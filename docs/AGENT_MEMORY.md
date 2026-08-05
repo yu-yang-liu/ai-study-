@@ -15,7 +15,7 @@
 | L1 | 对话记忆（短期） | `conversations` + `conversation_messages`，最近 20 条 | ✅ 已实现 |
 | L2 | 学情记忆（长期结构化） | `getLearnerContext` + `getAssistantContext` 注入 system prompt | ✅ 已实现 |
 | L3 | 工具副作用 | `runChatAgent` 工具写 DB（plan/analyze/grade/错题） | ✅ 已实现 |
-| L4 | 专用 Agent Memory | 见下文六项待建设能力 | ❌ 未实现 |
+| L4 | 专用 Agent Memory | `packages/core/src/ai/memory/`（M1 已落地编排层；M2–M6 待建设） | 🚧 M1 已实现 |
 
 **注意**：题库 RAG（`question_bank` + `text-embedding-v3`）仅用于批改/analyze 参考，**不是**用户 Agent Memory。
 
@@ -25,21 +25,24 @@
 
 ```
 POST /api/chat
-  → getOrCreateConversation(userId, subject, conversationId?)
-  → loadConversationMessages(userId, conversationId, limit=20)
-  → getAssistantContext(userId)          // 计划/错题/近7天练习快照，≤800 字
-  → runChatAgent({ history, assistantContext, message })
+  → loadMemory({ userId, subject, conversationId? })   // M1 统一读入口
+       ├ getOrCreateConversation(userId, subject, conversationId?)
+       ├ loadConversationMessages(userId, conversationId, limit=20)
+       └ getAssistantContext(userId)          // 计划/错题/近7天练习快照，≤800 字
+       → AgentMemory { conversationId, shortTerm, longTerm, episodic?, isColdStart }
+  → runChatAgent({ history: shortTerm, assistantContext: longTerm, message })
        system = persona + 工具说明 + 学情快照
        messages = system + history + user
        → JSON 意图 → 工具执行 → 可选 synthesizeReply
-  → persistChatExchange(...)               // 落 conversation_messages
+  → appendTurn(ctx, { userMessage, assistantReply }, conversationId)  // 落 conversation_messages
   → { reply, conversationId, action? }
 ```
 
-### 2.1 关键文件
+### 关键文件
 
 | 职责 | 路径 |
 |------|------|
+| **Memory 编排层（M1）** | `packages/core/src/ai/memory/memory.ts` |
 | Agent 编排 | `packages/core/src/ai/agent/runChatAgent.ts` |
 | 学情快照 | `packages/core/src/learning/assistant-context.ts` |
 | 学习者画像 | `packages/core/src/ai/learner/context.ts` |
@@ -61,15 +64,16 @@ POST /api/chat
 
 以下六项 **均未实现**，实施前须先读本文档与 `schema.ts`，避免与现有 L1–L3 重复造轮子。
 
-### M1 独立 `AgentMemory` 抽象/模块
+### M1 独立 `AgentMemory` 抽象/模块 ✅ 已实现
 
 | 项 | 说明 |
 |----|------|
 | **目标** | 统一读写入口，替代散落在 `conversation.ts` / `assistant-context.ts` / prompt 拼接中的隐式逻辑 |
-| **建议接口** | `loadMemory(ctx)` → `{ shortTerm, longTerm, episodic? }`；`appendTurn(...)`；可选 `upsertFact(...)` |
-| **落点** | 新建 `packages/core/src/ai/memory/`（或 `learning/memory/`） |
-| **优先级** | P1 — 其它五项的基础 |
-| **验收** | `/api/chat` 仅通过 Memory 模块取上下文；单测覆盖 cold start / 有历史 / 有学情 |
+| **落点** | `packages/core/src/ai/memory/`（`types.ts` / `memory.ts` / `compose.ts` / `index.ts`） |
+| **接口** | `loadMemory(ctx)` → `AgentMemory { conversationId, shortTerm, longTerm, episodic?, isColdStart }`；`appendTurn(ctx, turn, conversationId)`；`upsertFact`（M5 空桩） |
+| **行为** | 编排层 on top，不改 `conversation.ts` / `assistant-context.ts` / `persist.ts` 内部实现；`/api/chat` 已切换为 `loadMemory` / `appendTurn` |
+| **前向兼容** | `episodic?` 恒 `undefined`（M4 钩子）；`upsertFact` 类型化空桩（M5 领域） |
+| **验收** | `/api/chat` 仅通过 Memory 模块取上下文；单测覆盖 cold start / 有历史 / 有学情（`memory.test.ts`，4 用例） |
 
 ### M2 超长对话压缩/摘要（超过 20 条）
 
@@ -173,4 +177,4 @@ flowchart TD
 
 ---
 
-*文档版本：2026-07-22 · 对应当前工作区代码状态*
+*文档版本：2026-08-05 · 对应当前工作区代码状态（M1 已落地）*

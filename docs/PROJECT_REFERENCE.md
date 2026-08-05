@@ -322,7 +322,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 
 | # | 能力 | 现状 |
 |---|------|------|
-| M1 | 独立 `AgentMemory` 抽象/模块 | 记忆逻辑散落在 conversation / assistant-context / prompt |
+| M1 | 独立 `AgentMemory` 抽象/模块 | ✅ 已实现：`packages/core/src/ai/memory/` 编排层（`loadMemory` / `appendTurn`），on top of L1–L3 |
 | M2 | 超长对话压缩/摘要（超 20 条） | `loadConversationMessages` 硬截断 20 条 |
 | M3 | 跨会话记忆合成 | 会话按学科隔离，无跨 session 引用 |
 | M4 | 向量 / Episodic Memory | 仅 `question_bank` 有 embedding，无用户经历向量 |
@@ -364,7 +364,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 
 ### Agent Memory 迭代（见 [AGENT_MEMORY.md](./AGENT_MEMORY.md)）
 
-1. **M1** `AgentMemory` 模块统一读写
+1. **M1** `AgentMemory` 模块统一读写 ✅ 已实现
 2. **M2** 对话超 20 条摘要压缩
 3. **M3–M5** 跨会话事实 + Agent 写 memory
 4. **M4 + M6** 用户 episodic embedding + RAG（与题库 RAG 分离）
@@ -382,6 +382,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | 常量/学科 | `packages/core/src/constants.ts` |
 | 鉴权 | `packages/core/src/auth/index.ts`、`apps/web/middleware.ts` |
 | **Chat Agent** | `packages/core/src/ai/agent/runChatAgent.ts` |
+| **Agent Memory（M1）** | `packages/core/src/ai/memory/memory.ts` |
 | **学情快照** | `packages/core/src/learning/assistant-context.ts` |
 | **可复用 Actions** | `packages/core/src/learning/actions.ts` |
 | **会话读写** | `packages/core/src/learning/conversation.ts`、`learning/persist.ts` |
@@ -398,10 +399,11 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 
 ```
 POST /api/chat
-  → getOrCreateConversation + loadConversationMessages
-  → getAssistantContext（计划/错题/练习快照）
+  → loadMemory({ userId, subject, conversationId? })   // M1 统一读入口
+       ├ getOrCreateConversation + loadConversationMessages(20)
+       └ getAssistantContext（计划/错题/近7天练习快照，≤800 字）
   → runChatAgent（JSON 意图 → 工具执行 → 可选二次合成）
-  → persistChatExchange
+  → appendTurn（落 conversation_messages）
   → { reply, conversationId, action? }
 ```
 
@@ -454,7 +456,7 @@ POST /api/chat
 
 ### Agent Memory 六项（[AGENT_MEMORY.md](./AGENT_MEMORY.md) §3）
 
-- [ ] **M1** 独立 `AgentMemory` 抽象/模块
+- [x] **M1** 独立 `AgentMemory` 抽象/模块（`packages/core/src/ai/memory/`，编排层 on top of L1–L3）
 - [ ] **M2** 超长对话压缩/摘要（超 20 条）
 - [ ] **M3** 跨会话记忆合成
 - [ ] **M4** 向量 / Episodic Memory（用户经历 embedding）
@@ -463,4 +465,4 @@ POST /api/chat
 
 ---
 
-*文档版本：2026-07-22 · 对应当前工作区代码状态*
+*文档版本：2026-08-05 · 对应当前工作区代码状态（M1 已落地）*

@@ -33,6 +33,15 @@ export { recordApiUsage, queryUserUsage } from './usage';
 export { runEval, evalCase, computeDimensions, allSamples, gradeMathSamples, gradeEssaySamples } from './eval';
 export type { EvalCase, EvalResult, EvalReport, EvalDimension } from './eval';
 export { runChatAgent } from './agent';
+export { loadMemory, appendTurn, upsertFact, composeMemoryBlock } from './memory';
+export type {
+  MemoryContext,
+  AgentMemory,
+  TurnInput,
+  EpisodicMemory,
+  MemoryFact,
+  UpsertFactResult,
+} from './memory';
 
 export const structuredCall = _structuredCall;
 

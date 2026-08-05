@@ -1,11 +1,9 @@
 import {
   getAuthUser,
   checkAIRateLimit,
-  getAssistantContext,
-  getOrCreateConversation,
-  loadConversationMessages,
+  loadMemory,
+  appendTurn,
   runChatAgent,
-  persistChatExchange,
   AIStructuredError,
 } from '@ai-study/core';
 import { NextResponse } from 'next/server';
@@ -33,28 +31,22 @@ export async function POST(request: Request) {
   const { subject, message, conversationId: inputConversationId } = parsed.data;
 
   try {
-    const conversationId = await getOrCreateConversation(user.id, subject, inputConversationId);
-    const [history, { assistantText }] = await Promise.all([
-      loadConversationMessages(user.id, conversationId, 20),
-      getAssistantContext(user.id),
-    ]);
+    const mem = await loadMemory({ userId: user.id, subject, conversationId: inputConversationId });
 
     const agentResult = await runChatAgent({
       userId: user.id,
       subject,
       message,
-      history,
-      assistantContext: assistantText,
+      history: mem.shortTerm,
+      assistantContext: mem.longTerm,
     });
 
-    let savedConversationId = conversationId;
+    let savedConversationId = mem.conversationId;
     try {
-      savedConversationId = await persistChatExchange(
-        user.id,
-        subject,
-        message,
-        agentResult.reply,
-        conversationId,
+      savedConversationId = await appendTurn(
+        { userId: user.id, subject, conversationId: mem.conversationId },
+        { userMessage: message, assistantReply: agentResult.reply },
+        mem.conversationId,
       );
     } catch (persistErr) {
       console.warn('chat persist failed:', persistErr);
