@@ -1,0 +1,86 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "packages/ios/**"
+      - ".github/workflows/ios-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/ios/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      # ── ApiContracts Package ──
+      - name: Build ApiContracts
+        run: |
+          cd packages/ios/ApiContracts
+          swift build --configuration debug
+          swift test --configuration debug
+
+      # ── CoreKit Package ──
+      - name: Build CoreKit
+        run: |
+          cd packages/ios/CoreKit
+          swift build --configuration debug
+          swift test --configuration debug
+
+      # ── ios-gaokao (single high-school app target; directory name retained) ──
+      - name: Generate ios-gaokao.xcodeproj
+        run: |
+          brew install xcodegen
+          cd packages/ios/ios-gaokao
+          xcodegen generate --spec project.yml
+
+      - name: Build ios-gaokao (Debug)
+        run: |
+          xcodebuild build \
+            -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
+            -scheme ios-gaokao \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,name=iPhone 17" \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload build logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-logs
+          path: |
+            DerivedData/Logs/
+            packages/ios/ios-gaokao/*.log
+          retention-days: 3
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check YAML syntax
+        run: |
+          python3 -c "import yaml; yaml.safe_load(open('packages/ios/ios-gaokao/project.yml'))"
+          echo "YAML syntax OK"

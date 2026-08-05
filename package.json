@@ -1,0 +1,19 @@
+{
+  "name": "ai-study",
+  "private": true,
+  "scripts": {
+    "ts-check": "pnpm -r ts-check",
+    "lint": "pnpm -r lint",
+    "build": "pnpm -r build",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.3.1",
+    "tailwindcss": "^4.3.1"
+  }
+}

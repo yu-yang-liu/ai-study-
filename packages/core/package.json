@@ -1,0 +1,33 @@
+{
+  "name": "@ai-study/core",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ui": "./src/ui/index.tsx"
+  },
+  "scripts": {
+    "ts-check": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.17",
+    "drizzle-kit": "^0.31.10",
+    "react": "^19.2.7",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.9"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1086.0",
+    "@aws-sdk/s3-request-presigner": "^3.1086.0",
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.108.2",
+    "drizzle-orm": "^0.45.2",
+    "next": "^15.5.19",
+    "pg": "^8.22.0",
+    "zod": "^4.4.3"
+  }
+}

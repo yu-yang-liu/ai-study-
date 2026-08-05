@@ -1,0 +1,22 @@
+node_modules/
+.next/
+out/
+dist/
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo
+.DS_Store
+*.log
+apps/*/node_modules/
+packages/ios/tools/node_modules/
+
+# IDE / editor
+.cursor/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# OS
+Thumbs.db

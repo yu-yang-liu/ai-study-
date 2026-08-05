@@ -1,0 +1,38 @@
+name: Web CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "apps/web/**"
+      - "packages/core/**"
+      - ".github/workflows/web-ci.yml"
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck core
+        run: pnpm --filter @ai-study/core exec tsc --noEmit
+
+      - name: Test core
+        run: pnpm --filter @ai-study/core exec vitest run
+
+      - name: Typecheck web
+        run: pnpm --filter @ai-study/web exec tsc --noEmit

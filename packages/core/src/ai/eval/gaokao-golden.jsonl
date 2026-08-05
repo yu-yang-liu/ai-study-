@@ -1,0 +1,6 @@
+{"phase":"high","subject":"数学","input":"求函数 f(x)=x^3-3x 的单调区间","expect":{"subject":"数学","question_type":"计算题","knowledge_points":["导数应用","函数单调性"]}}
+{"phase":"high","subject":"语文","input":"分析《赤壁赋》中 '逝者如斯，而未尝往也' 的哲理","expect":{"subject":"语文","question_type":"简答题","knowledge_points":["文言文理解","哲学思想"]}}
+{"phase":"high","subject":"英语","input":"Translate: 科技创新是推动经济发展的关键动力","expect":{"subject":"英语","question_type":"简答题","knowledge_points":["翻译","科技词汇"]}}
+{"phase":"high","subject":"物理","input":"一个质量为 2kg 的物体从 10m 高处自由落下，求落地时的速度","expect":{"subject":"物理","question_type":"计算题","knowledge_points":["自由落体","动能定理"]}}
+{"phase":"high","subject":"化学","input":"配平化学方程式：Fe + O2 -> Fe3O4","expect":{"subject":"化学","question_type":"计算题","knowledge_points":["化学方程式配平"]}}
+{"phase":"high","subject":"生物","input":"简述光合作用的光反应和暗反应的主要区别","expect":{"subject":"生物","question_type":"简答题","knowledge_points":["光合作用","光反应","暗反应"]}}

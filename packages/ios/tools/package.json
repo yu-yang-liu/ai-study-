@@ -1,0 +1,14 @@
+{
+  "name": "ios-icon-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "代码生成 AI 学习 App 的 iOS App Icon（无需设计师出图）",
+  "scripts": {
+    "generate": "node generate-icons.mjs"
+  },
+  "dependencies": {
+    "opentype.js": "^1.3.4",
+    "sharp": "^0.33.5"
+  }
+}

@@ -1,0 +1,45 @@
+disabled_rules:
+  - trailing_comma
+  - line_length
+  - file_length
+  - type_body_length
+  - function_body_length
+  - cyclomatic_complexity
+
+opt_in_rules:
+  - empty_count
+  - missing_docs
+  - closure_end_indentation
+  - closure_spacing
+  - explicit_init
+  - fatal_error_message
+  - first_where
+  - sorted_imports
+
+excluded:
+  - .build
+  - DerivedData
+  - node_modules
+  - "**/.build"
+
+identifier_name:
+  min_length: 2
+  max_length: 60
+
+type_name:
+  min_length: 3
+  max_length: 60
+
+custom_rules:
+  no_fatal_error_unimplemented:
+    name: "FatalError Restricted"
+    regex: 'fatalError\("(?!未实现).*"\)'
+    message: "仅允许 fatalError(\"未实现\") 作为占位，其他 fatalError 须上报错误状态"
+    severity: error
+
+  no_direct_urlsession:
+    name: "No Direct URLSession"
+    regex: 'URLSession(?!Configuration)'
+    message: "ViewModel 不应直接持有 URLSession，通过 APIClient 注入"
+    excluded: "APIClient.swift"
+    severity: warning
