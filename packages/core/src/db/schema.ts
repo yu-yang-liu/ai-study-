@@ -200,6 +200,24 @@ export const conversationMessages = pgTable('conversation_messages', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+// ── 14. conversation_summaries (M2 滚动摘要) ──
+export const conversationSummaries = pgTable(
+  'conversation_summaries',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').notNull(),
+    summary: text('summary').notNull(),
+    summaryUpTo: timestamp('summary_up_to', { withTimezone: true }).notNull(),
+    messageCount: integer('message_count').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex('conversation_summaries_uidx').on(table.conversationId)],
+);
+
 // ── 10. user_profiles ──
 export const userProfiles = pgTable('user_profiles', {
   id: uuid('id').defaultRandom().primaryKey(),

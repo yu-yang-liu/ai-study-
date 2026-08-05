@@ -8,3 +8,11 @@ export type {
 } from './types';
 export { loadMemory, appendTurn, upsertFact } from './memory';
 export { composeMemoryBlock } from './compose';
+export {
+  summarizeConversation,
+  shouldSummarize,
+  composeSummaryBlock,
+  splitWindow,
+  RAW_WINDOW,
+  SUMMARY_TRIGGER,
+} from './summary';

@@ -1,6 +1,8 @@
+import { createServiceClient } from '../../db';
 import { getOrCreateConversation, loadConversationMessages } from '../../learning/conversation';
 import { getAssistantContext } from '../../learning/assistant-context';
 import { persistChatExchange } from '../../learning/persist';
+import type { ConversationMessage } from '../../learning/conversation';
 import type {
   MemoryContext,
   AgentMemory,
@@ -8,15 +10,110 @@ import type {
   MemoryFact,
   UpsertFactResult,
 } from './types';
+import {
+  RAW_WINDOW,
+  SUMMARY_TRIGGER,
+  shouldSummarize,
+  composeSummaryBlock,
+  summarizeConversation,
+} from './summary';
+
+/** 读取会话的现有滚动摘要行（若存在）。 */
+async function getConversationSummary(
+  conversationId: string,
+): Promise<{ summary: string; summaryUpTo: string } | null> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from('conversation_summaries')
+    .select('summary, summary_up_to')
+    .eq('conversation_id', conversationId)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    summary: data.summary as string,
+    summaryUpTo: data.summary_up_to as string,
+  };
+}
+
+/** upsert 会话滚动摘要。 */
+async function upsertConversationSummary(
+  conversationId: string,
+  userId: string,
+  summary: string,
+  summaryUpTo: string,
+  messageCount: number,
+): Promise<void> {
+  const supabase = createServiceClient();
+  await supabase.from('conversation_summaries').upsert(
+    {
+      conversation_id: conversationId,
+      user_id: userId,
+      summary,
+      summary_up_to: summaryUpTo,
+      message_count: messageCount,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'conversation_id' },
+  );
+}
+
+/** 取会话消息总数。 */
+async function countConversationMessages(conversationId: string): Promise<number> {
+  const supabase = createServiceClient();
+  const { count } = await supabase
+    .from('conversation_messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('conversation_id', conversationId);
+  return count ?? 0;
+}
+
+/** 取窗口外、且 created_at > summaryUpTo 的未摘要消息（chronological）。 */
+async function loadUnsummarizedOlderMessages(
+  conversationId: string,
+  userId: string,
+  summaryUpTo: string | null,
+  rawWindow: number,
+): Promise<ConversationMessage[]> {
+  const supabase = createServiceClient();
+  // 取除最近 rawWindow 条之外的全部消息（即更早的），按时间倒序取再 reverse
+  let query = supabase
+    .from('conversation_messages')
+    .select('role, content, created_at')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    // 偏移最近 rawWindow 条，取其前的全部（上限给一个合理值防止超大查询）
+    .range(rawWindow, rawWindow + 199);
+
+  if (summaryUpTo) {
+    query = query.gt('created_at', summaryUpTo);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(`loadUnsummarizedOlderMessages: ${error.message}`);
+
+  return (data ?? [])
+    .reverse()
+    .map((row) => ({
+      role: row.role as 'user' | 'assistant',
+      content: row.content as string,
+      createdAt: row.created_at as string,
+    }));
+}
 
 /**
  * M1 统一读入口 —— 替代 chat/route.ts 中的
  * getOrCreateConversation + Promise.all([loadConversationMessages, getAssistantContext])。
  *
+ * M2 扩展：长会话（消息总数 > SUMMARY_TRIGGER）时同步懒触发滚动摘要，
+ * 把早期消息压缩成摘要块拼到 longTerm 前缀；shortTerm 仍是最近 RAW_WINDOW 条 raw。
+ *
  * 严格保持现有顺序：
  *   1. 先 getOrCreateConversation（必须先解析出 conversationId）
  *   2. 再 Promise.all 并行取 history + assistantContext
  * 任何重排都会改变错误传播 / 竞态语义。
+ *
+ * 行为保持：count <= SUMMARY_TRIGGER 时走原路径（取 20 条 raw，无摘要），与 M1 完全等价。
  */
 export async function loadMemory(ctx: MemoryContext): Promise<AgentMemory> {
   const conversationId = await getOrCreateConversation(
@@ -25,16 +122,70 @@ export async function loadMemory(ctx: MemoryContext): Promise<AgentMemory> {
     ctx.conversationId,
   );
 
-  const [shortTerm, { assistantText }] = await Promise.all([
-    loadConversationMessages(ctx.userId, conversationId, 20),
+  // count + assistantContext 可并行；history 在判定后取（摘要分支需先知道 count）
+  const [messageCount, { assistantText }] = await Promise.all([
+    countConversationMessages(conversationId),
     getAssistantContext(ctx.userId),
   ]);
+
+  // 短会话：原路径，无摘要
+  if (!shouldSummarize(messageCount)) {
+    const shortTerm = await loadConversationMessages(ctx.userId, conversationId, RAW_WINDOW);
+    return {
+      conversationId,
+      shortTerm,
+      longTerm: assistantText,
+      episodic: undefined,
+      isColdStart: assistantText.length === 0,
+    };
+  }
+
+  // 长会话：取窗口内 raw + 窗口外未摘要消息
+  const [shortTerm, existingSummary] = await Promise.all([
+    loadConversationMessages(ctx.userId, conversationId, RAW_WINDOW),
+    getConversationSummary(conversationId),
+  ]);
+
+  let summary: string | undefined = existingSummary?.summary;
+
+  const olderUnsummarized = await loadUnsummarizedOlderMessages(
+    conversationId,
+    ctx.userId,
+    existingSummary?.summaryUpTo ?? null,
+    RAW_WINDOW,
+  );
+
+  if (olderUnsummarized.length > 0) {
+    try {
+      const newSummary = await summarizeConversation({
+        userId: ctx.userId,
+        subject: ctx.subject,
+        previousSummary: existingSummary?.summary ?? null,
+        messages: olderUnsummarized,
+      });
+      const upTo = olderUnsummarized[olderUnsummarized.length - 1]!.createdAt;
+      await upsertConversationSummary(
+        conversationId,
+        ctx.userId,
+        newSummary,
+        upTo,
+        messageCount,
+      );
+      summary = newSummary;
+    } catch (err) {
+      // 摘要 LLM 故障不阻断主对话：回退到旧摘要（或无摘要）路径
+      console.warn('conversation summarize failed:', err);
+    }
+  }
+
+  const longTerm = composeSummaryBlock(summary, assistantText);
 
   return {
     conversationId,
     shortTerm,
-    longTerm: assistantText,
-    episodic: undefined, // M4 钩子
+    longTerm,
+    summary,
+    episodic: undefined,
     isColdStart: assistantText.length === 0,
   };
 }

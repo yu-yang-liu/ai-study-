@@ -31,6 +31,8 @@ export interface AgentMemory {
   conversationId: string;
   shortTerm: ConversationMessage[];
   longTerm: string;
+  /** M2 滚动摘要（长会话才有）；已拼入 longTerm 前缀，此字段供 M3 跨会话合成复用。 */
+  summary?: string;
   episodic?: EpisodicMemory[];
   isColdStart: boolean;
 }

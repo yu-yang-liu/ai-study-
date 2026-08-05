@@ -27,9 +27,12 @@
 POST /api/chat
   → loadMemory({ userId, subject, conversationId? })   // M1 统一读入口
        ├ getOrCreateConversation(userId, subject, conversationId?)
-       ├ loadConversationMessages(userId, conversationId, limit=20)
-       └ getAssistantContext(userId)          // 计划/错题/近7天练习快照，≤800 字
-       → AgentMemory { conversationId, shortTerm, longTerm, episodic?, isColdStart }
+       ├ [M2] countConversationMessages → 若 > 30 进入摘要分支
+       │    ├ loadConversationMessages(20)            // 窗口内 raw
+       │    ├ getConversationSummary + loadUnsummarizedOlderMessages
+       │    └ summarizeConversation（LLM 摘要，失败回退）→ upsert conversation_summaries
+       ├ getAssistantContext(userId)          // 计划/错题/近7天练习快照，≤800 字
+       → AgentMemory { conversationId, shortTerm, longTerm(含摘要前缀), summary?, episodic?, isColdStart }
   → runChatAgent({ history: shortTerm, assistantContext: longTerm, message })
        system = persona + 工具说明 + 学情快照
        messages = system + history + user
@@ -43,6 +46,7 @@ POST /api/chat
 | 职责 | 路径 |
 |------|------|
 | **Memory 编排层（M1）** | `packages/core/src/ai/memory/memory.ts` |
+| **对话摘要（M2）** | `packages/core/src/ai/memory/summary.ts` |
 | Agent 编排 | `packages/core/src/ai/agent/runChatAgent.ts` |
 | 学情快照 | `packages/core/src/learning/assistant-context.ts` |
 | 学习者画像 | `packages/core/src/ai/learner/context.ts` |
@@ -75,15 +79,18 @@ POST /api/chat
 | **前向兼容** | `episodic?` 恒 `undefined`（M4 钩子）；`upsertFact` 类型化空桩（M5 领域） |
 | **验收** | `/api/chat` 仅通过 Memory 模块取上下文；单测覆盖 cold start / 有历史 / 有学情（`memory.test.ts`，4 用例） |
 
-### M2 超长对话压缩/摘要（超过 20 条）
+### M2 超长对话压缩/摘要（超过 20 条）✅ 已实现
 
 | 项 | 说明 |
 |----|------|
-| **现状** | `loadConversationMessages` 硬编码 `limit=20`（`chat/route.ts`） |
+| **现状** | ~~`loadConversationMessages` 硬编码 `limit=20`~~ 已在 `loadMemory` 内升级为滑动窗口 + 滚动摘要 |
 | **目标** | 超出窗口的旧消息压缩为摘要块，再与最近 N 条 raw 消息一并注入 |
-| **建议** | 表字段 `conversations.summary` 或独立 `conversation_summaries`；超阈值时异步/同步调用 `structuredCall(task: 'chat')` 生成摘要 |
-| **优先级** | P1 |
-| **验收** | 50+ 轮对话后 Agent 仍能引用早期达成的计划/结论；token 不超当前约 2 倍 |
+| **落点** | `packages/core/src/ai/memory/summary.ts`（`summarizeConversation` + 纯函数 `shouldSummarize`/`composeSummaryBlock`/`splitWindow`）；`memory.ts` `loadMemory` 接摘要分支 |
+| **存储** | 独立 `conversation_summaries` 表（迁移 `0001_conversation_summaries.sql`），一个会话一个滚动摘要行 |
+| **触发** | 同步懒触发：`loadMemory` 时 `count > SUMMARY_TRIGGER(30)` 才进入摘要分支，取窗口外未摘要消息调 LLM 生成/更新摘要 |
+| **容错** | 摘要 LLM 故障 `console.warn` 后回退无摘要路径，不阻断主对话 |
+| **行为保持** | `count <= 30` 走原路径（20 条 raw，无摘要），与 M1 完全等价；`runChatAgent` 签名不动，summary 拼入 `longTerm` 前缀 |
+| **验收** | 50+ 轮对话后 Agent 仍能引用早期达成的计划/结论；token 不超当前约 2 倍；`summary.test.ts` 覆盖纯函数与边界 |
 
 ### M3 跨会话记忆合成
 

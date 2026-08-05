@@ -1,19 +1,32 @@
 # ai-study 项目参考文档
 
-> 本文档汇总项目状态、对齐工作、完善度评估、外部依赖、使用形式、试运营方案与待补逻辑。  
+> 本文档为项目的**领导性参考文档**，汇总定位、架构、状态、外部依赖、使用形式与待补逻辑。  
 > 基线：**单学段（高中）** monorepo，包名 `@ai-study/*`，中考端 `ios-zhongkao` 已移除。
 
 ---
 
 ## 1. 项目概览
 
+### 1.1 平台定位
+
+面向高中学习场景的 AI 学习平台，采用 **pnpm monorepo** 架构，目标提供 **iOS 与 Android 原生客户端**及 Web 端，支持试卷解析、智能识别、AI 辅助批改、错题管理、学习计划、学习数据分析与智能对话等核心学习功能。
+
+> **多端现状**：iOS（`packages/ios`）已实现；**Android 为规划中，尚未实现**。Web（`apps/web`）同时承担前端与 API 后端。
+
+`packages` 体系承载平台共享能力，包括 AI 能力编排、多模型服务接入、知识检索增强（RAG）、学习算法（SM2 间隔重复）、智能 Agent（含 Agent Memory）、数据访问抽象、API 契约与通用业务逻辑，实现核心能力模块化管理与跨端复用。
+
+后端采用云端服务架构（Supabase + 多 AI provider），通过统一能力调度层（`packages/core/src/ai`）连接 AI 模型与业务服务，实现模型调用、任务编排、用户数据管理与学习流程闭环。系统具备类型安全（TypeScript 全量 `tsc --noEmit`）、自动化测试（Vitest）与持续集成（GitHub Actions iOS/Web 双 CI），保障平台稳定性与工程质量。
+
+### 1.2 关键事实
+
 | 项 | 说明 |
 |----|------|
 | 名称 | `ai-study` |
 | 定位 | AI 驱动的高中学习助手（分析、批改、**AI 学习助手**、计划、错题复习） |
-| Web | `apps/web` — Next.js 15 App Router，`@ai-study/web` |
+| Web | `apps/web` — Next.js 15 App Router，`@ai-study/web`（前端 + API 路由） |
 | Core | `packages/core` — 共享 TS 库，`@ai-study/core` |
 | iOS | `packages/ios` — Swift 客户端，App 目录名保留 `ios-gaokao` |
+| Android | 规划中，未实现 |
 | 学段 | `APP_PHASE = 'high'`（`packages/core/src/constants.ts`） |
 | 学科 | `HIGH_SUBJECTS` 九科统一常量（语文…地理） |
 
@@ -22,7 +35,7 @@
 ```
 ai-study/
 ├── apps/web/                 # Next.js Web + API 路由
-├── packages/core/            # AI、鉴权、DB Schema、UI 组件、Agent
+├── packages/core/            # AI、鉴权、DB Schema、UI 组件、Agent、Memory
 ├── packages/ios/
 │   ├── ApiContracts/         # Swift API 模型
 │   ├── CoreKit/              # 网络、认证、共享 UI
@@ -156,8 +169,9 @@ cd apps/web && pnpm exec tsc --noEmit
 | Node 22 + pnpm 9 | 本地/构建 | — |
 | 部署主机（上线） | 跑 Next.js | `NEXT_PUBLIC_APP_URL` |
 
-数据库初始化（一次性）：在 Supabase SQL Editor 执行  
-`packages/core/src/db/migrations/0000_initial.sql`（需 **pgvector** 扩展）。
+数据库初始化（一次性）：在 Supabase SQL Editor 依次执行  
+`packages/core/src/db/migrations/0000_initial.sql`（需 **pgvector** 扩展）、  
+`0001_conversation_summaries.sql`（M2 摘要表）。
 
 ### 4.2 强烈建议
 
@@ -323,7 +337,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | # | 能力 | 现状 |
 |---|------|------|
 | M1 | 独立 `AgentMemory` 抽象/模块 | ✅ 已实现：`packages/core/src/ai/memory/` 编排层（`loadMemory` / `appendTurn`），on top of L1–L3 |
-| M2 | 超长对话压缩/摘要（超 20 条） | `loadConversationMessages` 硬截断 20 条 |
+| M2 | 超长对话压缩/摘要（超 20 条） | ✅ 已实现：`memory/summary.ts` + `conversation_summaries` 表，同步懒触发（>30 条） |
 | M3 | 跨会话记忆合成 | 会话按学科隔离，无跨 session 引用 |
 | M4 | 向量 / Episodic Memory | 仅 `question_bank` 有 embedding，无用户经历向量 |
 | M5 | Agent 主动写/改 memory 条目 | 工具只写业务表，无 `remember` 类 API |
@@ -365,7 +379,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 ### Agent Memory 迭代（见 [AGENT_MEMORY.md](./AGENT_MEMORY.md)）
 
 1. **M1** `AgentMemory` 模块统一读写 ✅ 已实现
-2. **M2** 对话超 20 条摘要压缩
+2. **M2** 对话超 20 条摘要压缩 ✅ 已实现
 3. **M3–M5** 跨会话事实 + Agent 写 memory
 4. **M4 + M6** 用户 episodic embedding + RAG（与题库 RAG 分离）
 
@@ -377,12 +391,13 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 |------|------|
 | **Agent Memory 专项** | [docs/AGENT_MEMORY.md](./AGENT_MEMORY.md) |
 | 环境变量模板 | `apps/web/.env.example` |
-| DB 迁移 | `packages/core/src/db/migrations/0000_initial.sql` |
+| DB 迁移 | `packages/core/src/db/migrations/0000_initial.sql`、`0001_conversation_summaries.sql` |
 | Schema | `packages/core/src/db/schema.ts` |
 | 常量/学科 | `packages/core/src/constants.ts` |
 | 鉴权 | `packages/core/src/auth/index.ts`、`apps/web/middleware.ts` |
 | **Chat Agent** | `packages/core/src/ai/agent/runChatAgent.ts` |
 | **Agent Memory（M1）** | `packages/core/src/ai/memory/memory.ts` |
+| **对话摘要（M2）** | `packages/core/src/ai/memory/summary.ts` |
 | **学情快照** | `packages/core/src/learning/assistant-context.ts` |
 | **可复用 Actions** | `packages/core/src/learning/actions.ts` |
 | **会话读写** | `packages/core/src/learning/conversation.ts`、`learning/persist.ts` |
@@ -457,7 +472,7 @@ POST /api/chat
 ### Agent Memory 六项（[AGENT_MEMORY.md](./AGENT_MEMORY.md) §3）
 
 - [x] **M1** 独立 `AgentMemory` 抽象/模块（`packages/core/src/ai/memory/`，编排层 on top of L1–L3）
-- [ ] **M2** 超长对话压缩/摘要（超 20 条）
+- [x] **M2** 超长对话压缩/摘要（超 20 条）（`memory/summary.ts` + `conversation_summaries` 表）
 - [ ] **M3** 跨会话记忆合成
 - [ ] **M4** 向量 / Episodic Memory（用户经历 embedding）
 - [ ] **M5** Agent 主动写/改 memory 条目

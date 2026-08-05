@@ -34,6 +34,14 @@ export { runEval, evalCase, computeDimensions, allSamples, gradeMathSamples, gra
 export type { EvalCase, EvalResult, EvalReport, EvalDimension } from './eval';
 export { runChatAgent } from './agent';
 export { loadMemory, appendTurn, upsertFact, composeMemoryBlock } from './memory';
+export {
+  summarizeConversation,
+  shouldSummarize,
+  composeSummaryBlock,
+  splitWindow,
+  RAW_WINDOW,
+  SUMMARY_TRIGGER,
+} from './memory';
 export type {
   MemoryContext,
   AgentMemory,
