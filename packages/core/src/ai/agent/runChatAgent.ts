@@ -16,6 +16,7 @@ import {
   executePlan,
   fetchWrongQuestionSummary,
 } from '../../learning/actions';
+import { upsertUserFact, forgetUserFact } from '../memory/facts';
 
 const planArgsSchema = z.object({
   focus: z.string().optional(),
@@ -29,6 +30,16 @@ const gradeArgsSchema = z.object({
   questionContent: z.string().min(10),
   studentAnswer: z.string().min(1),
   questionType: z.enum(['math', 'essay']).default('math'),
+});
+
+const rememberFactArgsSchema = z.object({
+  key: z.string().min(1).max(64),
+  value: z.string().min(1).max(300),
+  category: z.string().max(32).optional(),
+});
+
+const forgetFactArgsSchema = z.object({
+  key: z.string().min(1).max(64),
 });
 
 function historyToMessages(history: ConversationMessage[]): ChatMessage[] {
@@ -132,6 +143,34 @@ async function executeTool(
       return {
         summary: `\u5171 ${summary.total} \u9898\u5f85\u590d\u4e60\uff1a\n${lines}`,
         action: { type: 'wrong_questions', payload: summary as unknown as Record<string, unknown> },
+      };
+    }
+    case 'remember_fact': {
+      const parsed = rememberFactArgsSchema.safeParse(args);
+      if (!parsed.success) {
+        return { summary: '', directReply: '\u8bf7\u63d0\u4f9b\u8981\u8bb0\u4f4f\u7684\u4e8b\u5b9e\u952e\u4e0e\u5185\u5bb9\u3002' };
+      }
+      await upsertUserFact(userId, {
+        key: parsed.data.key,
+        value: parsed.data.value,
+        category: parsed.data.category,
+      });
+      return {
+        summary: `\u5df2\u8bb0\u4f4f\uff1a${parsed.data.key} = ${parsed.data.value}`,
+        directReply: `\u597d\u7684\uff0c\u6211\u8bb0\u4e0b\u4e86\u300c${parsed.data.value}\u300d\uff0c\u4e4b\u540e\u4f1a\u8de8\u4f1a\u8bdd\u8bb0\u4f4f\u8fd9\u70b9\u3002`,
+      };
+    }
+    case 'forget_fact': {
+      const parsed = forgetFactArgsSchema.safeParse(args);
+      if (!parsed.success) {
+        return { summary: '', directReply: '\u8bf7\u63d0\u4f9b\u8981\u5220\u9664\u7684\u4e8b\u5b9e\u952e\u3002' };
+      }
+      const removed = await forgetUserFact(userId, parsed.data.key);
+      return {
+        summary: removed ? `\u5df2\u5220\u9664\uff1a${parsed.data.key}` : `\u672a\u627e\u5230\uff1a${parsed.data.key}`,
+        directReply: removed
+          ? `\u5df2\u5fd8\u8bb0\u300c${parsed.data.key}\u300d\u3002`
+          : `\u672c\u6765\u5c31\u6ca1\u6709\u8bb0\u8fc7\u300c${parsed.data.key}\u300d\u54e6\u3002`,
       };
     }
     default:

@@ -41,6 +41,11 @@ export {
   splitWindow,
   RAW_WINDOW,
   SUMMARY_TRIGGER,
+  loadUserFacts,
+  composeUserFactsBlock,
+  upsertUserFact,
+  forgetUserFact,
+  MAX_USER_FACTS,
 } from './memory';
 export type {
   MemoryContext,
@@ -49,6 +54,7 @@ export type {
   EpisodicMemory,
   MemoryFact,
   UpsertFactResult,
+  StoredFact,
 } from './memory';
 
 export const structuredCall = _structuredCall;

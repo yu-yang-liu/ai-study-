@@ -73,6 +73,8 @@ export const chatAgentToolName = z.enum([
   'analyze_question',
   'grade_submission',
   'summarize_wrong_questions',
+  'remember_fact',
+  'forget_fact',
 ]);
 
 export const chatAgentOutput = z.object({

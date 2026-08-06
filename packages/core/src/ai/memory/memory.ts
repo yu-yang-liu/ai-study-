@@ -17,6 +17,8 @@ import {
   composeSummaryBlock,
   summarizeConversation,
 } from './summary';
+import { loadUserFacts, composeUserFactsBlock, upsertUserFact } from './facts';
+import type { StoredFact } from './facts';
 
 /** 读取会话的现有滚动摘要行（若存在）。 */
 async function getConversationSummary(
@@ -122,21 +124,22 @@ export async function loadMemory(ctx: MemoryContext): Promise<AgentMemory> {
     ctx.conversationId,
   );
 
-  // count + assistantContext 可并行；history 在判定后取（摘要分支需先知道 count）
-  const [messageCount, { assistantText }] = await Promise.all([
+  // count + assistantContext + 跨会话事实（M3）可并行；history 在判定后取（摘要分支需先知道 count）
+  const [messageCount, { assistantText }, userFacts] = await Promise.all([
     countConversationMessages(conversationId),
     getAssistantContext(ctx.userId),
+    loadUserFacts(ctx.userId),
   ]);
 
-  // 短会话：原路径，无摘要
+  // 短会话：原路径，无摘要（M3 事实仍注入）
   if (!shouldSummarize(messageCount)) {
     const shortTerm = await loadConversationMessages(ctx.userId, conversationId, RAW_WINDOW);
     return {
       conversationId,
       shortTerm,
-      longTerm: assistantText,
+      longTerm: composeLongTerm(undefined, userFacts, assistantText),
       episodic: undefined,
-      isColdStart: assistantText.length === 0,
+      isColdStart: assistantText.length === 0 && userFacts.length === 0,
     };
   }
 
@@ -178,7 +181,7 @@ export async function loadMemory(ctx: MemoryContext): Promise<AgentMemory> {
     }
   }
 
-  const longTerm = composeSummaryBlock(summary, assistantText);
+  const longTerm = composeLongTerm(summary, userFacts, assistantText);
 
   return {
     conversationId,
@@ -186,8 +189,26 @@ export async function loadMemory(ctx: MemoryContext): Promise<AgentMemory> {
     longTerm,
     summary,
     episodic: undefined,
-    isColdStart: assistantText.length === 0,
+    isColdStart: assistantText.length === 0 && userFacts.length === 0,
   };
+}
+
+/**
+ * 纯函数：把「会话摘要 + 跨会话事实 + 学情快照」合成最终 longTerm 块。
+ * 顺序：摘要 → 跨会话事实 → 学情快照。无内容段省略，保持可读性。
+ * 抽离以便单测，且让短/长会话两条路径共用同一拼接逻辑。
+ */
+function composeLongTerm(
+  summary: string | undefined,
+  userFacts: StoredFact[],
+  assistantText: string,
+): string {
+  const factsBlock = composeUserFactsBlock(userFacts);
+  const parts: string[] = [];
+  if (summary) parts.push(composeSummaryBlock(summary, ''));
+  if (factsBlock) parts.push(factsBlock);
+  if (assistantText) parts.push(assistantText);
+  return parts.join('\n\n');
 }
 
 /**
@@ -212,12 +233,18 @@ export async function appendTurn(
 }
 
 /**
- * M5 桩 —— 类型化但未实现。M1 暴露此签名以锁定接口形状，让后续 Agent 可条件性调用
- * 而不需改类型。M3/M5 落地真实存储（需 user_memory_facts 表）。
+ * M5 写入口 —— upsert 一条用户跨会话事实（user_id + key 唯一）。
+ * 落地真实存储（user_memory_facts 表），Agent 可通过 remember 工具调用。
+ * 失败时返回 { stored: false, reason }，不抛错（由调用方决定是否阻断）。
  */
 export async function upsertFact(
-  _ctx: MemoryContext,
-  _fact: MemoryFact,
+  ctx: MemoryContext,
+  fact: MemoryFact,
 ): Promise<UpsertFactResult> {
-  return { stored: false, reason: 'not_implemented' };
+  try {
+    await upsertUserFact(ctx.userId, fact, ctx.conversationId);
+    return { stored: true };
+  } catch (err) {
+    return { stored: false, reason: String(err) };
+  }
 }

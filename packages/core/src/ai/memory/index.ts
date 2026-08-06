@@ -16,3 +16,11 @@ export {
   RAW_WINDOW,
   SUMMARY_TRIGGER,
 } from './summary';
+export {
+  loadUserFacts,
+  composeUserFactsBlock,
+  upsertUserFact,
+  forgetUserFact,
+  MAX_USER_FACTS,
+} from './facts';
+export type { StoredFact } from './facts';

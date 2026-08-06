@@ -292,3 +292,23 @@ export const questionBank = pgTable(
   },
   (table) => [index('idx_question_bank_phase_subject').on(table.phase, table.subject)],
 );
+
+// ── 15. user_memory_facts (M3/M5：用户跨会话事实) ──
+export const userMemoryFacts = pgTable(
+  'user_memory_facts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull(),
+    key: text('key').notNull(),
+    value: text('value').notNull(),
+    category: text('category'),
+    sourceConversationId: uuid('source_conversation_id'),
+    phase: phaseEnum('phase').notNull().default('high'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('user_memory_facts_uidx').on(table.userId, table.key),
+    index('idx_user_memory_facts_user').on(table.userId),
+  ],
+);

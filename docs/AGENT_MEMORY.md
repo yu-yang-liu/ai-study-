@@ -15,7 +15,7 @@
 | L1 | 对话记忆（短期） | `conversations` + `conversation_messages`，最近 20 条 | ✅ 已实现 |
 | L2 | 学情记忆（长期结构化） | `getLearnerContext` + `getAssistantContext` 注入 system prompt | ✅ 已实现 |
 | L3 | 工具副作用 | `runChatAgent` 工具写 DB（plan/analyze/grade/错题） | ✅ 已实现 |
-| L4 | 专用 Agent Memory | `packages/core/src/ai/memory/`（M1 已落地编排层；M2–M6 待建设） | 🚧 M1 已实现 |
+| L4 | 专用 Agent Memory | `packages/core/src/ai/memory/`（M1–M3/M5 已落地；M4/M6 待建设） | 🚧 M3/M5 已实现 |
 
 **注意**：题库 RAG（`question_bank` + `text-embedding-v3`）仅用于批改/analyze 参考，**不是**用户 Agent Memory。
 
@@ -47,6 +47,7 @@ POST /api/chat
 |------|------|
 | **Memory 编排层（M1）** | `packages/core/src/ai/memory/memory.ts` |
 | **对话摘要（M2）** | `packages/core/src/ai/memory/summary.ts` |
+| **跨会话事实读写（M3/M5）** | `packages/core/src/ai/memory/facts.ts` |
 | Agent 编排 | `packages/core/src/ai/agent/runChatAgent.ts` |
 | 学情快照 | `packages/core/src/learning/assistant-context.ts` |
 | 学习者画像 | `packages/core/src/ai/learner/context.ts` |
@@ -92,15 +93,16 @@ POST /api/chat
 | **行为保持** | `count <= 30` 走原路径（20 条 raw，无摘要），与 M1 完全等价；`runChatAgent` 签名不动，summary 拼入 `longTerm` 前缀 |
 | **验收** | 50+ 轮对话后 Agent 仍能引用早期达成的计划/结论；token 不超当前约 2 倍；`summary.test.ts` 覆盖纯函数与边界 |
 
-### M3 跨会话记忆合成
+### M3 跨会话记忆合成 ✅ 已实现
 
 | 项 | 说明 |
 |----|------|
-| **现状** | 会话按 `title=subject` 隔离；无「上周在数学对话里说过…」的跨 session 检索 |
-| **目标** | 按 `user_id` 聚合多会话摘要或关键事实，注入 `getAssistantContext` 或 M1 的 `longTerm` |
-| **建议** | 定期从各 `conversations` rollup；或维护 `user_memory_facts` 表 |
-| **优先级** | P2 |
-| **验收** | 新开会话时能引用其它学科/旧会话中用户明确说过的目标（如「下周一模」） |
+| **现状** | ~~会话按 `title=subject` 隔离；无跨 session 检索~~ 已落地 `user_memory_facts` 表（迁移 `0002`），按 `user_id` 聚合跨会话事实 |
+| **目标** | 按 `user_id` 聚合多会话关键事实，注入 `longTerm`（M5 写入，M3 读出） |
+| **落点** | `packages/core/src/ai/memory/facts.ts`（`loadUserFacts` + 纯函数 `composeUserFactsBlock`）；`memory.ts` `loadMemory` 并行加载事实并拼入 `longTerm` |
+| **存储** | `user_memory_facts` 表（迁移 `0002_user_memory_facts.sql`），`user_id + key` 唯一，限 `MAX_USER_FACTS=12` 条注入 |
+| **行为保持** | 无事实时 `composeUserFactsBlock` 返回空串，longTerm 与 M2 等价；isColdStart 现含「无学情且无事实」语义 |
+| **验收** | 用户在 A 学科会话说「目标 985」→ M5 写入 → 新开 B 学科会话时 longTerm 含该事实（`facts.test.ts` 覆盖纯函数） |
 
 ### M4 向量 / Episodic Memory（用户经历 embedding）
 
@@ -112,15 +114,15 @@ POST /api/chat
 | **优先级** | P2 |
 | **验收** | 用户问「我哪类题错最多」时，能召回相关历史片段（不仅依赖 SQL 聚合快照） |
 
-### M5 Agent 主动写/改 Memory 条目
+### M5 Agent 主动写/改 Memory 条目 ✅ 已实现
 
 | 项 | 说明 |
 |----|------|
-| **现状** | 工具只写业务表；Agent 不能显式 `remember("目标院校", "...")` |
-| **目标** | 新工具如 `upsert_user_fact` / `forget_fact`；或从对话中自动抽取事实写入 M3/M4 存储 |
-| **约束** | 须 `user_id` 隔离；RLS 或 service client + 显式校验；禁止写入其它用户 |
-| **优先级** | P2 |
-| **验收** | 用户说「记住我目标 985」后，新会话 system 快照含该事实；用户可要求删除 |
+| **现状** | ~~工具只写业务表；Agent 不能显式 `remember("目标院校", "...")`~~ 已落地 `remember_fact` / `forget_fact` 两个 Agent 工具 |
+| **目标** | Agent 在对话中识别用户明确声明后，写入 M3 的 `user_memory_facts`；用户可要求删除 |
+| **落点** | `runChatAgent` `executeTool` 新增 `remember_fact` / `forget_fact` 分支（调 `upsertUserFact` / `forgetUserFact`）；`memory.ts` `upsertFact` 从空桩升级为真实写入；`chatAgent` prompt 与 `chatAgentToolName` enum 扩展 |
+| **约束** | `user_id` 隔离（service client + 显式 `eq('user_id', userId)`）；key/value 长度受限（zod 校验）；表 RLS 仅 `user_id = auth.uid()` |
+| **验收** | 用户说「记住我目标 985」→ Agent 调 `remember_fact` → 下次新会话 longTerm 含该事实；用户说「忘掉目标」→ `forget_fact` 删除 |
 
 ### M6 RAG 检索用户历史（区别于题库 RAG）
 
@@ -158,7 +160,8 @@ flowchart TD
   L1 -.-> M1
 ```
 
-**建议实施顺序**：M1 → M2 → M3 / M5 → M4 → M6
+**建议实施顺序**：M1 → M2 → M3 / M5 → M4 → M6  
+**当前进度**：M1 ✅ → M2 ✅ → M3 ✅ → M5 ✅（M3/M5 共用 `user_memory_facts` 表）；M4 / M6 待建设
 
 ---
 
@@ -184,4 +187,4 @@ flowchart TD
 
 ---
 
-*文档版本：2026-08-05 · 对应当前工作区代码状态（M1 已落地）*
+*文档版本：2026-08-06 · 对应当前工作区代码状态（M1/M2/M3/M5 已落地）*
