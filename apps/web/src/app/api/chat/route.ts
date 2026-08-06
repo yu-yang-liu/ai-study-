@@ -31,7 +31,12 @@ export async function POST(request: Request) {
   const { subject, message, conversationId: inputConversationId } = parsed.data;
 
   try {
-    const mem = await loadMemory({ userId: user.id, subject, conversationId: inputConversationId });
+    const mem = await loadMemory({
+      userId: user.id,
+      subject,
+      conversationId: inputConversationId,
+      query: message,
+    });
 
     const agentResult = await runChatAgent({
       userId: user.id,

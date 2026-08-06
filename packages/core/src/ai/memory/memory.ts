@@ -9,6 +9,7 @@ import type {
   TurnInput,
   MemoryFact,
   UpsertFactResult,
+  EpisodicMemory,
 } from './types';
 import {
   RAW_WINDOW,
@@ -19,6 +20,7 @@ import {
 } from './summary';
 import { loadUserFacts, composeUserFactsBlock, upsertUserFact } from './facts';
 import type { StoredFact } from './facts';
+import { retrieveUserMemory } from './episodic';
 
 /** 读取会话的现有滚动摘要行（若存在）。 */
 async function getConversationSummary(
@@ -131,14 +133,30 @@ export async function loadMemory(ctx: MemoryContext): Promise<AgentMemory> {
     loadUserFacts(ctx.userId),
   ]);
 
+  // M6：可选语义召回用户历史经历。用当前用户消息（或回退到 subject）作为 query。
+  // 失败/无 key 时静默返回空，不阻断主对话。仅当存在学情或事实（非冷启动）才召回，避免空查询。
+  let episodic: EpisodicMemory[] | undefined;
+  if (!(assistantText.length === 0 && userFacts.length === 0)) {
+    try {
+      const hits = await retrieveUserMemory({
+        query: ctx.query ?? ctx.subject,
+        userId: ctx.userId,
+        limit: 3,
+      });
+      episodic = hits.length > 0 ? hits : undefined;
+    } catch (err) {
+      console.warn('retrieveUserMemory failed:', err);
+    }
+  }
+
   // 短会话：原路径，无摘要（M3 事实仍注入）
   if (!shouldSummarize(messageCount)) {
     const shortTerm = await loadConversationMessages(ctx.userId, conversationId, RAW_WINDOW);
     return {
       conversationId,
       shortTerm,
-      longTerm: composeLongTerm(undefined, userFacts, assistantText),
-      episodic: undefined,
+      longTerm: composeLongTerm(undefined, userFacts, assistantText, episodic),
+      episodic,
       isColdStart: assistantText.length === 0 && userFacts.length === 0,
     };
   }
@@ -181,34 +199,44 @@ export async function loadMemory(ctx: MemoryContext): Promise<AgentMemory> {
     }
   }
 
-  const longTerm = composeLongTerm(summary, userFacts, assistantText);
+  const longTerm = composeLongTerm(summary, userFacts, assistantText, episodic);
 
   return {
     conversationId,
     shortTerm,
     longTerm,
     summary,
-    episodic: undefined,
+    episodic,
     isColdStart: assistantText.length === 0 && userFacts.length === 0,
   };
 }
 
 /**
- * 纯函数：把「会话摘要 + 跨会话事实 + 学情快照」合成最终 longTerm 块。
- * 顺序：摘要 → 跨会话事实 → 学情快照。无内容段省略，保持可读性。
+ * 纯函数：把「会话摘要 + 跨会话事实 + 学情快照 + episodic」合成最终 longTerm 块。
+ * 顺序：摘要 → 跨会话事实 → episodic 经历 → 学情快照。无内容段省略，保持可读性。
  * 抽离以便单测，且让短/长会话两条路径共用同一拼接逻辑。
  */
 function composeLongTerm(
   summary: string | undefined,
   userFacts: StoredFact[],
   assistantText: string,
+  episodic?: EpisodicMemory[],
 ): string {
   const factsBlock = composeUserFactsBlock(userFacts);
+  const episodicBlock = composeEpisodicBlock(episodic);
   const parts: string[] = [];
   if (summary) parts.push(composeSummaryBlock(summary, ''));
   if (factsBlock) parts.push(factsBlock);
+  if (episodicBlock) parts.push(episodicBlock);
   if (assistantText) parts.push(assistantText);
   return parts.join('\n\n');
+}
+
+/** 纯函数：把 episodic 经历格式化为注入块。空/无传入返回空串。 */
+export function composeEpisodicBlock(episodic?: EpisodicMemory[]): string {
+  if (!episodic || episodic.length === 0) return '';
+  const lines = episodic.map((e) => `- [${e.source}] ${e.content}（相似度 ${e.score}）`);
+  return `【相关历史经历】\n${lines.join('\n')}`;
 }
 
 /**

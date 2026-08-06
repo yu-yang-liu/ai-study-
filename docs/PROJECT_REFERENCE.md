@@ -172,7 +172,8 @@ cd apps/web && pnpm exec tsc --noEmit
 数据库初始化（一次性）：在 Supabase SQL Editor 依次执行  
 `packages/core/src/db/migrations/0000_initial.sql`（需 **pgvector** 扩展）、  
 `0001_conversation_summaries.sql`（M2 摘要表）、  
-`0002_user_memory_facts.sql`（M3/M5 跨会话事实表）。
+`0002_user_memory_facts.sql`（M3/M5 跨会话事实表）、  
+`0003_user_memories.sql`（M4/M6 用户经历向量表 + `match_user_memories` RPC）。
 
 ### 4.2 强烈建议
 
@@ -340,9 +341,9 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | M1 | 独立 `AgentMemory` 抽象/模块 | ✅ 已实现：`packages/core/src/ai/memory/` 编排层（`loadMemory` / `appendTurn`），on top of L1–L3 |
 | M2 | 超长对话压缩/摘要（超 20 条） | ✅ 已实现：`memory/summary.ts` + `conversation_summaries` 表，同步懒触发（>30 条） |
 | M3 | 跨会话记忆合成 | ✅ 已实现：`user_memory_facts` 表 + `loadUserFacts` 注入 longTerm |
-| M4 | 向量 / Episodic Memory | 仅 `question_bank` 有 embedding，无用户经历向量 |
+| M4 | 向量 / Episodic Memory | ✅ 已实现：`user_memories` 向量表 + `storeUserMemory`/`match_user_memories` |
 | M5 | Agent 主动写/改 memory 条目 | ✅ 已实现：`remember_fact` / `forget_fact` Agent 工具 + `upsertFact` 真实写入 |
-| M6 | RAG 检索用户历史 | `retrieveReferences` 仅查题库，非用户记忆 |
+| M6 | RAG 检索用户历史 | ✅ 已实现：`retrieveUserMemory` 语义召回，`loadMemory` 注入 episodic |
 
 **已实现（勿重复建设）**：L1 对话 20 条 + L2 学情快照（`getAssistantContext`）+ L3 工具落库。见 AGENT_MEMORY.md §2。
 
@@ -382,7 +383,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 1. **M1** `AgentMemory` 模块统一读写 ✅ 已实现
 2. **M2** 对话超 20 条摘要压缩 ✅ 已实现
 3. **M3–M5** 跨会话事实 + Agent 写 memory ✅ 已实现（共用 `user_memory_facts` 表）
-4. **M4 + M6** 用户 episodic embedding + RAG（与题库 RAG 分离）
+4. **M4 + M6** 用户 episodic embedding + RAG ✅ 已实现（`user_memories` 表 + `retrieveUserMemory`，与题库 RAG 分离）
 
 ---
 
@@ -392,7 +393,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 |------|------|
 | **Agent Memory 专项** | [docs/AGENT_MEMORY.md](./AGENT_MEMORY.md) |
 | 环境变量模板 | `apps/web/.env.example` |
-| DB 迁移 | `packages/core/src/db/migrations/0000_initial.sql`、`0001_conversation_summaries.sql`、`0002_user_memory_facts.sql` |
+| DB 迁移 | `packages/core/src/db/migrations/0000_initial.sql`、`0001_conversation_summaries.sql`、`0002_user_memory_facts.sql`、`0003_user_memories.sql` |
 | Schema | `packages/core/src/db/schema.ts` |
 | 常量/学科 | `packages/core/src/constants.ts` |
 | 鉴权 | `packages/core/src/auth/index.ts`、`apps/web/middleware.ts` |
@@ -400,6 +401,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | **Agent Memory（M1）** | `packages/core/src/ai/memory/memory.ts` |
 | **对话摘要（M2）** | `packages/core/src/ai/memory/summary.ts` |
 | **跨会话事实（M3/M5）** | `packages/core/src/ai/memory/facts.ts` |
+| **用户经历向量（M4/M6）** | `packages/core/src/ai/memory/episodic.ts` |
 | **学情快照** | `packages/core/src/learning/assistant-context.ts` |
 | **可复用 Actions** | `packages/core/src/learning/actions.ts` |
 | **会话读写** | `packages/core/src/learning/conversation.ts`、`learning/persist.ts` |
@@ -476,10 +478,10 @@ POST /api/chat
 - [x] **M1** 独立 `AgentMemory` 抽象/模块（`packages/core/src/ai/memory/`，编排层 on top of L1–L3）
 - [x] **M2** 超长对话压缩/摘要（超 20 条）（`memory/summary.ts` + `conversation_summaries` 表）
 - [x] **M3** 跨会话记忆合成（`memory/facts.ts` + `user_memory_facts` 表，注入 longTerm）
-- [ ] **M4** 向量 / Episodic Memory（用户经历 embedding）
+- [x] **M4** 向量 / Episodic Memory（`memory/episodic.ts` + `user_memories` 表，批改/计划/事实写入向量）
 - [x] **M5** Agent 主动写/改 memory 条目（`remember_fact`/`forget_fact` 工具 + `upsertFact`）
-- [ ] **M6** RAG 检索用户历史（区别于 `question_bank`）
+- [x] **M6** RAG 检索用户历史（`retrieveUserMemory` 语义召回，注入 episodic，区别于 `question_bank`）
 
 ---
 
-*文档版本：2026-08-06 · 对应当前工作区代码状态（M1/M2/M3/M5 已落地）*
+*文档版本：2026-08-06 · 对应当前工作区代码状态（M1–M6 全部已落地）*

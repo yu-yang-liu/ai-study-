@@ -312,3 +312,20 @@ export const userMemoryFacts = pgTable(
     index('idx_user_memory_facts_user').on(table.userId),
   ],
 );
+
+// ── 16. user_memories (M4/M6：用户经历向量) ──
+export const userMemories = pgTable(
+  'user_memories',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull(),
+    phase: phaseEnum('phase').notNull().default('high'),
+    source: text('source').notNull(),
+    subject: text('subject'),
+    content: text('content').notNull(),
+    metadata: jsonb('metadata').notNull().default({}),
+    embedding: vector1024('embedding'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('idx_user_memories_user').on(table.userId)],
+);

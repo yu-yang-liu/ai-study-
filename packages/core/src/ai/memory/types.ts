@@ -6,11 +6,18 @@ export interface MemoryContext {
   subject: string;
   /** 来自 POST body 的可选 conversationId；未传时由 getOrCreateConversation 解析/新建。 */
   conversationId?: string;
+  /**
+   * M6：用于 episodic 向量召回的查询文本（通常是用户当前消息）。
+   * 未传时回退到 subject 做查询。仅非冷启动时才触发召回。
+   */
+  query?: string;
 }
 
 /**
  * M4 预留 —— M1 不实现，仅类型存在以锁定 AgentMemory 形状。
  * 未来对高价值事件（批改结论、计划、用户声明）做 embedding 后填充。
+ *
+ * M4/M6 已实现：episodic 现由 retrieveUserMemory 填充，score = 余弦相似度。
  */
 export interface EpisodicMemory {
   id: string;

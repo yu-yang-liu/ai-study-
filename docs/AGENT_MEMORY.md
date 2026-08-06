@@ -15,7 +15,7 @@
 | L1 | 对话记忆（短期） | `conversations` + `conversation_messages`，最近 20 条 | ✅ 已实现 |
 | L2 | 学情记忆（长期结构化） | `getLearnerContext` + `getAssistantContext` 注入 system prompt | ✅ 已实现 |
 | L3 | 工具副作用 | `runChatAgent` 工具写 DB（plan/analyze/grade/错题） | ✅ 已实现 |
-| L4 | 专用 Agent Memory | `packages/core/src/ai/memory/`（M1–M3/M5 已落地；M4/M6 待建设） | 🚧 M3/M5 已实现 |
+| L4 | 专用 Agent Memory | `packages/core/src/ai/memory/`（M1–M6 全部已落地） | ✅ 已实现 |
 
 **注意**：题库 RAG（`question_bank` + `text-embedding-v3`）仅用于批改/analyze 参考，**不是**用户 Agent Memory。
 
@@ -48,6 +48,7 @@ POST /api/chat
 | **Memory 编排层（M1）** | `packages/core/src/ai/memory/memory.ts` |
 | **对话摘要（M2）** | `packages/core/src/ai/memory/summary.ts` |
 | **跨会话事实读写（M3/M5）** | `packages/core/src/ai/memory/facts.ts` |
+| **用户经历向量（M4/M6）** | `packages/core/src/ai/memory/episodic.ts` |
 | Agent 编排 | `packages/core/src/ai/agent/runChatAgent.ts` |
 | 学情快照 | `packages/core/src/learning/assistant-context.ts` |
 | 学习者画像 | `packages/core/src/ai/learner/context.ts` |
@@ -104,15 +105,16 @@ POST /api/chat
 | **行为保持** | 无事实时 `composeUserFactsBlock` 返回空串，longTerm 与 M2 等价；isColdStart 现含「无学情且无事实」语义 |
 | **验收** | 用户在 A 学科会话说「目标 985」→ M5 写入 → 新开 B 学科会话时 longTerm 含该事实（`facts.test.ts` 覆盖纯函数） |
 
-### M4 向量 / Episodic Memory（用户经历 embedding）
+### M4 向量 / Episodic Memory（用户经历 embedding）✅ 已实现
 
 | 项 | 说明 |
 |----|------|
-| **现状** | 仅 `question_bank` 有 pgvector；用户对话/批改/计划无向量索引 |
-| **目标** | 对高价值事件（批改结论、计划、用户声明）做 embedding，按语义检索 Top-K 注入 prompt |
-| **依赖** | `DASHSCOPE_API_KEY`（`text-embedding-v3`，与题库 RAG 同模型）；新表 + `match_user_memories` RPC |
-| **优先级** | P2 |
-| **验收** | 用户问「我哪类题错最多」时，能召回相关历史片段（不仅依赖 SQL 聚合快照） |
+| **现状** | ~~仅 `question_bank` 有 pgvector；用户对话/批改/计划无向量索引~~ 已落地 `user_memories` 向量表 + ivfflat 索引 + `match_user_memories` RPC |
+| **目标** | 对高价值事件（批改结论、计划、用户声明）做 embedding，按语义检索 Top-K |
+| **落点** | `packages/core/src/ai/memory/episodic.ts`（`storeUserMemory` 写入 + `embedUserMemory` 复用 `text-embedding-v3`）；`runChatAgent` 在 plan/grade/remember_fact 工具成功后异步写入 |
+| **依赖** | `DASHSCOPE_API_KEY`（与题库 RAG 同模型）；迁移 `0003_user_memories.sql` |
+| **容错** | embedding 失败时仍写入行（embedding 为 null），事件不丢；检索失败静默返回空，不阻断主对话 |
+| **验收** | 批改/计划后 `user_memories` 有对应行；后续问「我哪类题错最多」可经语义召回相关历史片段 |
 
 ### M5 Agent 主动写/改 Memory 条目 ✅ 已实现
 
@@ -124,15 +126,16 @@ POST /api/chat
 | **约束** | `user_id` 隔离（service client + 显式 `eq('user_id', userId)`）；key/value 长度受限（zod 校验）；表 RLS 仅 `user_id = auth.uid()` |
 | **验收** | 用户说「记住我目标 985」→ Agent 调 `remember_fact` → 下次新会话 longTerm 含该事实；用户说「忘掉目标」→ `forget_fact` 删除 |
 
-### M6 RAG 检索用户历史（区别于题库 RAG）
+### M6 RAG 检索用户历史（区别于题库 RAG）✅ 已实现
 
 | 项 | 说明 |
 |----|------|
-| **现状** | `retrieveReferences` 仅查 `question_bank`（`packages/core/src/ai/rag/retrieve.ts`） |
-| **目标** | 专用 `retrieveUserMemory({ query, userId, limit })`，检索 M4 中的用户 episodic 向量 |
-| **与 #4 关系** | M4 负责写入与索引；M6 负责 Agent 读路径 |
-| **优先级** | P2（依赖 M4） |
-| **验收** | Chat Agent 在回答前可选调用用户 RAG；日志区分 `question_bank` vs `user_memory` 来源 |
+| **现状** | ~~`retrieveReferences` 仅查 `question_bank`~~ 新增 `retrieveUserMemory({ query, userId, limit })`，检索 M4 用户 episodic 向量 |
+| **目标** | Agent 读路径语义召回用户历史，注入 prompt（与题库 RAG 分离） |
+| **落点** | `packages/core/src/ai/memory/episodic.ts` `retrieveUserMemory`（调 `match_user_memories` RPC）；`loadMemory` 非冷启动时召回 Top-3 拼入 `longTerm` 的 `【相关历史经历】` 块；`MemoryContext.query` 接收用户当前消息 |
+| **与 #4 关系** | M4 负责写入与索引；M6 负责 Agent 读路径（已完成闭环） |
+| **来源区分** | 题库走 `retrieveReferences`（`question_bank`）；用户记忆走 `retrieveUserMemory`（`user_memories`），两者表/RPC 独立 |
+| **验收** | `loadMemory` 返回的 `episodic` 字段被填充；`composeEpisodicBlock` 拼入 longTerm；冷启动不触发召回 |
 
 ---
 
@@ -161,7 +164,7 @@ flowchart TD
 ```
 
 **建议实施顺序**：M1 → M2 → M3 / M5 → M4 → M6  
-**当前进度**：M1 ✅ → M2 ✅ → M3 ✅ → M5 ✅（M3/M5 共用 `user_memory_facts` 表）；M4 / M6 待建设
+**当前进度**：M1 ✅ → M2 ✅ → M3 ✅ → M5 ✅ → M4 ✅ → M6 ✅（六项全部落地）
 
 ---
 
@@ -187,4 +190,4 @@ flowchart TD
 
 ---
 
-*文档版本：2026-08-06 · 对应当前工作区代码状态（M1/M2/M3/M5 已落地）*
+*文档版本：2026-08-06 · 对应当前工作区代码状态（M1–M6 全部已落地）*

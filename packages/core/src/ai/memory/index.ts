@@ -24,3 +24,10 @@ export {
   MAX_USER_FACTS,
 } from './facts';
 export type { StoredFact } from './facts';
+export {
+  storeUserMemory,
+  retrieveUserMemory,
+  embedUserMemory,
+} from './episodic';
+export type { StoreUserMemoryInput, UserMemorySource } from './episodic';
+export { composeEpisodicBlock } from './memory';

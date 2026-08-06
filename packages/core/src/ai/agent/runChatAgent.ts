@@ -17,6 +17,7 @@ import {
   fetchWrongQuestionSummary,
 } from '../../learning/actions';
 import { upsertUserFact, forgetUserFact } from '../memory/facts';
+import { storeUserMemory } from '../memory/episodic';
 
 const planArgsSchema = z.object({
   focus: z.string().optional(),
@@ -86,6 +87,14 @@ async function executeTool(
         .slice(0, 5)
         .map((t) => `- ${t.title} (${t.subject}, ${t.estimatedMinutes}\u5206)`)
         .join('\n');
+      // M4\uff1a\u8ba1\u5212\u751f\u6210\u662f\u9ad8\u4ef7\u503c\u4e8b\u4ef6\uff0c\u5199\u5165\u7528\u6237\u7ecf\u5386\u5411\u91cf
+      void storeUserMemory({
+        userId,
+        source: 'plan',
+        subject,
+        content: `${plan.title}\uff1a${plan.description}`,
+        metadata: { taskCount: plan.tasks.length },
+      }).catch((e) => console.warn('storeUserMemory(plan) failed:', e));
       return {
         summary: `\u8ba1\u5212\u300a${plan.title}\u300b\uff1a${plan.description}\n${taskLines}`,
         action: { type: 'plan', payload: plan as unknown as Record<string, unknown> },
@@ -126,6 +135,14 @@ async function executeTool(
         questionContent: parsed.data.questionContent,
         studentAnswer: parsed.data.studentAnswer,
       });
+      // M4\uff1a\u6279\u6539\u7ed3\u8bba\u662f\u9ad8\u4ef7\u503c\u4e8b\u4ef6\uff0c\u5199\u5165\u7528\u6237\u7ecf\u5386\u5411\u91cf
+      void storeUserMemory({
+        userId,
+        source: 'grade',
+        subject,
+        content: `\u6279\u6539 ${result.score}/${result.maxScore}\uff1a${result.summary}`,
+        metadata: { score: result.score, maxScore: result.maxScore },
+      }).catch((e) => console.warn('storeUserMemory(grade) failed:', e));
       return {
         summary: `\u5f97\u5206 ${result.score}/${result.maxScore}\uff1a${result.summary}`,
         action: { type: 'grade', payload: result as unknown as Record<string, unknown> },
@@ -155,6 +172,13 @@ async function executeTool(
         value: parsed.data.value,
         category: parsed.data.category,
       });
+      // M4：用户明确声明的事实也是高价值事件，写入经历向量
+      void storeUserMemory({
+        userId,
+        source: 'fact',
+        content: `${parsed.data.key}：${parsed.data.value}`,
+        metadata: { category: parsed.data.category ?? null },
+      }).catch((e) => console.warn('storeUserMemory(fact) failed:', e));
       return {
         summary: `\u5df2\u8bb0\u4f4f\uff1a${parsed.data.key} = ${parsed.data.value}`,
         directReply: `\u597d\u7684\uff0c\u6211\u8bb0\u4e0b\u4e86\u300c${parsed.data.value}\u300d\uff0c\u4e4b\u540e\u4f1a\u8de8\u4f1a\u8bdd\u8bb0\u4f4f\u8fd9\u70b9\u3002`,

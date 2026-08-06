@@ -46,6 +46,10 @@ export {
   upsertUserFact,
   forgetUserFact,
   MAX_USER_FACTS,
+  storeUserMemory,
+  retrieveUserMemory,
+  embedUserMemory,
+  composeEpisodicBlock,
 } from './memory';
 export type {
   MemoryContext,
@@ -55,6 +59,8 @@ export type {
   MemoryFact,
   UpsertFactResult,
   StoredFact,
+  StoreUserMemoryInput,
+  UserMemorySource,
 } from './memory';
 
 export const structuredCall = _structuredCall;
