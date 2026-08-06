@@ -1,6 +1,6 @@
 import {
   getAuthUser,
-  getOrCreateConversation,
+  getOrCreateConversationRow,
   loadConversationMessages,
   listConversations,
 } from '@ai-study/core';
@@ -23,8 +23,11 @@ export async function GET(request: Request) {
     if (subject) {
       const conversations = await listConversations(user.id, subject, 10);
       if (conversations.length === 0) {
-        const newId = await getOrCreateConversation(user.id, subject);
-        return NextResponse.json({ conversations: [{ id: newId, title: subject, updatedAt: new Date().toISOString() }] });
+        // 冷启动：真实创建一个会话，返回其真实 id/title/updatedAt（不再伪造时间戳）。
+        const row = await getOrCreateConversationRow(user.id, subject);
+        return NextResponse.json({
+          conversations: [{ id: row.id, title: row.title, updatedAt: row.updatedAt }],
+        });
       }
       return NextResponse.json({ conversations });
     }

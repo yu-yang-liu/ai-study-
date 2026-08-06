@@ -1,4 +1,4 @@
-import { createServiceClient } from '../../db';
+import { createServiceClient, getServiceClient } from '../../db';
 import { createClientFromToken } from '../../auth';
 import type { LearnerModel } from './types';
 import { buildLearnerModel } from './model';
@@ -12,7 +12,7 @@ export async function getLearnerContext(
   userId: string,
   accessToken?: string,
 ): Promise<{ model: LearnerModel; context: string }> {
-  const supabase = accessToken ? createClientFromToken(accessToken) : createServiceClient();
+  const supabase = accessToken ? createClientFromToken(accessToken) : getServiceClient();
 
   // Query user_profiles
   const { data: profiles } = await supabase

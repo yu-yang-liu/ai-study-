@@ -19,6 +19,11 @@ export function shouldSummarize(messageCount: number, trigger: number = SUMMARY_
 
 /**
  * 纯函数：把摘要拼到 longTerm 前缀。无摘要时原样返回 longTerm（M1 兼容）。
+ *
+ * 注意：本函数只负责产出「【历史摘要】\n摘要」这一片段。longTerm 的完整拼接
+ * （摘要 → 事实 → episodic → 学情快照）由调用方 composeLongTerm 统一 join，
+ * 因此 composeLongTerm 内以 composeSummaryBlock(summary, '') 传入空 longTerm ——
+ * 空串是刻意为之，并非遗漏。直接把 longTerm 透传进来反而会重复拼接。
  */
 export function composeSummaryBlock(summary: string | null | undefined, longTerm: string): string {
   if (!summary) return longTerm;

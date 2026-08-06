@@ -77,7 +77,7 @@ export class AIStructuredError extends Error {
   public readonly zodError: z.ZodError;
 
   constructor(task: TaskName, zodError: z.ZodError) {
-    super(`结构化输出校验失�?[${task}]�?{formatZodError(zodError)}`);
+    super(`结构化输出校验失败[${task}]: ${formatZodError(zodError)}`);
     this.name = 'AIStructuredError';
     this.task = task;
     this.zodError = zodError;

@@ -97,7 +97,7 @@ async function executeTool(
       }).catch((e) => console.warn('storeUserMemory(plan) failed:', e));
       return {
         summary: `\u8ba1\u5212\u300a${plan.title}\u300b\uff1a${plan.description}\n${taskLines}`,
-        action: { type: 'plan', payload: plan as unknown as Record<string, unknown> },
+        action: { type: 'plan', payload: plan },
       };
     }
     case 'analyze_question': {
@@ -116,7 +116,7 @@ async function executeTool(
       });
       return {
         summary: `\u5206\u6790\u5b8c\u6210\uff1a${result.analysis}`,
-        action: { type: 'analyze', payload: result as unknown as Record<string, unknown> },
+        action: { type: 'analyze', payload: result },
       };
     }
     case 'grade_submission': {
@@ -145,7 +145,7 @@ async function executeTool(
       }).catch((e) => console.warn('storeUserMemory(grade) failed:', e));
       return {
         summary: `\u5f97\u5206 ${result.score}/${result.maxScore}\uff1a${result.summary}`,
-        action: { type: 'grade', payload: result as unknown as Record<string, unknown> },
+        action: { type: 'grade', payload: result },
       };
     }
     case 'summarize_wrong_questions': {
@@ -153,13 +153,13 @@ async function executeTool(
       if (summary.total === 0) {
         return {
           summary: '\u5f53\u524d\u6ca1\u6709\u5f85\u590d\u4e60\u7684\u9519\u9898\u3002',
-          action: { type: 'wrong_questions', payload: summary as unknown as Record<string, unknown> },
+          action: { type: 'wrong_questions', payload: summary },
         };
       }
       const lines = summary.items.map((i) => `- [${i.subject}] ${i.preview}`).join('\n');
       return {
         summary: `\u5171 ${summary.total} \u9898\u5f85\u590d\u4e60\uff1a\n${lines}`,
-        action: { type: 'wrong_questions', payload: summary as unknown as Record<string, unknown> },
+        action: { type: 'wrong_questions', payload: summary },
       };
     }
     case 'remember_fact': {
@@ -226,7 +226,9 @@ export async function runChatAgent(opts: {
     phase: 'high',
   });
 
-  const parsed = chatAgentOutput.parse(agentStep);
+  // structuredCall 内部已对 schema 做过 safeParse（含一次重试），此处返回值即校验通过的 T，
+  // 无需再次 chatAgentOutput.parse(agentStep)（原 A4：冗余二次解析）。
+  const parsed = agentStep;
 
   if (!parsed.tool) {
     return { reply: parsed.reply ?? '\u6211\u6682\u65f6\u65e0\u6cd5\u56de\u590d\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5\u3002' };

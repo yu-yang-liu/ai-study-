@@ -90,10 +90,25 @@ export type ChatAgentOutput = z.infer<typeof chatAgentOutput>;
 
 export type ChatActionType = 'plan' | 'analyze' | 'grade' | 'wrong_questions';
 
-export interface ChatAction {
-  type: ChatActionType;
-  payload: Record<string, unknown>;
-}
+/**
+ * ChatAction 判别联合（discriminated union）。
+ * 以 `type` 为判别字段，`payload` 携带对应动作的结构化结果，
+ * 类型收窄后可直接访问 payload 字段，无需 `as Record<string, unknown>` 再断言。
+ *
+ * payload 分别对应：
+ * - plan        → PlanOutput（executePlan 返回）
+ * - analyze     → AnalyzeOutput（executeAnalyze 返回）
+ * - grade       → GradeResult（executeGrade 返回）
+ * - wrong_questions → WrongQuestionSummary（fetchWrongQuestionSummary 返回）
+ *
+ * 注：前端 chat/page.tsx 仍用本地 `payload: Record<string, unknown>` 宽类型接收
+ * （API 边界序列化后不做运行时校验），与本联合类型在结构上兼容。
+ */
+export type ChatAction =
+  | { type: 'plan'; payload: PlanOutput }
+  | { type: 'analyze'; payload: AnalyzeOutput }
+  | { type: 'grade'; payload: import('../../learning/actions').GradeResult }
+  | { type: 'wrong_questions'; payload: import('../../learning/actions').WrongQuestionSummary };
 
 export interface ChatAgentResult {
   reply: string;

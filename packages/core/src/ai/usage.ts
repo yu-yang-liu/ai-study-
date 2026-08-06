@@ -1,4 +1,4 @@
-import { createServiceClient } from '../db';
+import { createServiceClient, getServiceClient } from '../db';
 import type { AppPhase } from '../constants';
 import type { TokenUsage } from './gateway/types';
 
@@ -50,7 +50,7 @@ export async function recordApiUsage(opts: RecordOptions): Promise<void> {
   if (!opts.userId) return;
   const cost = calcCost(opts.model, opts.usage);
 
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
 
   await insertWithRetry(supabase, {
     user_id: opts.userId,
@@ -65,7 +65,7 @@ export async function recordApiUsage(opts: RecordOptions): Promise<void> {
 }
 
 export async function queryUserUsage(userId: string): Promise<{ totalCost: number; calls: number }> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 

@@ -2,6 +2,7 @@ import {
   getAuthUser,
   checkAIRateLimit,
   executeGrade,
+  AIStructuredError,
 } from '@ai-study/core';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -22,19 +23,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '\u8bf7\u6c42\u8fc7\u4e8e\u9891\u7e41' }, { status: 429 });
   }
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
   const parsed = gradeSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const { subject, questionType, questionContent, studentAnswer } = parsed.data;
 
-  const result = await executeGrade({
-    userId: user.id,
-    subject,
-    questionType,
-    questionContent,
-    studentAnswer,
-  });
+  try {
+    const result = await executeGrade({
+      userId: user.id,
+      subject,
+      questionType,
+      questionContent,
+      studentAnswer,
+    });
 
-  return NextResponse.json(result);
+    return NextResponse.json(result);
+  } catch (err) {
+    if (err instanceof AIStructuredError) {
+      return NextResponse.json({ error: err.message }, { status: 422 });
+    }
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 }

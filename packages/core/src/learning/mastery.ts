@@ -1,4 +1,4 @@
-import { createServiceClient } from '../db';
+import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
 
 export type MasteryOutcome = 'exposure' | 'correct' | 'incorrect' | 'review';
@@ -54,7 +54,7 @@ export async function updateKnowledgeMastery(
   const delta = masteryDelta(outcome, quality);
   if (delta === 0 && outcome === 'review') return;
 
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const now = new Date().toISOString();
 
   for (const kp of points) {
@@ -88,7 +88,7 @@ export async function updateKnowledgeMastery(
 }
 
 async function bumpDataRichness(userId: string): Promise<void> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { data: profile } = await supabase
     .from('user_profiles')
     .select('data_richness')

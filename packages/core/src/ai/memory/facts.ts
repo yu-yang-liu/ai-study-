@@ -1,4 +1,4 @@
-import { createServiceClient } from '../../db';
+import { getServiceClient } from '../../db';
 import { APP_PHASE } from '../../constants';
 import type { MemoryFact } from './types';
 
@@ -15,7 +15,7 @@ export interface StoredFact extends MemoryFact {
  * 仅当前 phase（high）。失败时返回空数组 —— 不阻断主对话。
  */
 export async function loadUserFacts(userId: string): Promise<StoredFact[]> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { data, error } = await supabase
     .from('user_memory_facts')
     .select('id, key, value, category, updated_at')
@@ -60,7 +60,7 @@ export async function upsertUserFact(
   fact: MemoryFact,
   sourceConversationId?: string,
 ): Promise<StoredFact> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { data, error } = await supabase
     .from('user_memory_facts')
     .upsert(
@@ -93,7 +93,7 @@ export async function upsertUserFact(
 
 /** 删除某用户的指定 key 事实。返回是否删除了一行。 */
 export async function forgetUserFact(userId: string, key: string): Promise<boolean> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { data, error } = await supabase
     .from('user_memory_facts')
     .delete({ count: 'exact' })

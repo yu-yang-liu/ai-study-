@@ -1,4 +1,4 @@
-import { createServiceClient } from '../db';
+import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
 import { getLearnerContext } from '../ai/learner/context';
 import type { PlanOutput } from '../ai/structured/schemas';
@@ -31,7 +31,7 @@ function formatPlanSummary(planData: unknown, title: string, description: string
  * into a short text block for chat agent system prompt injection.
  */
 export async function getAssistantContext(userId: string): Promise<AssistantContextSnapshot> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const [{ context: learnerText }, planRes, wrongRes, practiceRes] = await Promise.all([
     getLearnerContext(userId),
     supabase
@@ -56,7 +56,9 @@ export async function getAssistantContext(userId: string): Promise<AssistantCont
       .select('is_correct, created_at')
       .eq('user_id', userId)
       .eq('phase', APP_PHASE)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .order('created_at', { ascending: false })
+      .limit(50),
   ]);
 
   const sections: string[] = [];

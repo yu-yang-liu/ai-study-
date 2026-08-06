@@ -1,4 +1,4 @@
-import { createServiceClient } from '../db';
+import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
 import { embedTexts } from '../ai';
 
@@ -26,7 +26,7 @@ export async function ingestQuestionBankEntries(
 
   const texts = entries.map(embeddingText);
   const { vectors } = await embedTexts(texts);
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
 
   const rows = entries.map((entry, i) => ({
     phase: APP_PHASE,

@@ -1,4 +1,4 @@
-import { createServiceClient } from '../../db';
+import { getServiceClient } from '../../db';
 import { APP_PHASE } from '../../constants';
 import { safeFetch } from '../../security';
 import type { EpisodicMemory } from './types';
@@ -48,7 +48,7 @@ export async function embedUserMemory(text: string): Promise<number[]> {
  * 后续可由补偿任务回填。返回插入行 id。
  */
 export async function storeUserMemory(opts: StoreUserMemoryInput): Promise<string> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
 
   let embedding: number[] | null = null;
   try {
@@ -80,6 +80,10 @@ export async function storeUserMemory(opts: StoreUserMemoryInput): Promise<strin
  * 检索用户经历向量（M6 读入口）。
  * 调 match_user_memories RPC（service_role），跨学科按语义相似度召回 Top-K。
  * 失败时返回空数组 —— 不阻断主对话。
+ *
+ * 冷启动说明：loadMemory 仅在「有学情或跨会话事实」（非冷启动）时才调用本函数。
+ * 冷启动用户无任何历史可检索，语义召回必然为空，因此跳过以省一次 embedding 调用 ——
+ * 这不是 bug，而是刻意省略。
  */
 export async function retrieveUserMemory(opts: {
   query: string;
@@ -97,7 +101,7 @@ export async function retrieveUserMemory(opts: {
     return [];
   }
 
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { data, error } = await supabase.rpc('match_user_memories', {
     query_embedding: `[${embedding.join(',')}]`,
     match_user_id: userId,

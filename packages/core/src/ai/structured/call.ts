@@ -68,7 +68,7 @@ export async function structuredCall<T>(opts: {
       { role: 'assistant' as const, content: raw.content },
       {
         role: 'user' as const,
-        content: `??????${formatZodError(result.error)}?????????? JSON?`,
+        content: `上一次输出未通过校验，错误：${formatZodError(result.error)}。请按 JSON schema 重新输出合法 JSON。`,
       },
     ];
 
@@ -91,7 +91,7 @@ export async function structuredCall<T>(opts: {
     } catch {
       throw new AIStructuredError(
         opts.task,
-        new ZodError([{ code: 'custom', path: ['_parse'], message: '??? AI ?????? JSON' }]),
+        new ZodError([{ code: 'custom', path: ['_parse'], message: '重试后 AI 输出仍非合法 JSON' }]),
       );
     }
 

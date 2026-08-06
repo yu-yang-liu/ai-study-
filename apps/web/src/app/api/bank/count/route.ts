@@ -1,9 +1,9 @@
-import { createServiceClient } from '@ai-study/core';
+import { getServiceClient } from '@ai-study/core';
 import { NextResponse } from 'next/server';
 
 /** Public count of high-school question bank entries (no row data exposed). */
 export async function GET() {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { count, error } = await supabase
     .from('question_bank')
     .select('*', { count: 'exact', head: true })

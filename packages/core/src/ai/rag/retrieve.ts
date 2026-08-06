@@ -1,4 +1,4 @@
-import { createServiceClient } from '../../db';
+import { getServiceClient } from '../../db';
 import { safeFetch } from '../../security';
 import type { RAGReference, RetrieveOptions } from './types';
 
@@ -61,7 +61,7 @@ export async function retrieveReferences(opts: RetrieveOptions): Promise<RAGRefe
   const embedding = await embedQuery(opts.query);
   const minScore = opts.minScore ?? 0.78;
 
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
 
   // Use pgvector match via raw SQL since match_questions is SQL function
   const { data, error } = await supabase.rpc('match_questions', {

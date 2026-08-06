@@ -3,7 +3,7 @@ export { APP_PHASE, HIGH_SUBJECTS } from './constants';
 export type { AppPhase, HighSubject } from './constants';
 
 // db
-export { createAnonClient, createServiceClient, createDrizzleClient, schema } from './db';
+export { createAnonClient, createServiceClient, getServiceClient, createDrizzleClient, schema } from './db';
 export type { SupabaseClient } from './db';
 
 // auth
@@ -31,11 +31,12 @@ export { checkRateLimit, rateLimitByKey, checkAIRateLimit, AUTH_RATE_LIMIT, AI_R
 export { seedAppContent, getContent, listContent, upsertContent, deleteContent } from './content';
 export type { ContentRecord } from './content';
 
-export { bootstrapUserRecords, persistAnalyzeResult, persistChatExchange, persistPlanResult } from './learning/persist';
+export { bootstrapUserRecords, persistAnalyzeResult, persistChatExchange, persistPlanResult, persistGradeResult } from './learning/persist';
 export { getAssistantContext } from './learning/assistant-context';
 export type { AssistantContextSnapshot } from './learning/assistant-context';
 export {
   getOrCreateConversation,
+  getOrCreateConversationRow,
   loadConversationMessages,
   listConversations,
 } from './learning/conversation';
@@ -48,6 +49,15 @@ export {
   fetchStudySnapshot,
 } from './learning/actions';
 export type { GradeResult, GradeQuestionType, WrongQuestionSummary, StudySnapshot } from './learning/actions';
+export { GRADE_PASS_RATIO } from './learning/actions';
+export { fetchStats, fetchWrongQuestionList, submitWrongQuestionReview, FetchNotFoundErr } from './learning/queries';
+export type {
+  PracticeRow,
+  SubjectStats,
+  StatsResponse,
+  WrongRow,
+  WrongQuestionItem,
+} from './learning/types';
 export {
   updateKnowledgeMastery,
   masteryDelta,

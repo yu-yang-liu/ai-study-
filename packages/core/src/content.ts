@@ -1,4 +1,4 @@
-import { createServiceClient } from './db';
+import { getServiceClient } from './db';
 import { requireAdmin } from './auth';
 import { APP_PHASE, HIGH_SUBJECTS } from './constants';
 
@@ -15,7 +15,7 @@ export interface ContentRecord {
  * Lists all content records for the high-school phase (public read).
  */
 export async function listContent(phase: typeof APP_PHASE = APP_PHASE): Promise<ContentRecord[]> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { data, error } = await supabase
     .from('app_content')
     .select('*')
@@ -31,7 +31,7 @@ export async function getContent(
   contentType: string,
   phase: typeof APP_PHASE = APP_PHASE,
 ): Promise<ContentRecord | null> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { data, error } = await supabase
     .from('app_content')
     .select('*')
@@ -50,7 +50,7 @@ export async function upsertContent(
 ): Promise<ContentRecord> {
   requireAdmin(adminEmail);
 
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { data, error } = await supabase
     .from('app_content')
     .upsert(
@@ -73,7 +73,7 @@ export async function upsertContent(
 export async function deleteContent(adminEmail: string, id: string): Promise<void> {
   requireAdmin(adminEmail);
 
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { error } = await supabase.from('app_content').delete().eq('id', id);
 
   if (error) throw new Error(`deleteContent failed: ${error.message}`);
@@ -86,7 +86,7 @@ const CONTENT_TYPES = ['system_prompt', 'exam_info', 'knowledge_tree', 'sample_q
 export async function seedAppContent(adminEmail: string): Promise<void> {
   requireAdmin(adminEmail);
 
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
 
   for (const subject of SUBJECTS) {
     for (const ct of CONTENT_TYPES) {

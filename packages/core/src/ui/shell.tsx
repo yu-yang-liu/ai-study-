@@ -13,7 +13,7 @@ const DEFAULT_ITEMS = [
   { href: '/analyze', label: '\u8bd5\u9898\u5206\u6790' },
   { href: '/upload', label: '\u62cd\u7167\u4e0a\u4f20' },
   { href: '/grade', label: '\u667a\u80fd\u6279\u6539' },
-  { href: '/chat', label: 'AI \u5bf9\u8bdd' },
+  { href: '/chat', label: 'AI \u5b66\u4e60\u52a9\u624b' },
   { href: '/plan', label: '\u5b66\u4e60\u8ba1\u5212' },
   { href: '/wrong-questions', label: '\u9519\u9898\u590d\u4e60' },
   { href: '/stats', label: '\u5b66\u4e60\u7edf\u8ba1' },

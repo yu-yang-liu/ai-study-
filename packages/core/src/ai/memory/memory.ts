@@ -1,4 +1,4 @@
-import { createServiceClient } from '../../db';
+import { getServiceClient } from '../../db';
 import { getOrCreateConversation, loadConversationMessages } from '../../learning/conversation';
 import { getAssistantContext } from '../../learning/assistant-context';
 import { persistChatExchange } from '../../learning/persist';
@@ -26,7 +26,7 @@ import { retrieveUserMemory } from './episodic';
 async function getConversationSummary(
   conversationId: string,
 ): Promise<{ summary: string; summaryUpTo: string } | null> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { data } = await supabase
     .from('conversation_summaries')
     .select('summary, summary_up_to')
@@ -47,7 +47,7 @@ async function upsertConversationSummary(
   summaryUpTo: string,
   messageCount: number,
 ): Promise<void> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   await supabase.from('conversation_summaries').upsert(
     {
       conversation_id: conversationId,
@@ -63,7 +63,7 @@ async function upsertConversationSummary(
 
 /** 取会话消息总数。 */
 async function countConversationMessages(conversationId: string): Promise<number> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const { count } = await supabase
     .from('conversation_messages')
     .select('id', { count: 'exact', head: true })
@@ -78,7 +78,7 @@ async function loadUnsummarizedOlderMessages(
   summaryUpTo: string | null,
   rawWindow: number,
 ): Promise<ConversationMessage[]> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   // 取除最近 rawWindow 条之外的全部消息（即更早的），按时间倒序取再 reverse
   let query = supabase
     .from('conversation_messages')

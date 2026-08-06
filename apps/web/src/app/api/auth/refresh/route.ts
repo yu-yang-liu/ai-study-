@@ -1,4 +1,4 @@
-import { createAnonClient } from '@ai-study/core';
+import { createAnonClient, AUTH_RATE_LIMIT, checkRateLimit } from '@ai-study/core';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -6,9 +6,27 @@ const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
 
+function getClientIp(request: Request): string {
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+}
+
 /** Supabase session refresh for mobile clients (iOS). */
 export async function POST(request: Request) {
-  const body = await request.json();
+  const ip = getClientIp(request);
+  const rl = await checkRateLimit(`auth:refresh:${ip}`, AUTH_RATE_LIMIT.maxRequests, AUTH_RATE_LIMIT.windowMs);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: '请求过于频繁，请稍后再试' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.retryAfterMs ?? 1000) / 1000)) } },
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
   const parsed = refreshSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

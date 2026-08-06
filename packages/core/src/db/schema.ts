@@ -303,7 +303,9 @@ export const userMemoryFacts = pgTable(
     value: text('value').notNull(),
     category: text('category'),
     sourceConversationId: uuid('source_conversation_id'),
-    phase: phaseEnum('phase').notNull().default('high'),
+    // 注：迁移 0002_user_memory_facts.sql 建为 `phase text not null default 'high'`（纯文本列），
+    // 而非 phase_type enum。此处刻意用 text() 与迁移对齐，避免类型漂移。
+    phase: text('phase').notNull().default('high'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -319,7 +321,9 @@ export const userMemories = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     userId: uuid('user_id').notNull(),
-    phase: phaseEnum('phase').notNull().default('high'),
+    // 注：迁移 0003_user_memories.sql 建为 `phase text not null default 'high'`（纯文本列），
+    // 而非 phase_type enum。此处刻意用 text() 与迁移对齐，避免类型漂移。
+    phase: text('phase').notNull().default('high'),
     source: text('source').notNull(),
     subject: text('subject'),
     content: text('content').notNull(),

@@ -330,11 +330,11 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | 3 | Chat 内不支持图片 OCR（需走 upload 页） |
 | 4 | 无 DeepSeek native `tool_calls`（当前 JSON 意图方案够用但可迭代） |
 | 5 | 无后台主动推送教练 |
-| 6 | `learning_events` 中 `practice` 类型尚无写入 |
+| 6 | `learning_events` 中 `practice` 类型尚无写入（待真题演练功能实现后接入） |
 | 7 | 统计/dashboard 算法与可视化仍偏基础 |
 | 8 | iOS `真题演练` 占位；`FeatureFlags.isLearnerProfileEnabled` 未接 |
 
-### P1 — Agent Memory 六项（未实现，详见 [AGENT_MEMORY.md](./AGENT_MEMORY.md)）
+### P1 — Agent Memory 六项（已实现，详见 [AGENT_MEMORY.md](./AGENT_MEMORY.md)）
 
 | # | 能力 | 现状 |
 |---|------|------|
@@ -352,7 +352,6 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | # | 问题 |
 |---|------|
 | 9 | DB `phase_type` 去掉 `middle`（需迁移） |
-| 10 | 部分 prompt/错误信息仍有 UTF-8 历史损坏 |
 | 11 | Web 导航仍写「AI 对话」而非「AI 学习助手」 |
 
 ### 已解决（勿重复修）
@@ -433,7 +432,7 @@ POST /api/chat
 | 阶段 | 用户意图 | 结论/行动 |
 |------|----------|-----------|
 | check | 检查项目状态 | tsc/vitest 通过；对齐工作正常 |
-| 完善度 | 整体完成度 | 可演示 ~60%，可上线 ~35%；最大 gap 是数据闭环 |
+| 完善度 | 整体完成度 | 可演示 ~75%，可上线 ~45%；最大 gap 是数据闭环 |
 | 强化对齐 | 修不一致与断裂 | 错题/统计/批改落库、middleware、编码、CI、README |
 | 数据闭环 | P0/P1 批量修复 | 鉴权、持久化、mastery、iOS 功能对等、S3 |
 | Chat Agent | 增强 AI 对话 | 多轮+学情+tool-calling；Web/iOS 主入口升级 |
@@ -464,6 +463,18 @@ POST /api/chat
 - [x] **对话历史**：`GET /api/chat/history` + Web/iOS 同步
 - [x] **Actions 抽取**：`executeAnalyze` / `executeGrade` / `executePlan`
 - [x] **UI**：Chat 快捷 chip、action 卡片、Dashboard/Web 主 CTA
+- [x] **Web 导航文案**：统一为「AI 学习助手」
+- [x] **UTF-8 历史损坏修复**：`AIStructuredError` 信息、`structuredCall` 重试提示、`db/index.ts` 注释
+- [x] **错误处理对齐**：`persist.ts` 各 insert 检查 error；grade/plan 路由补 `AIStructuredError → 422`；多处 `request.json()` 补 try/catch
+- [x] **`/api/auth/refresh` 限流**：补 IP 维度限流
+- [x] **代码评审整改（第三阶段）**：
+  - service-role client 单例化（`getServiceClient`），anon client 仍按请求新建
+  - `ChatAction` 改判别联合（`{ type; payload }`），移除 `as unknown as Record<string, unknown>`；删除 `runChatAgent` 冗余二次 `chatAgentOutput.parse`
+  - grade 及格阈值常量化（`GRADE_PASS_RATIO = 0.6`）
+  - `persistGradeResult` 迁入 `persist.ts`；stats / wrong-questions 路由查询下沉 `learning/queries.ts`；共享类型抽至 `learning/types.ts`
+  - `getOrCreateConversationRow` 返回真实 `updated_at`（修正冷启动伪时间戳）
+  - upload key 改用 `crypto.randomUUID()`；`assistant-context` 检索补 `limit(50)`
+  - schema `userMemoryFacts/userMemories.phase` 由 `phaseEnum` 改 `text`，与迁移 0002/0003 对齐（零迁移）
 
 ### 未完成
 
@@ -471,7 +482,6 @@ POST /api/chat
 - [ ] 部署指南 / 运维文档
 - [ ] 题库/RAG 大规模 seed
 - [ ] Chat 内图片 OCR（v2）
-- [ ] Web 导航文案统一为「AI 学习助手」
 
 ### Agent Memory 六项（[AGENT_MEMORY.md](./AGENT_MEMORY.md) §3）
 
@@ -484,4 +494,4 @@ POST /api/chat
 
 ---
 
-*文档版本：2026-08-06 · 对应当前工作区代码状态（M1–M6 全部已落地）*
+*文档版本：2026-08-06 · 对应当前工作区代码状态（M1–M6 全部已落地，第三阶段评审整改已完成：tsc 双包通过、vitest 74/74）*

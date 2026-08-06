@@ -45,7 +45,8 @@ export async function POST(request: Request) {
 
   const { contentType } = parsed.data;
   const ext = extForType(contentType);
-  const key = `users/${user.id}/ocr/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  // 用 crypto.randomUUID 保证 key 全局唯一，避免 Math.random 的碰撞/可预测风险。
+  const key = `users/${user.id}/ocr/${Date.now()}_${crypto.randomUUID()}.${ext}`;
 
   try {
     const presigned = await createPresignedUploadUrl(user.id, key, contentType);

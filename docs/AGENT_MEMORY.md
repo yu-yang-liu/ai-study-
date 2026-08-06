@@ -8,12 +8,12 @@
 
 ## 1. 概念界定
 
-本项目 **没有** 独立的 `AgentMemory` 模块（待建设 M1）。当前「记忆效果」由以下机制叠加实现：
+本项目的 Agent Memory 已有独立模块（`packages/core/src/ai/memory/`，M1–M6 全部已落地）。当前「记忆效果」由以下机制叠加实现：
 
 | 层级 | 类型 | 实现 | 状态 |
 |------|------|------|------|
 | L1 | 对话记忆（短期） | `conversations` + `conversation_messages`，最近 20 条 | ✅ 已实现 |
-| L2 | 学情记忆（长期结构化） | `getLearnerContext` + `getAssistantContext` 注入 system prompt | ✅ 已实现 |
+| L2 | 学情记忆（长期结构化） | `getAssistantContext` 注入 system prompt（内部聚合 `getLearnerContext` 等） | ✅ 已实现 |
 | L3 | 工具副作用 | `runChatAgent` 工具写 DB（plan/analyze/grade/错题） | ✅ 已实现 |
 | L4 | 专用 Agent Memory | `packages/core/src/ai/memory/`（M1–M6 全部已落地） | ✅ 已实现 |
 
@@ -63,12 +63,13 @@ POST /api/chat
 - `conversation_messages` — 单轮 user/assistant 消息
 - `user_profiles`、`knowledge_mastery`、`learning_events` — 学情画像
 - `study_plans`、`wrong_questions`、`practice_records` — Assistant 快照数据源
+- `question_bank` — 平台共享题库，经 **service client**（绕 RLS）读取，供批改/analyze RAG 参考；**非**用户 Agent Memory，亦不依赖 RLS
 
 ---
 
-## 3. 六项待建设能力（Agent Memory 路线图）
+## 3. 六项已实现能力（Agent Memory 路线图）
 
-以下六项 **均未实现**，实施前须先读本文档与 `schema.ts`，避免与现有 L1–L3 重复造轮子。
+以下六项均已实现。实施前仍须先读本文档与 `schema.ts`，避免与现有 L1–L3 重复造轮子。
 
 ### M1 独立 `AgentMemory` 抽象/模块 ✅ 已实现
 

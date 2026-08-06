@@ -4,12 +4,18 @@ import { TASK_SCHEMA } from '../ai/structured/schemas';
 import { retrieveReferences } from '../ai/rag';
 import { getLearnerContext } from '../ai/learner/context';
 import type { AnalyzeOutput, GradeMathOutput, GradeEssayOutput, PlanOutput } from '../ai/structured/schemas';
-import { createServiceClient } from '../db';
+import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
-import { persistAnalyzeResult, persistPlanResult } from './persist';
-import { updateKnowledgeMastery } from './mastery';
+import { persistAnalyzeResult, persistPlanResult, persistGradeResult } from './persist';
 
 export type GradeQuestionType = 'math' | 'essay';
+
+/**
+ * 批改兜底判定阈值：当 AI 未显式返回 isCorrect 时，按得分率 ≥ 此值判定为正确。
+ * 影响是否写入 wrong_questions 与 SM-2 复习链路。
+ * 注：此为「及格即掌握」的简化口径；后续若需按题型/学科细分，可改造为映射表。
+ */
+export const GRADE_PASS_RATIO = 0.6;
 
 export type GradeResult = {
   score: number;
@@ -28,93 +34,6 @@ export interface StudySnapshot {
   practiceCount7d: number;
   accuracy7d: number;
   wrongQuestionCount: number;
-}
-
-async function persistGradeResult(
-  userId: string,
-  subject: string,
-  questionType: GradeQuestionType,
-  questionContent: string,
-  studentAnswer: string,
-  result: GradeResult,
-  isCorrect: boolean,
-): Promise<void> {
-  const supabase = createServiceClient();
-
-  const { data: question, error: qErr } = await supabase
-    .from('questions')
-    .insert({
-      user_id: userId,
-      phase: APP_PHASE,
-      subject,
-      content: questionContent,
-      source: 'grade',
-    })
-    .select('id')
-    .single();
-
-  if (qErr || !question) {
-    throw new Error(`grade questions insert: ${qErr?.message ?? 'no row'}`);
-  }
-
-  const { error: prErr } = await supabase.from('practice_records').insert({
-    user_id: userId,
-    phase: APP_PHASE,
-    question_id: question.id,
-    is_correct: isCorrect,
-    score: result.score,
-    max_score: result.maxScore,
-    user_answer: studentAnswer,
-    ai_feedback: result.summary,
-  });
-  if (prErr) throw new Error(`grade practice_records insert: ${prErr.message}`);
-
-  const { error: qaErr } = await supabase.from('question_analysis').insert({
-    user_id: userId,
-    phase: APP_PHASE,
-    question_id: question.id,
-    subject,
-    question_type: questionType === 'math' ? '\u8ba1\u7b97\u9898' : '\u4f5c\u6587',
-    knowledge_points: [],
-    analysis: result.summary,
-  });
-  if (qaErr) throw new Error(`grade question_analysis insert: ${qaErr.message}`);
-
-  if (!isCorrect) {
-    const { data: existing } = await supabase
-      .from('wrong_questions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('question_id', question.id)
-      .eq('mastered', false)
-      .maybeSingle();
-
-    if (!existing) {
-      const { error: wqErr } = await supabase.from('wrong_questions').insert({
-        user_id: userId,
-        phase: APP_PHASE,
-        question_id: question.id,
-        knowledge_points: [],
-        review_count: 0,
-        ease_factor: 2.5,
-        interval_days: 1,
-      });
-      if (wqErr) throw new Error(`grade wrong_questions insert: ${wqErr.message}`);
-    }
-  }
-
-  const { error: evErr } = await supabase.from('learning_events').insert({
-    user_id: userId,
-    phase: APP_PHASE,
-    type: 'grade',
-    subject,
-    is_correct: isCorrect,
-    score: result.score,
-    max_score: result.maxScore,
-  });
-  if (evErr) throw new Error(`grade learning_events insert: ${evErr.message}`);
-
-  await updateKnowledgeMastery(userId, subject, [], isCorrect ? 'correct' : 'incorrect');
 }
 
 export async function executeAnalyze(opts: {
@@ -192,7 +111,7 @@ export async function executeGrade(opts: {
     steps: 'steps' in result ? result.steps : undefined,
   };
 
-  const isCorrect = gradeResult.isCorrect ?? gradeResult.score >= gradeResult.maxScore * 0.6;
+  const isCorrect = gradeResult.isCorrect ?? gradeResult.score >= gradeResult.maxScore * GRADE_PASS_RATIO;
 
   try {
     await persistGradeResult(userId, subject, questionType, questionContent, studentAnswer, gradeResult, isCorrect);
@@ -241,7 +160,7 @@ export async function executePlan(opts: {
 }
 
 export async function fetchWrongQuestionSummary(userId: string, limit = 5): Promise<WrongQuestionSummary> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
 
   const { count } = await supabase
     .from('wrong_questions')
@@ -273,7 +192,7 @@ export async function fetchWrongQuestionSummary(userId: string, limit = 5): Prom
 }
 
 export async function fetchStudySnapshot(userId: string): Promise<StudySnapshot> {
-  const supabase = createServiceClient();
+  const supabase = getServiceClient();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [practiceRes, wrongCountRes] = await Promise.all([
