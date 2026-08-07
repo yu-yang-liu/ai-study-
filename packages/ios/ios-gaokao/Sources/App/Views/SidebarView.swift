@@ -19,7 +19,7 @@ enum SidebarItem: String, Identifiable, CaseIterable {
     var title: String {
         switch self {
         case .dashboard:       return "\u4eea\u8868\u76d8"
-        case .chat:            return "AI \u5bf9\u8bdd"
+        case .chat:            return "AI \u5b66\u4e60\u52a9\u624b"
         case .analyze:         return "\u9898\u76ee\u5206\u6790"
         case .upload:          return "\u62cd\u7167\u5206\u6790"
         case .grade:           return "\u4f5c\u4e1a\u6279\u6539"

@@ -145,7 +145,7 @@ struct DashboardView: View {
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 if FeatureFlags.isChatEnabled {
-                    toolButton(.chat, icon: "text.bubble.fill", title: "AI \u5bf9\u8bdd", subtitle: "\u81ea\u7531\u4ea4\u6d41\u7b54\u7591")
+                    toolButton(.chat, icon: "text.bubble.fill", title: "AI \u5b66\u4e60\u52a9\u624b", subtitle: "\u81ea\u7531\u4ea4\u6d41\u7b54\u7591")
                 }
 
                 if FeatureFlags.isAnalyzeEnabled {

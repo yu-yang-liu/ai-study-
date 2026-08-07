@@ -1,16 +1,19 @@
 import SwiftUI
+import PhotosUI
 import CoreKit
 import ApiContracts
+import UIKit
 
 struct ChatView: View {
     @StateObject var viewModel: ChatViewModel
+    @State private var pickerItem: PhotosPickerItem?
 
     var body: some View {
         VStack(spacing: 0) {
             if viewModel.isOffline {
                 HStack(spacing: 6) {
                     Image(systemName: "wifi.slash").font(.caption)
-                    Text("\u7f51\u7edc\u8fde\u63a5\u4e0d\u53ef\u7528\uff0c\u6b63\u5728\u663e\u793a\u672c\u5730\u6570\u636e").font(.caption)
+                    Text("网络连接不可用，正在显示本地数据").font(.caption)
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
@@ -21,10 +24,13 @@ struct ChatView: View {
             messageList
             inputBar
         }
-        .navigationTitle("AI \u5b66\u4e60\u52a9\u624b")
+        .navigationTitle("AI 学习助手")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: viewModel.selectedSubject) { _, _ in
             Task { await viewModel.loadHistory() }
+        }
+        .onChange(of: pickerItem) { _, newItem in
+            Task { await loadPickerItem(newItem) }
         }
     }
 
@@ -44,7 +50,7 @@ struct ChatView: View {
     }
 
     private var messageList: some View {
-        LoadingStateView(state: viewModel.messages, emptyMessage: "\u5f00\u59cb\u548c AI \u5b66\u4e60\u52a9\u624b\u804a\u804a\u5427\uff01") { messages in
+        LoadingStateView(state: viewModel.messages, emptyMessage: "开始和 AI 学习助手聊聊吧！") { messages in
             ScrollViewReader { proxy in
                 List {
                     if messages.isEmpty {
@@ -70,6 +76,13 @@ struct ChatView: View {
                             if let action = message.action, message.role == .assistant {
                                 ChatActionCard(action: action)
                             }
+                            // 助手消息附带的图片分析结果，复用既有 AnalysisResultView
+                            if let result = message.analyzeResult, message.role == .assistant {
+                                AnalysisResultView(result: result)
+                                    .padding(8)
+                                    .background(Color(.systemGray6))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
                         }
                         .listRowSeparator(.hidden)
                         .id(message.id)
@@ -86,20 +99,73 @@ struct ChatView: View {
     }
 
     private var inputBar: some View {
-        HStack(spacing: 10) {
-            TextField("\u8f93\u5165\u4f60\u7684\u95ee\u9898...", text: $viewModel.inputText, axis: .vertical)
-                .lineLimit(1...4).textFieldStyle(.roundedBorder)
-            Button {
-                Task { await viewModel.sendMessage() }
-            } label: {
-                if viewModel.isSending {
-                    ProgressView().tint(.white).frame(width: 24, height: 24)
-                } else {
-                    Image(systemName: "arrow.up.circle.fill").font(.title2)
-                }
+        VStack(spacing: 0) {
+            // 待发送图片预览
+            if let image = viewModel.pendingImagePreview {
+                pendingImagePreviewBar(image: image)
             }
-            .disabled(viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSending)
-        }.padding(.horizontal).padding(.vertical, 8).background(.thinMaterial)
+            HStack(spacing: 10) {
+                PhotosPicker(selection: $pickerItem, matching: .images) {
+                    Image(systemName: "photo.fill")
+                        .font(.title3)
+                        .foregroundStyle(viewModel.pendingImageData == nil ? .accentColor : .secondary)
+                }
+                .disabled(viewModel.isSending)
+
+                TextField("输入你的问题...", text: $viewModel.inputText, axis: .vertical)
+                    .lineLimit(1...4).textFieldStyle(.roundedBorder)
+
+                Button {
+                    Task { await viewModel.sendMessage() }
+                } label: {
+                    if viewModel.isSending {
+                        ProgressView().tint(.white).frame(width: 24, height: 24)
+                    } else {
+                        Image(systemName: "arrow.up.circle.fill").font(.title2)
+                    }
+                }
+                .disabled(!viewModel.canSend)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+        }
+        .background(.thinMaterial)
+    }
+
+    /// 待发送图片的预览条：缩略图 + 说明输入框（可选）+ 移除按钮
+    private func pendingImagePreviewBar(image: UIImage) -> some View {
+        HStack(spacing: 10) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            TextField("为图片添加说明（可选）", text: $viewModel.inputText, axis: .vertical)
+                .font(.caption)
+                .lineLimit(1...2)
+
+            Spacer()
+
+            Button {
+                viewModel.clearPendingImage()
+                pickerItem = nil
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
+                    .font(.title3)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 6)
+        .background(Color(.systemGray6).opacity(0.5))
+    }
+
+    private func loadPickerItem(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        if let data = try? await item.loadTransferable(type: Data.self) {
+            viewModel.setPendingImage(data)
+        }
     }
 }
 
@@ -110,15 +176,25 @@ struct MessageBubble: View {
         HStack(alignment: .top, spacing: 8) {
             if isUser { Spacer(minLength: 60) }
             VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
-                Text(isUser ? "\u4f60" : "AI\u8001\u5e08").font(.caption2).foregroundStyle(.secondary)
-                if isUser {
-                    Text(message.content).font(.body).padding(10)
-                        .background(Color.accentColor.opacity(0.15))
+                Text(isUser ? "你" : "AI老师").font(.caption2).foregroundStyle(.secondary)
+                // 用户消息附带图片：先展示图片，再展示文字（若有）
+                if let data = message.imagePreview, let uiImage = UIImage(data: data) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 220, maxHeight: 220)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else {
-                    MarkdownRenderer(message.content).padding(10)
-                        .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                if !message.content.isEmpty {
+                    if isUser {
+                        Text(message.content).font(.body).padding(10)
+                            .background(Color.accentColor.opacity(0.15))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    } else {
+                        MarkdownRenderer(message.content).padding(10)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
                 }
             }
             if !isUser { Spacer(minLength: 60) }
@@ -134,28 +210,28 @@ struct ChatActionCard: View {
             switch action.type {
             case "plan":
                 if let title = action.payload["title"]?.stringValue {
-                    Text("\u5b66\u4e60\u8ba1\u5212\uff1a\(title)").font(.caption).fontWeight(.semibold)
+                    Text("学习计划：\(title)").font(.caption).fontWeight(.semibold)
                 }
                 if let tasks = action.payload["tasks"]?.arrayValue {
                     ForEach(Array(tasks.prefix(3).enumerated()), id: \.offset) { _, task in
                         if let obj = task.objectValue,
                            let t = obj["title"]?.stringValue,
                            let s = obj["subject"]?.stringValue {
-                            Text("\u2022 \(t) (\(s))").font(.caption2)
+                            Text("• \(t) (\(s))").font(.caption2)
                         }
                     }
                 }
             case "grade":
                 if let score = action.payload["score"]?.doubleValue,
                    let maxScore = action.payload["maxScore"]?.doubleValue {
-                    Text("\u6279\u6539\u7ed3\u679c\uff1a\(Int(score))/\(Int(maxScore))").font(.caption).fontWeight(.semibold)
+                    Text("批改结果：\(Int(score))/\(Int(maxScore))").font(.caption).fontWeight(.semibold)
                 }
                 if let summary = action.payload["summary"]?.stringValue {
                     Text(summary).font(.caption2)
                 }
             case "wrong_questions":
                 if let total = action.payload["total"]?.doubleValue {
-                    Text("\u9519\u9898\u6458\u8981\uff1a\u5171 \(Int(total)) \u9898").font(.caption).fontWeight(.semibold)
+                    Text("错题摘要：共 \(Int(total)) 题").font(.caption).fontWeight(.semibold)
                 }
             default:
                 EmptyView()

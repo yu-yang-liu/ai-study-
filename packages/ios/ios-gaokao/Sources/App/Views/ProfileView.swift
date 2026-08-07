@@ -98,6 +98,17 @@ struct ProfileView: View {
                 Text("界面主题")
             }
 
+            // MARK: - 学习画像（FeatureFlag 控制，未开启时占位）
+            Section {
+                learnerProfileEntry
+            } header: {
+                Text("学习画像")
+            } footer: {
+                Text(FeatureFlags.isLearnerProfileEnabled
+                     ? "基于你的练习、错题与计划生成的学情快照"
+                     : "该功能正在开发中，敬请期待")
+            }
+
             // MARK: - 账户信息
             Section {
                 LabeledContent("用户 ID", value: authManager.currentUser?.id ?? "未登录")
@@ -140,6 +151,45 @@ struct ProfileView: View {
         .task {
             await viewModel.loadSettings()
         }
+    }
+
+    // MARK: - 学习画像入口
+
+    /// 受 FeatureFlags.isLearnerProfileEnabled 控制：
+    /// - 开启：跳转学习画像（后续版本接入学情快照端点）
+    /// - 未开启（当前默认）：展示「敬请期待」占位，不造数据
+    private var learnerProfileEntry: some View {
+        if FeatureFlags.isLearnerProfileEnabled {
+            // 预留：后续接入学情快照端点后，此处导航到 LearnerProfileView
+            NavigationLink {
+                learnerProfilePlaceholder(label: "学习画像")
+            } label: {
+                Label("查看学习画像", systemImage: "chart.bar.doc.horizontal")
+            }
+        } else {
+            Label("学习画像（敬请期待）", systemImage: "chart.bar.doc.horizontal")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// 学习画像占位视图（flag 未开启时统一兜底）
+    private func learnerProfilePlaceholder(label: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "chart.bar.doc.horizontal")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            Text("\(label)功能即将上线")
+                .font(.headline)
+            Text("我们正在基于你的练习、错题与计划数据生成个性化学情画像，敬请期待。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle(label)
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     // MARK: - 头像
