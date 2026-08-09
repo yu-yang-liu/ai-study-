@@ -98,7 +98,6 @@ jobs:
               -target ios-gaokao \
               -configuration Debug \
               -sdk iphonesimulator \
-              -derivedDataPath DerivedData \
               CODE_SIGNING_ALLOWED=NO; } 2>&1 | tee /tmp/app-build.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
