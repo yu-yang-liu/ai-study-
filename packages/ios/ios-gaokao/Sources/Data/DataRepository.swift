@@ -7,7 +7,7 @@ import CoreKit
 @ModelActor
 public actor DataRepository {
     /// 当前学段（从 AppEnvironment 读取）
-    private let phase: String
+    private let phase: String = AppEnvironment.phase
 
     public init(modelContainer: ModelContainer, phase: String = AppEnvironment.phase) {
         let modelContext = ModelContext(modelContainer)
