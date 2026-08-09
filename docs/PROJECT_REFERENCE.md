@@ -44,12 +44,13 @@ ai-study/
 │   ├── apicontracts/         # 纯 JVM 数据契约（@Serializable）
 │   ├── corekit/              # OkHttp/Retrofit、Bearer+refresh、配置、品牌色
 │   └── app/                  # Compose UI、ViewModel、Room 缓存
-├── .github/workflows/        # ios-ci.yml、web-ci.yml、android-ci.yml
+├── packages/visual-ast/      # Geometry AST 开源子模块（schema/validator/SVG renderer/prompt/playground，零依赖，不纳入 pnpm）
+├── .github/workflows/        # ios-ci.yml、web-ci.yml、android-ci.yml、geometry-eval.yml
 ├── docs/                     # 本文档等
 └── README.md
 ```
 
-`pnpm-workspace.yaml` 仅包含 `apps/*` 与 `packages/core`；iOS 为独立 Xcode 工程，Android 为独立 Gradle 工程，二者均不纳入 pnpm workspace。
+`pnpm-workspace.yaml` 仅包含 `apps/*` 与 `packages/core`；iOS 为独立 Xcode 工程，Android 为独立 Gradle 工程，visual-ast 为零依赖独立模块（Node 原生 type stripping 直接跑），均不纳入 pnpm workspace。
 
 ---
 
@@ -133,7 +134,7 @@ ai-study/
 | Core 共享库 | ~80% | AI/鉴权/Schema/Agent/Actions 较完整 |
 | Web 应用 | ~70% | 功能齐全，Chat Agent 串联学情 |
 | iOS 客户端 | ~75% | 与 Web API 基本对等，TestFlight 可演示 |
-| 测试 | ~25% | Core 11 个测试文件（51/51 通过） |
+| 测试 | ~25% | Core 18 个测试文件（108 passed / 2 skipped，2 个需 key） |
 | 文档/运维 | ~50% | 有 README、Web CI；仍缺部署指南 |
 | **可演示** | **~75%** | Chat Agent + 批改闭环可完整演示 |
 | **可上线** | **~45%** | 运营/题库/RAG 深度仍不足 |
@@ -156,9 +157,11 @@ ai-study/
 
 ```bash
 pnpm install
-cd packages/core && pnpm exec tsc --noEmit && pnpm exec vitest run   # 51/51
+cd packages/core && pnpm exec tsc --noEmit && pnpm exec vitest run   # 108 passed / 2 skipped
 cd apps/web && pnpm exec tsc --noEmit
 ```
+
+> 2 个跳过项为需 `DEEPSEEK_API_KEY` 的真跑测试：geometry eval 与 analyze e2e。
 
 ---
 
@@ -389,7 +392,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 2. Chat 内接 `imageUrl`（upload 后带回对话）
 3. 部署指南 + 监控
 4. DB `phase_type` 迁移（可选）
-5. **公式/几何渲染**（见 [RENDER_AST.md](./RENDER_AST.md)）：M1 公式 AST + iosMath；M2 几何 AST + Canvas
+5. **Science AST 三版本**（见 [RENDER_AST.md](./RENDER_AST.md)、[SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md)）：V1（公式 M1）与 V2（几何 M2 核心）已完成；后续为 V2 扩展（化学分子结构、立体/圆锥曲线、动态几何）与 V3 长期积累（知识图谱/学习智能，未启动）
 
 ### Agent Memory 迭代（见 [AGENT_MEMORY.md](./AGENT_MEMORY.md)）
 
@@ -404,10 +407,16 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 
 | 类别 | 路径 |
 |------|------|
+| **Science AST 三版本方案** | [docs/SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md) |
 | **公式/几何渲染方案** | [docs/RENDER_AST.md](./RENDER_AST.md) |
+| **Visual AST 子项目** | [docs/VISUAL_AST.md](./VISUAL_AST.md) |
+| **几何提示词与 Eval** | [docs/GEOMETRY_PROMPT_EVAL.md](./GEOMETRY_PROMPT_EVAL.md)、[docs/GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md) |
 | **Agent Memory 专项** | [docs/AGENT_MEMORY.md](./AGENT_MEMORY.md) |
 | 环境变量模板 | `apps/web/.env.example` |
 | DB 迁移 | `packages/core/src/db/migrations/0000_initial.sql`、`0001_conversation_summaries.sql`、`0002_user_memory_facts.sql`、`0003_user_memories.sql` |
+| Geometry AST（core schema） | `packages/core/src/ai/structured/schemas.ts` |
+| 几何提示词（权威版） | `packages/core/src/ai/prompt/geometry.ts` |
+| 几何后置 attach | `packages/core/src/learning/actions.ts` |
 | Schema | `packages/core/src/db/schema.ts` |
 | 常量/学科 | `packages/core/src/constants.ts` |
 | 鉴权 | `packages/core/src/auth/index.ts`、`apps/web/middleware.ts` |
@@ -429,7 +438,8 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | Android API 客户端 | `packages/android/corekit/src/main/kotlin/com/aistudy/corekit/net/ApiClient.kt` |
 | Android 入口 | `packages/android/app/src/main/kotlin/com/aistudy/app/MainActivity.kt` |
 | Android README | `packages/android/README.md` |
-| CI | `.github/workflows/ios-ci.yml`、`web-ci.yml`、`android-ci.yml` |
+| CI | `.github/workflows/ios-ci.yml`、`web-ci.yml`、`android-ci.yml`、`geometry-eval.yml` |
+| iOS 几何渲染 | `packages/ios/CoreKit/Sources/CoreKit/Geometry/GeometryCanvasView.swift` |
 
 ### Chat Agent 数据流
 
@@ -500,6 +510,7 @@ POST /api/chat
 - [ ] 部署指南 / 运维文档
 - [ ] 题库/RAG 大规模 seed
 - [ ] Chat 内图片 OCR（v2）
+- [ ] **V3 学习智能**：Knowledge Graph Agent + 学习状态模型 + 个性化推荐 + 智能规划（长期积累型，未启动，见 [SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md) §5）
 - [x] **公式渲染 M1**：后端 `Block[]` schema + 前端 `FormulaView`(iosMath) + `MarkdownRenderer(blocks:)`（见 [RENDER_AST.md](./RENDER_AST.md)）
 - [x] **几何渲染 M2（核心）**：Geometry AST + `GeometryCanvasView` + geometry task eval 8/8 + analyze 生产链路端到端（扩展项见 [GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md)）
 
@@ -514,4 +525,4 @@ POST /api/chat
 
 ---
 
-*文档版本：2026-08-06 · 对应当前工作区代码状态（M1–M6 全部已落地，第三阶段评审整改已完成：tsc 双包通过、vitest 74/74）*
+*文档版本：2026-08-10 · 对应当前工作区代码状态（M1–M6 全部已落地，第三阶段评审整改已完成：tsc 双包通过、vitest 108 passed / 2 skipped）*

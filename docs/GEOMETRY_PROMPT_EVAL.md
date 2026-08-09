@@ -2,7 +2,7 @@
 
 > 状态：**M-C 已完成，达标**（真跑 eval 通过率 100%，平均分 0.96）· **M-D 已完成**（analyze 生产链路端到端通过，2026-08-09）
 > 基线：2026-08-09 · 对应 [SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md) V2 剩余项
-> 关联：设计文件 §4 Visual AST、[RENDER_AST.md](./RENDER_AST.md) §3.4（提示词待补）、[VISUAL_AST.md](./VISUAL_AST.md) §4
+> 关联：设计文件 §4 Visual AST、[RENDER_AST.md](./RENDER_AST.md) §3.4（已定稿）、[VISUAL_AST.md](./VISUAL_AST.md) §4
 
 ---
 
@@ -20,7 +20,7 @@
 **确认**：几何图作为 `visual` block 出现（`{ "type": "visual", "kind": "geometry", "geometry": {...} }`），不再新增顶层 `geometryAst` 字段。
 
 - V1 已定义 `visual` block，V2 的 iOS `ContentBlock.visual(kind:geometry:)` + `GeometryCanvasView` 已能消费；
-- analyze / gradeMath / chat 的 blocks 数组天然支持，AI 自行判断"这题需不需要图"；
+- analyze / gradeMath 的 blocks 数组可承载 `visual(kind:"geometry")`（analyze 走后置 attach；gradeMath 仅 format 弱信号）；chat 链路暂未接几何（`replyBlocks` 会透传 sanitize 后的 visual block，但提示词不要求输出）；
 - RENDER_AST §3.4 的"待定项"就此关闭。
 
 ### 1.2 新增内部 `geometry` task（仅 eval / 提示词迭代用，不暴露 API）
@@ -83,7 +83,7 @@
 
 ### 3.1 人工标注用例（`packages/core/src/ai/eval/geometry-samples.ts`）
 
-首版 8 个 case（含 1 个负例）：
+首版 8 个 case（含 1 个负例）；eval v2 已扩展 09–11 等价样本（平移/旋转/缩放），共 11 例（见 [GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md) A.5）：
 
 | # | 题目 | 期望 geometry |
 |---|------|--------------|
@@ -127,7 +127,7 @@ pnpm --filter @ai-study/core eval:geometry
 
 ### 3.4 局限说明（第一版）
 
-- 坐标对比用绝对坐标 + 容差；不处理「整体平移/旋转/缩放」的几何等价（第二版再做相对几何匹配）；
+- 坐标对比：v1 用绝对坐标 + 容差；eval v2 已升级为 2D 相似变换等价匹配（平移/旋转/缩放，镜像与向量方向保持严格，见 [GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md) Phase A）；
 - `expression` 只做采样对比，不做符号等价（`(x+1)^2` vs `x^2+2x+1` 视为不等，但采样差值可接受）；
 - bounds 自动适配，不作为打分项。
 
@@ -140,7 +140,7 @@ pnpm --filter @ai-study/core eval:geometry
 - [x] **M-A**：`geometryAstSchema` / `geometryOutputSchema` + `geometry` task 注册（TASK_ROUTING/TASK_SCHEMA/TASK_INSTRUCTIONS/FORMATS）；`prompt/geometry.ts` 定稿（GEOMETRY_SYSTEM_PROMPT + GEOMETRY_BLOCK_INSTRUCTION + buildGeometryUserPrompt）；BLOCK_INSTRUCTION 已追加几何 visual block 片段。
 - [x] **M-B**：`geometry-samples.ts`（8 例含负例）+ `geometry-scoring.ts`（9 维度加权打分）+ `geometry-math.ts`（安全表达式求值）+ `geometry-eval.test.ts`（纯函数 7 例全绿 + key 驱动集成 eval）；`pnpm --filter @ai-study/core eval:geometry` 可跑。
 - [x] **M-C**：真跑 eval（DeepSeek deepseek-chat）→ **通过率 100%（8/8）**，平均分 0.96，非法输出率 0%，负例正确率 100%（无需迭代提示词）。
-- [ ] **M-D**：analyze 生产链路接入 visual block + iOS 端到端（macOS CI）。
+- [x] **M-D**：analyze 生产链路接入 visual block + iOS 端到端（macOS CI）。
 
 ### M-C 报告（2026-08-09）
 
