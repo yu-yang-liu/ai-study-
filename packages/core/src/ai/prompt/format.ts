@@ -1,4 +1,5 @@
 import type { TaskName } from '../gateway/types';
+import { GEOMETRY_BLOCK_INSTRUCTION } from './geometry';
 
 /**
  * Generates a JSON format instruction for a given task.
@@ -24,7 +25,7 @@ export function schemaToFormatInstruction(task: TaskName): string {
   "analysisBlocks": [{"type": "text", "content": "\u89e3\u6790\u6b65\u9aa4"}, {"type": "formula", "latex": "\\frac{1}{2}"}],
   "examPointsBlocks": [{"type": "text", "content": "\u8003\u70b9\u8bf4\u660e"}]
 }
-\u6ce8\uff1aanswer/analysis/examPoints \u5b57\u7b26\u4e32\u5b57\u6bb5\u7531\u540e\u7aef\u6d3e\u751f\uff0c\u6a21\u578b\u65e0\u9700\u8f93\u51fa\uff1b\u8bf7\u8f93\u51fa *Blocks \u6570\u7ec4\u3002\u6587\u5b57\u7528 {type:"text",content}\uff0c\u516c\u5f0f\u7528 {type:"formula",latex}\uff08\u7eaf LaTeX\uff0c\u4e0d\u8981 $ \u5305\u88f9\uff09\uff0c\u8868\u683c\u7528 {type:"table",headers,rows}\uff0c\u89e3\u9898\u6b65\u9aa4\u7528 {type:"steps",title,steps}\uff0c\u56fe\u793a\u5360\u4f4d\u7528 {type:"visual",kind:"placeholder"}\u3002`,
+\u6ce8\uff1aanswer/analysis/examPoints \u5b57\u7b26\u4e32\u5b57\u6bb5\u7531\u540e\u7aef\u6d3e\u751f\uff0c\u6a21\u578b\u65e0\u9700\u8f93\u51fa\uff1b\u8bf7\u8f93\u51fa *Blocks \u6570\u7ec4\u3002\u6587\u5b57\u7528 {type:"text",content}\uff0c\u516c\u5f0f\u7528 {type:"formula",latex}\uff08\u7eaf LaTeX\uff0c\u4e0d\u8981 $ \u5305\u88f9\uff09\uff0c\u8868\u683c\u7528 {type:"table",headers,rows}\uff0c\u89e3\u9898\u6b65\u9aa4\u7528 {type:"steps",title,steps}\uff0c\u56fe\u793a\u5360\u4f4d\u7528 {type:"visual",kind:"placeholder"}\u3002${GEOMETRY_BLOCK_INSTRUCTION}`,
     analyzeImg: `\u8bf7\u8f93\u51fa JSON\uff1a
 {
   "subject": "${subjects}",
@@ -34,7 +35,7 @@ export function schemaToFormatInstruction(task: TaskName): string {
   "answerBlocks": [{"type": "text", "content": "\u53c2\u8003\u7b54\u6848"}],
   "analysisBlocks": [{"type": "text", "content": "\u89e3\u6790"}, {"type": "formula", "latex": "\\frac{1}{2}"}]
 }
-\u6ce8\uff1a\u8bf7\u8f93\u51fa *Blocks \u6570\u7ec4\uff0c\u6587\u5b57\u7528 {type:"text",content}\uff0c\u516c\u5f0f\u7528 {type:"formula",latex}\uff08\u7eaf LaTeX\uff0c\u4e0d\u8981 $ \u5305\u88f9\uff09\uff0c\u8868\u683c\u7528 {type:"table",headers,rows}\uff0c\u89e3\u9898\u6b65\u9aa4\u7528 {type:"steps",title,steps}\u3002\u5b57\u7b26\u4e32\u5b57\u6bb5\u7531\u540e\u7aef\u6d3e\u751f\u3002`,
+\u6ce8\uff1a\u8bf7\u8f93\u51fa *Blocks \u6570\u7ec4\uff0c\u6587\u5b57\u7528 {type:"text",content}\uff0c\u516c\u5f0f\u7528 {type:"formula",latex}\uff08\u7eaf LaTeX\uff0c\u4e0d\u8981 $ \u5305\u88f9\uff09\uff0c\u8868\u683c\u7528 {type:"table",headers,rows}\uff0c\u89e3\u9898\u6b65\u9aa4\u7528 {type:"steps",title,steps}\u3002\u5b57\u7b26\u4e32\u5b57\u6bb5\u7531\u540e\u7aef\u6d3e\u751f\u3002${GEOMETRY_BLOCK_INSTRUCTION}`,
     gradeMath: `\u8bf7\u8f93\u51fa JSON\uff1a
 {
   "score": 85,
@@ -43,7 +44,7 @@ export function schemaToFormatInstruction(task: TaskName): string {
   "steps": [{"stepNumber": 1, "isCorrect": true, "feedbackBlocks": [{"type": "text", "content": "\u6b65\u9aa4\u8bc4\u4ef7"}, {"type": "formula", "latex": "x^2"}]}],
   "summaryBlocks": [{"type": "text", "content": "\u603b\u4f53\u8bc4\u4ef7"}]
 }
-\u6ce8\uff1a\u8bf7\u8f93\u51fa feedbackBlocks/summaryBlocks \u6570\u7ec4\uff0c\u6587\u5b57\u7528 {type:"text",content}\uff0c\u516c\u5f0f\u7528 {type:"formula",latex}\uff08\u7eaf LaTeX\uff0c\u4e0d\u8981 $ \u5305\u88f9\uff09\uff0c\u8868\u683c\u7528 {type:"table",headers,rows}\uff0c\u89e3\u9898\u6b65\u9aa4\u7528 {type:"steps",title,steps}\u3002\u5b57\u7b26\u4e32\u5b57\u6bb5\u7531\u540e\u7aef\u6d3e\u751f\u3002`,
+\u6ce8\uff1a\u8bf7\u8f93\u51fa feedbackBlocks/summaryBlocks \u6570\u7ec4\uff0c\u6587\u5b57\u7528 {type:"text",content}\uff0c\u516c\u5f0f\u7528 {type:"formula",latex}\uff08\u7eaf LaTeX\uff0c\u4e0d\u8981 $ \u5305\u88f9\uff09\uff0c\u8868\u683c\u7528 {type:"table",headers,rows}\uff0c\u89e3\u9898\u6b65\u9aa4\u7528 {type:"steps",title,steps}\u3002\u5b57\u7b26\u4e32\u5b57\u6bb5\u7531\u540e\u7aef\u6d3e\u751f\u3002${GEOMETRY_BLOCK_INSTRUCTION}`,
     gradeEssay: `\u8bf7\u8f93\u51fa JSON\uff1a
 {
   "score": 45,

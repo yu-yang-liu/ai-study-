@@ -4,7 +4,14 @@ import { TASK_SCHEMA } from '../ai/structured/schemas';
 import { blocksToPlainText, sanitizeBlocks } from '../ai/structured/blocks';
 import { retrieveReferences } from '../ai/rag';
 import { getLearnerContext } from '../ai/learner/context';
-import type { AnalyzeOutput, GradeMathOutput, GradeEssayOutput, PlanOutput, Block } from '../ai/structured/schemas';
+import type {
+  AnalyzeOutput,
+  GradeMathOutput,
+  GradeEssayOutput,
+  PlanOutput,
+  Block,
+  GeometryOutput,
+} from '../ai/structured/schemas';
 import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
 import { persistAnalyzeResult, persistPlanResult, persistGradeResult } from './persist';
@@ -23,7 +30,7 @@ export type GradeResult = {
   maxScore: number;
   isCorrect?: boolean;
   summary: string;
-  steps?: Array<{ stepNumber: number; isCorrect: boolean; feedback: string }>;
+  steps?: Array<{ stepNumber: number; isCorrect: boolean; feedback?: string }>;
   /** 公式块（M1 公式渲染）：存在时 iOS 优先渲染 blocks，缺省回退 summary string。由 executeGrade 从模型输出透传。 */
   summaryBlocks?: Block[];
   stepsBlocks?: Array<{ stepNumber: number; feedbackBlocks?: Block[] }>;
@@ -38,6 +45,44 @@ export interface StudySnapshot {
   practiceCount7d: number;
   accuracy7d: number;
   wrongQuestionCount: number;
+}
+
+/** v1 Geometry AST 覆盖的学科（化学分子结构为 graph 布局，排到扩展阶段）。 */
+const GEOMETRY_SUBJECTS = new Set(['数学', '物理']);
+
+/**
+ * M-D：analyze 后置几何检测。
+ *
+ * 用独立 `geometry` task（已验证 eval 8/8）判断题目是否需要示意图，命中则把
+ * 合法 Geometry AST 以 `visual(kind:"geometry")` block 前置进 analysisBlocks。
+ * 不直接依赖 analyze 主提示词输出图形（实测不可靠）；失败时静默降级，不影响 analyze 结果。
+ */
+export async function attachGeometryVisualBlock(opts: {
+  subject: string;
+  question: string;
+  blocks: Block[] | undefined;
+}): Promise<Block[] | undefined> {
+  if (!GEOMETRY_SUBJECTS.has(opts.subject) || !opts.question.trim()) return opts.blocks;
+  try {
+    const messages = composeMessages({
+      task: 'geometry',
+      subject: opts.subject,
+      phase: 'high',
+      userInput: opts.question,
+    });
+    const output = (await structuredCall({
+      task: 'geometry',
+      schema: TASK_SCHEMA.geometry,
+      messages,
+      phase: 'high',
+    })) as GeometryOutput;
+    if (!output.geometry) return opts.blocks;
+    const visual: Block = { type: 'visual', kind: 'geometry', geometry: output.geometry };
+    return [visual, ...(opts.blocks ?? [])];
+  } catch (err) {
+    console.warn('attachGeometryVisualBlock failed:', err);
+    return opts.blocks;
+  }
 }
 
 export async function executeAnalyze(opts: {
@@ -87,6 +132,15 @@ export async function executeAnalyze(opts: {
   }
   if (result.examPointsBlocks) {
     result.examPoints = result.examPoints ?? blocksToPlainText(result.examPointsBlocks);
+  }
+
+  // M-D：后置几何检测（仅文本题；拍照题待 OCR 文本接入后复用）。
+  if (!isImage && content?.trim()) {
+    result.analysisBlocks = await attachGeometryVisualBlock({
+      subject,
+      question: content,
+      blocks: result.analysisBlocks,
+    });
   }
 
   try {
@@ -148,7 +202,7 @@ export async function executeGrade(opts: {
   const gradeResult: GradeResult = {
     score: result.score,
     maxScore: result.maxScore,
-    summary: result.summary,
+    summary: result.summary ?? '',
     isCorrect: 'isCorrect' in result ? result.isCorrect : undefined,
     steps: 'steps' in result ? result.steps : undefined,
     // 透传 blocks 供 API 响应携带，iOS 优先渲染。
