@@ -8,7 +8,7 @@ struct StatsView: View {
     var body: some View {
         LoadingStateView(
             state: viewModel.stats,
-            emptyMessage: "\u6682\u65e0\u5b66\u4e60\u6570\u636e\uff0c\u5b8c\u6210\u7ec3\u4e60\u540e\u4f1a\u5728\u6b64\u663e\u793a",
+            emptyMessage: "\u{6682}\u{65e0}\u{5b66}\u{4e60}\u{6570}\u{636e}\u{ff0c}\u{5b8c}\u{6210}\u{7ec3}\u{4e60}\u{540e}\u{4f1a}\u{5728}\u{6b64}\u{663e}\u{793a}",
             onRetry: { Task { await viewModel.load() } }
         ) { data in
             ScrollView {
@@ -23,7 +23,7 @@ struct StatsView: View {
             }
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle("\u5b66\u4e60\u7edf\u8ba1")
+        .navigationTitle("\u{5b66}\u{4e60}\u{7edf}\u{8ba1}")
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.load() }
         .refreshable { await viewModel.load() }
@@ -31,15 +31,15 @@ struct StatsView: View {
 
     private func summaryCards(_ data: StatsResponse) -> some View {
         HStack(spacing: 12) {
-            StatCard(value: "\(data.totalQuestions)", label: "\u603b\u7ec3\u4e60\u91cf")
-            StatCard(value: "\(data.accuracy)%", label: "\u6b63\u786e\u7387")
-            StatCard(value: "\(data.avgScore)", label: "\u5747\u5206")
+            StatCard(value: "\(data.totalQuestions)", label: "\u{603b}\u{7ec3}\u{4e60}\u{91cf}")
+            StatCard(value: "\(data.accuracy)%", label: "\u{6b63}\u{786e}\u{7387}")
+            StatCard(value: "\(data.avgScore)", label: "\u{5747}\u{5206}")
         }
     }
 
     private func subjectSection(_ data: StatsResponse) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("\u5404\u79d1\u8868\u73b0")
+            Text("\u{5404}\u{79d1}\u{8868}\u{73b0}")
                 .font(.headline)
 
             ForEach(viewModel.subjects, id: \.self) { subject in
@@ -55,7 +55,7 @@ struct StatsView: View {
 
     private func recentSection(_ data: StatsResponse) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("\u6700\u8fd1\u5b66\u4e60")
+            Text("\u{6700}\u{8fd1}\u{5b66}\u{4e60}")
                 .font(.headline)
 
             VStack(spacing: 8) {
@@ -64,7 +64,7 @@ struct StatsView: View {
                         Text(day.date)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Text("\(day.count) \u6b21")
+                        Text("\(day.count) \u{6b21}")
                             .fontWeight(.medium)
                     }
                     .font(.subheadline)

@@ -70,14 +70,14 @@ struct DashboardView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
                         .foregroundStyle(.white)
-                    Text("AI \u5b66\u4e60\u52a9\u624b")
+                    Text("AI \u{5b66}\u{4e60}\u{52a9}\u{624b}")
                         .font(.headline)
                         .foregroundStyle(.white)
                 }
-                Text("\u61c2\u4f60\u7684\u5b66\u60c5\uff0c\u53ef\u5236\u5b9a\u8ba1\u5212\u3001\u67e5\u9519\u9898\u3001\u6279\u6539\u4f5c\u4e1a")
+                Text("\u{61c2}\u{4f60}\u{7684}\u{5b66}\u{60c5}\u{ff0c}\u{53ef}\u{5236}\u{5b9a}\u{8ba1}\u{5212}\u{3001}\u{67e5}\u{9519}\u{9898}\u{3001}\u{6279}\u{6539}\u{4f5c}\u{4e1a}")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.9))
-                Text("\u5f00\u59cb\u5bf9\u8bdd")
+                Text("\u{5f00}\u{59cb}\u{5bf9}\u{8bdd}")
                     .fontWeight(.bold)
                     .foregroundStyle(Color.brandPrimary)
                     .frame(maxWidth: .infinity)
@@ -139,30 +139,30 @@ struct DashboardView: View {
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 if FeatureFlags.isChatEnabled {
-                    toolButton(.chat, icon: "text.bubble.fill", title: "AI \u5b66\u4e60\u52a9\u624b", subtitle: "\u81ea\u7531\u4ea4\u6d41\u7b54\u7591", color: Color.brandPrimary)
+                    toolButton(.chat, icon: "text.bubble.fill", title: "AI \u{5b66}\u{4e60}\u{52a9}\u{624b}", subtitle: "\u{81ea}\u{7531}\u{4ea4}\u{6d41}\u{7b54}\u{7591}", color: Color.brandPrimary)
                 }
 
                 if FeatureFlags.isAnalyzeEnabled {
-                    toolButton(.analyze, icon: "doc.text.magnifyingglass", title: "\u9898\u76ee\u5206\u6790", subtitle: "\u6df1\u5ea6\u89e3\u6790\u9898\u5e72", color: SubjectTheme.math.color)
+                    toolButton(.analyze, icon: "doc.text.magnifyingglass", title: "\u{9898}\u{76ee}\u{5206}\u{6790}", subtitle: "\u{6df1}\u{5ea6}\u{89e3}\u{6790}\u{9898}\u{5e72}", color: SubjectTheme.math.color)
                 }
 
                 if FeatureFlags.isImageUploadEnabled {
-                    toolButton(.upload, icon: "camera.fill", title: "\u62cd\u7167\u5206\u6790", subtitle: "\u4e0a\u4f20\u9898\u76ee\u56fe\u7247", color: SubjectTheme.chemistry.color)
+                    toolButton(.upload, icon: "camera.fill", title: "\u{62cd}\u{7167}\u{5206}\u{6790}", subtitle: "\u{4e0a}\u{4f20}\u{9898}\u{76ee}\u{56fe}\u{7247}", color: SubjectTheme.chemistry.color)
                 }
 
                 if FeatureFlags.isGradeEnabled {
-                    toolButton(.grade, icon: "checkmark.circle.fill", title: "\u4f5c\u4e1a\u6279\u6539", subtitle: "\u667a\u80fd\u8bc4\u5206\u53cd\u9988", color: SubjectTheme.english.color)
+                    toolButton(.grade, icon: "checkmark.circle.fill", title: "\u{4f5c}\u{4e1a}\u{6279}\u{6539}", subtitle: "\u{667a}\u{80fd}\u{8bc4}\u{5206}\u{53cd}\u{9988}", color: SubjectTheme.english.color)
                 }
 
                 if FeatureFlags.isWrongQuestionsEnabled {
-                    toolButton(.wrongQuestions, icon: "xmark.circle.fill", title: "\u9519\u9898\u590d\u4e60", subtitle: "SM-2 \u95f4\u9694\u590d\u4e60", color: Color.semanticWarning)
+                    toolButton(.wrongQuestions, icon: "xmark.circle.fill", title: "\u{9519}\u{9898}\u{590d}\u{4e60}", subtitle: "SM-2 \u{95f4}\u{9694}\u{590d}\u{4e60}", color: Color.semanticWarning)
                 }
 
                 if FeatureFlags.isStatsEnabled {
-                    toolButton(.stats, icon: "chart.bar.fill", title: "\u5b66\u4e60\u7edf\u8ba1", subtitle: "\u6570\u636e\u603b\u89c8\u5206\u6790", color: SubjectTheme.physics.color)
+                    toolButton(.stats, icon: "chart.bar.fill", title: "\u{5b66}\u{4e60}\u{7edf}\u{8ba1}", subtitle: "\u{6570}\u{636e}\u{603b}\u{89c8}\u{5206}\u{6790}", color: SubjectTheme.physics.color)
                 }
 
-                toolButton(.realExam, icon: "book.pages.fill", title: "\u771f\u9898\u6f14\u7ec3", subtitle: "\u8fd1\u5341\u5e74\u771f\u9898\u5e93", color: SubjectTheme.geography.color)
+                toolButton(.realExam, icon: "book.pages.fill", title: "\u{771f}\u{9898}\u{6f14}\u{7ec3}", subtitle: "\u{8fd1}\u{5341}\u{5e74}\u{771f}\u{9898}\u{5e93}", color: SubjectTheme.geography.color)
             }
         }
     }
