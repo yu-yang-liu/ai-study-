@@ -500,7 +500,7 @@ POST /api/chat
 - [ ] 部署指南 / 运维文档
 - [ ] 题库/RAG 大规模 seed
 - [ ] Chat 内图片 OCR（v2）
-- [ ] **公式渲染 M1**：后端 `Block[]` schema + 前端 `FormulaView`(iosMath) + `MarkdownRenderer(blocks:)`（见 [RENDER_AST.md](./RENDER_AST.md)）
+- [x] **公式渲染 M1**：后端 `Block[]` schema + 前端 `FormulaView`(iosMath) + `MarkdownRenderer(blocks:)`（见 [RENDER_AST.md](./RENDER_AST.md)）
 - [ ] **几何渲染 M2**：Geometry AST + `GeometryCanvasView`（提示词待补）
 
 ### Agent Memory 六项（[AGENT_MEMORY.md](./AGENT_MEMORY.md) §3）
