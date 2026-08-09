@@ -1,6 +1,6 @@
 # 几何提示词定稿与 Eval 准确率方案
 
-> 状态：**M-A/M-B 已完成**（geometry schema/task/prompt 定稿 + eval 基建；M-C 真跑 eval 待 key）
+> 状态：**M-C 已完成，达标**（真跑 eval 通过率 100%，平均分 0.96）
 > 基线：2026-08-09 · 对应 [SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md) V2 剩余项
 > 关联：设计文件 §4 Visual AST、[RENDER_AST.md](./RENDER_AST.md) §3.4（提示词待补）、[VISUAL_AST.md](./VISUAL_AST.md) §4
 
@@ -139,8 +139,22 @@ pnpm --filter @ai-study/core eval:geometry
 
 - [x] **M-A**：`geometryAstSchema` / `geometryOutputSchema` + `geometry` task 注册（TASK_ROUTING/TASK_SCHEMA/TASK_INSTRUCTIONS/FORMATS）；`prompt/geometry.ts` 定稿（GEOMETRY_SYSTEM_PROMPT + GEOMETRY_BLOCK_INSTRUCTION + buildGeometryUserPrompt）；BLOCK_INSTRUCTION 已追加几何 visual block 片段。
 - [x] **M-B**：`geometry-samples.ts`（8 例含负例）+ `geometry-scoring.ts`（9 维度加权打分）+ `geometry-math.ts`（安全表达式求值）+ `geometry-eval.test.ts`（纯函数 7 例全绿 + key 驱动集成 eval）；`pnpm --filter @ai-study/core eval:geometry` 可跑。
-- [ ] **M-C**：真跑 eval（需 DeepSeek API key）→ 迭代提示词 → 达标报告。
+- [x] **M-C**：真跑 eval（DeepSeek deepseek-chat）→ **通过率 100%（8/8）**，平均分 0.96，非法输出率 0%，负例正确率 100%（无需迭代提示词）。
 - [ ] **M-D**：analyze 生产链路接入 visual block + iOS 端到端（macOS CI）。
+
+### M-C 报告（2026-08-09）
+
+| case | overall |
+|------|---------|
+| geometry-01 triangle-angle | 1.00 |
+| geometry-02 coordinate-parabola | 0.97 |
+| geometry-03 circle-inscribed | 0.87 |
+| geometry-04 force-diagram | 0.88 |
+| geometry-05 right-triangle | 1.00 |
+| geometry-06 linear-function | 1.00 |
+| geometry-07 no-figure（负例） | 1.00 |
+| geometry-08 altitude | 0.99 |
+| **通过率 / 平均分** | **100% / 0.96** |
 
 | 步骤 | 内容 | 可本地验证（无 key） |
 |------|------|---------------------|

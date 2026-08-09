@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { composeMessages } from '../prompt';
 import { structuredCall } from '../structured/call';
 import { TASK_SCHEMA, type GeometryOutput } from '../structured/schemas';
+import { registerProvider } from '../gateway/registry';
+import { createDeepSeekProvider } from '../providers/deepseek';
 import {
   geometryCasePassed,
   geometryOverallScore,
@@ -104,6 +106,7 @@ describe('geometry-scoring 纯函数', () => {
 // 真跑 LLM eval：需要 DEEPSEEK_API_KEY；缺省跳过。
 describe.skipIf(!process.env.DEEPSEEK_API_KEY)('geometry eval（需 key）', () => {
   it('运行全部样本并报告准确率', async () => {
+    registerProvider(createDeepSeekProvider());
     const results: Array<{ id: string; overall: number; dimensions: Record<string, number> }> = [];
     for (const sample of geometrySamples) {
       const messages = composeMessages({
@@ -132,5 +135,5 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)('geometry eval（需 key）', () 
     // eslint-disable-next-line no-console
     console.log(`geometry eval 通过率：${(rate * 100).toFixed(0)}% (${passed}/${results.length})`);
     expect(rate).toBeGreaterThanOrEqual(0.8);
-  });
+  }, 600_000);
 });
