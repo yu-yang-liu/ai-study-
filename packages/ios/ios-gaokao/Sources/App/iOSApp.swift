@@ -62,7 +62,7 @@ struct AILearningApp: App {
 @MainActor
 final class AppCoordinator: ObservableObject {
     @Published var isAuthenticated = false
-    let authManager: AuthManager
+    lazy var authManager: AuthManager = AuthManager(apiClient: apiClient, tokenStorage: tokenStorage)
     let apiClient: APIClient
     let dataRepository: DataRepository
     let networkMonitor: NetworkMonitor
@@ -85,7 +85,6 @@ final class AppCoordinator: ObservableObject {
                 return await self.handleUnauthorized()
             }
         )
-        authManager = AuthManager(apiClient: apiClient, tokenStorage: tokenStorage)
         dataRepository = DataRepository(modelContainer: modelContainer)
         networkMonitor = NetworkMonitor()
         notificationManager = NotificationManager()
