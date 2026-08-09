@@ -11,7 +11,7 @@
   "scripts": {
     "ts-check": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "eval:geometry": "vitest run src/ai/eval/geometry-eval.test.ts"
+    "eval:geometry": "vitest run src/ai/eval/geometry-eval.test.ts src/ai/eval/analyze-geometry-e2e.test.ts"
   },
   "devDependencies": {
     "@types/pg": "^8.20.0",

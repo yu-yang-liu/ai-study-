@@ -1,6 +1,6 @@
 # 几何提示词定稿与 Eval 准确率方案
 
-> 状态：**M-C 已完成，达标**（真跑 eval 通过率 100%，平均分 0.96）
+> 状态：**M-C 已完成，达标**（真跑 eval 通过率 100%，平均分 0.96）· **M-D 已完成**（analyze 生产链路端到端通过，2026-08-09）
 > 基线：2026-08-09 · 对应 [SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md) V2 剩余项
 > 关联：设计文件 §4 Visual AST、[RENDER_AST.md](./RENDER_AST.md) §3.4（提示词待补）、[VISUAL_AST.md](./VISUAL_AST.md) §4
 
@@ -62,7 +62,7 @@
 | 变体 | 用途 | 输出 |
 |------|------|------|
 | `geometry` task 完整版 | eval / 提示词迭代 | `{ geometry, reason }` |
-| `GEOMETRY_BLOCK_INSTRUCTION` 片段 | analyze/gradeMath 的 BLOCK_INSTRUCTION 追加 | 需要图时在 blocks 中输出 visual block |
+| `GEOMETRY_BLOCK_INSTRUCTION` 片段 | analyze/gradeMath 的 format 指令末尾追加（弱信号） | 需要图时在 blocks 中输出 visual block；实测单独依赖不可靠，生产主路径走后置 attach |
 | `analyzeImg` 拍照场景 | 拍照题（Phase 2 后期） | 与完整版一致 |
 
 ### 2.4 错误修复循环
@@ -161,7 +161,15 @@ pnpm --filter @ai-study/core eval:geometry
 | M-A | core：`geometryAstSchema` + `geometryOutputSchema` + `geometry` task 注册 + prompt v2 定稿 + BLOCK_INSTRUCTION 片段 | ✅ schema 单测 |
 | M-B | eval 基建：`geometry-samples.ts` + `geometry-scoring.ts` + `run-geometry-eval` script | ✅ scoring/样本单测 |
 | M-C | 真跑 eval（需 DeepSeek API key）→ 迭代提示词 → 达标报告 | ❌ 需 key |
-| M-D | analyze 接入 visual block（生产链路）+ iOS 端到端（macOS CI） | ❌ 需 key + CI |
+| M-D | analyze 接入 visual block（生产链路）+ iOS 端到端（macOS CI） | ✅ 已通过（`analyze-geometry-e2e.test.ts`，真 key，2026-08-09） |
+
+### M-D 实施记录（2026-08-09）
+
+- [x] 生产链路接入方案：**独立 `geometry` task 后置检测**——analyze 完成后对数学/物理题再跑一次 `geometry` task，命中则把合法 Geometry AST 以 `visual(kind:"geometry")` block 前置进 `analysisBlocks`（`attachGeometryVisualBlock`）。analyze 主提示词只保留 format 末尾的弱信号片段（实测模型在 analyze 主任务中直接输出图形块不可靠）。
+- [x] 修复生产链路契约 bug：`analyzeOutput.analysis`、`gradeMathOutput.summary/steps[].feedback` 从必填改为可选（format 指令声明「字符串由后端派生」，模型可只输出 blocks）；persist 层兜底 `?? null`。
+- [x] 收紧 `geometryElementSchema`：按 type 判别联合、关键字段必填（`expr`/`vertices`/`from/to` 等），`scene` 禁止 `functionCurve`（函数图像必须用 `coordinateSystem`）；非法字段名触发 schema 失败 → `structuredCall` 重试纠正。
+- [x] 新增端到端测试：`analyze-geometry-e2e.test.ts`（scene 三角形 + coordinateSystem 抛物线两用例，走生产 prompt/schema/sanitize/attach 全链路）。
+- [x] 验证：完整 geometry eval 严格 schema 下 8/8 依旧达标；e2e 两用例产出合法 visual block 且根类型正确。
 
 ---
 
@@ -174,4 +182,4 @@ pnpm --filter @ai-study/core eval:geometry
 
 ---
 
-*文档版本：2026-08-09 · 待执行（M-A 可立即开始）*
+*文档版本：2026-08-09 · M-A~M-D 已完成；扩展（eval v2 相对匹配、立体/圆锥曲线节点、化学 graph 布局）见 [GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md)*
