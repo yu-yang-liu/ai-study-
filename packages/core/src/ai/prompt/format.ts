@@ -75,6 +75,12 @@ export function schemaToFormatInstruction(task: TaskName): string {
   }
 }
 \u89c4\u5219\uff1a\u82e5\u53ef\u76f4\u63a5\u56de\u7b54\u5219\u586b reply\uff08\u542b\u516c\u5f0f/\u8868\u683c/\u6b65\u9aa4\u65f6\u540c\u65f6\u586b replyBlocks\uff09\uff1b\u82e5\u9700\u6267\u884c\u5de5\u5177\u5219\u586b tool\u3002\u4e0d\u8981\u540c\u65f6\u586b\u5199\u65e0\u6548\u7684 tool\u3002`,
+    geometry: `请输出 JSON：
+{
+  "geometry": {"type":"scene","elements":[...]} 或 null,
+  "reason": "判断依据"
+}
+注意：geometry 必须为合法 Geometry AST（scene/coordinateSystem，元素 ≤ 20，数学坐标、角度单位度）；不需要图形时 geometry 为 null。`,
   };
 
   return FORMATS[task] ?? '\u8bf7\u8f93\u51fa\u7b26\u5408\u8981\u6c42\u7684 JSON \u683c\u5f0f';

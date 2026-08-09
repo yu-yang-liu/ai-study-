@@ -10,7 +10,8 @@
   },
   "scripts": {
     "ts-check": "tsc --noEmit",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "eval:geometry": "vitest run src/ai/eval/geometry-eval.test.ts"
   },
   "devDependencies": {
     "@types/pg": "^8.20.0",

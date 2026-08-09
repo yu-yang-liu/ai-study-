@@ -1,5 +1,6 @@
 import type { TaskName } from '../gateway/types';
 import { CHAT_AGENT_TASK_INSTRUCTION } from './chatAgent';
+import { GEOMETRY_BLOCK_INSTRUCTION, GEOMETRY_SYSTEM_PROMPT } from './geometry';
 
 const BLOCK_INSTRUCTION = `
 【分块输出】对于含数学公式的字段，请输出 blocks 数组而非纯字符串：
@@ -8,7 +9,7 @@ const BLOCK_INSTRUCTION = `
 - 表格用 { "type": "table", "headers": ["列1","列2"], "rows": [["值1","值2"]] }
 - 解题步骤用 { "type": "steps", "title": "解法", "steps": [{"title": "第一步", "blocks": [...]}] }
 - 示意图占位用 { "type": "visual", "kind": "placeholder" }
-公式与文字分别成块，不要把公式混进 text。无公式时可只用 text 块。`;
+公式与文字分别成块，不要把公式混进 text。无公式时可只用 text 块。${GEOMETRY_BLOCK_INSTRUCTION}`;
 
 const TASK_INSTRUCTIONS: Record<TaskName, string> = {
   ocr: `请识别图片中的所有文字、公式和图表。对于公式，使用 LaTeX 格式输出。`,
@@ -36,6 +37,7 @@ const TASK_INSTRUCTIONS: Record<TaskName, string> = {
 2. 列出具体任务，每项包含学科、知识点、预估时间、优先级、原因`,
   chat: `\u8bf7\u4ee5\u5b66\u79d1\u6559\u5e08\u7684\u8eab\u4efd\u56de\u7b54\u5b66\u751f\u95ee\u9898\u3002`,
   chatAgent: CHAT_AGENT_TASK_INSTRUCTION,
+  geometry: GEOMETRY_SYSTEM_PROMPT,
 };
 
 export function getTaskInstruction(task: TaskName): string {

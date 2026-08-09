@@ -103,6 +103,72 @@ export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   visualBlockSchema,
 ]);
 
+// ── Geometry AST（Phase 2 · Visual AST；与 visual-ast v1 对齐）──
+
+export const sceneBoundsSchema = z.object({
+  xMin: z.number(),
+  yMin: z.number(),
+  xMax: z.number(),
+  yMax: z.number(),
+});
+
+const vec2Schema = z.tuple([z.number(), z.number()]);
+
+/** 几何元素（10 种类型共用宽松对象，渲染器按 type 分发；非法字段由对应校验兜底）。 */
+export const geometryElementSchema = z.object({
+  type: z.enum(['point', 'line', 'vector', 'triangle', 'polygon', 'circle', 'arc', 'angle', 'functionCurve', 'label']),
+  label: z.string().max(200).optional(),
+  color: z.string().optional(),
+  visible: z.boolean().optional(),
+  x: z.number().optional(),
+  y: z.number().optional(),
+  from: vec2Schema.optional(),
+  to: vec2Schema.optional(),
+  vertices: z.array(vec2Schema).min(3).max(3).optional(),
+  points: z.array(vec2Schema).min(3).optional(),
+  labels: z.array(z.string()).optional(),
+  center: vec2Schema.optional(),
+  radius: z.number().gt(0).optional(),
+  fill: z.enum(['none', 'light']).optional(),
+  startAngle: z.number().optional(),
+  endAngle: z.number().optional(),
+  vertex: vec2Schema.optional(),
+  degrees: z.number().optional(),
+  expr: z.string().min(1).max(80).optional(),
+  xRange: vec2Schema.optional(),
+  samples: z.number().int().min(2).max(1000).optional(),
+  text: z.string().min(1).optional(),
+  anchor: z.enum(['start', 'middle', 'end']).optional(),
+  style: z.enum(['solid', 'dashed']).optional(),
+});
+export type GeometryElement = z.infer<typeof geometryElementSchema>;
+
+/** Geometry AST 根节点（scene / coordinateSystem）。 */
+export const geometryAstSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('scene'),
+    elements: z.array(geometryElementSchema).max(20),
+    bounds: sceneBoundsSchema.optional(),
+  }),
+  z.object({
+    type: z.literal('coordinateSystem'),
+    xRange: vec2Schema,
+    yRange: vec2Schema,
+    xStep: z.number().gt(0).optional(),
+    yStep: z.number().gt(0).optional(),
+    showGrid: z.boolean().optional(),
+    children: z.array(geometryElementSchema).max(20),
+  }),
+]);
+export type GeometryAST = z.infer<typeof geometryAstSchema>;
+
+/** geometry task 输出：geometry 可为 null（不需要图形）。 */
+export const geometryOutputSchema = z.object({
+  geometry: geometryAstSchema.nullable(),
+  reason: z.string().max(200).optional(),
+});
+export type GeometryOutput = z.infer<typeof geometryOutputSchema>;
+
 export const ocrOutput = z.object({
   text: z.string(),
   blocks: z.array(z.object({
@@ -238,4 +304,5 @@ export const TASK_SCHEMA: Record<TaskName, z.ZodType<unknown>> = {
   plan: planOutput,
   chat: chatOutput,
   chatAgent: chatAgentOutput,
+  geometry: geometryOutputSchema,
 };

@@ -18,7 +18,8 @@ export type TaskName =
   | 'gradeEssay'
   | 'plan'
   | 'chat'
-  | 'chatAgent';
+  | 'chatAgent'
+  | 'geometry';
 
 export interface TaskRoute {
   capability: Capability;
@@ -36,6 +37,7 @@ export const TASK_ROUTING: Record<TaskName, TaskRoute> = {
   plan: { capability: 'text-reasoning', temperature: 0.4, jsonMode: true },
   chat: { capability: 'fast-text', temperature: 0.7, jsonMode: false },
   chatAgent: { capability: 'fast-text', temperature: 0.3, jsonMode: true },
+  geometry: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
 };
 
 // ── Provider interface ──
