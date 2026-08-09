@@ -83,6 +83,8 @@ jobs:
           path: |
             DerivedData/Logs/
             packages/ios/ios-gaokao/*.log
+            /tmp/apc-build.log
+            /tmp/apc-test.log
           retention-days: 3
 
   lint:
