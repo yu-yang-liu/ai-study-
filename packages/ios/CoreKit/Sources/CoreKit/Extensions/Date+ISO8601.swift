@@ -2,7 +2,7 @@ import Foundation
 
 extension Date {
     /// ISO 8601 格式（含毫秒）
-    public static let iso8601Formatter: ISO8601DateFormatter = {
+    nonisolated(unsafe) public static let iso8601Formatter: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f

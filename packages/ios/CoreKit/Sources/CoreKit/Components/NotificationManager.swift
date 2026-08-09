@@ -1,5 +1,5 @@
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
 
 /// 本地通知管理器
 /// 负责权限申请、学习提醒调度、通知取消
