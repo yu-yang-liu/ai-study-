@@ -82,11 +82,7 @@ final class AppCoordinator: ObservableObject {
             tokenProvider: { [tokenStorage] in await tokenStorage.getAccessToken() },
             onUnauthorized: { [weak self] in
                 guard let self else { return false }
-                let refreshed = await self.authManager.refreshAfterUnauthorized()
-                if !refreshed {
-                    await MainActor.run { self.isAuthenticated = false }
-                }
-                return refreshed
+                return await self.handleUnauthorized()
             }
         )
         authManager = AuthManager(apiClient: apiClient, tokenStorage: tokenStorage)
@@ -100,6 +96,14 @@ final class AppCoordinator: ObservableObject {
         }
     }
 
+    /// 401 未授权：尝试刷新 Token，失败则登出
+    private func handleUnauthorized() async -> Bool {
+        let refreshed = await authManager.refreshAfterUnauthorized()
+        if !refreshed {
+            isAuthenticated = false
+        }
+        return refreshed
+    }
 }
 
 // MARK: - 智能考试年份检测
