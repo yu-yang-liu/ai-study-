@@ -78,6 +78,7 @@ final class UnicodeMathBackendTests: XCTestCase {
 
     // MARK: FormulaView 默认后端
 
+    @MainActor
     func testDefaultBackendIsAvailable() {
         // defaultBackend：iOS 且 iosMath 可导入时为 IosMathBackend，否则回退 UnicodeMathBackend
         // （macOS CI 无 UIKit，走 Unicode 降级）。
