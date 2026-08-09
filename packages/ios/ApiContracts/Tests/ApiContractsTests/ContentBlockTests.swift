@@ -93,7 +93,7 @@ final class ContentBlockTests: XCTestCase {
                 {"type": "text", "content": "x="},
                 {"type": "formula", "latex": "2"}
             ],
-            "analysisBlocks": [{"type": "formula", "latex": "\\frac{1}{2}"}],
+            "analysisBlocks": [{"type": "formula", "latex": "\\\\frac{1}{2}"}],
             "examPointsBlocks": null
         }
         """.data(using: .utf8)!
@@ -215,7 +215,7 @@ final class ContentBlockTests: XCTestCase {
 
     func testDecodeStepsMissingBlocksYieldsEmptyBlocks() throws {
         // 非法/残缺步骤不导致整块解码失败（客户端解析稳定）。
-        let json = #"{"type":"steps","steps":[{"title":"第一步"}]}"#.data(using: .utf8)!
+          let json = #"{"type":"steps","title":"第一步","steps":[{"title":"第一步"}]}"#.data(using: .utf8)!
         let block = try JSONDecoder().decode(ContentBlock.self, from: json)
         guard case .steps(let title, let steps, let interaction) = block else {
             return XCTFail("expected steps block")

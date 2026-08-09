@@ -3,7 +3,7 @@ import SwiftData
 
 /// 对话历史 SwiftData 模型
 @Model
-public final class ChatHistoryRecord {
+public final class ChatHistoryRecord: @unchecked Sendable {
     /// 唯一标识
     @Attribute(.unique) public var id: UUID
 

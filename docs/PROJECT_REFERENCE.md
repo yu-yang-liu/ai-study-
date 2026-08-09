@@ -345,7 +345,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | 6 | `learning_events` 中 `practice` 类型尚无写入（待真题演练功能实现后接入） |
 | 7 | 统计/dashboard 算法与可视化仍偏基础 |
 | 8 | iOS `真题演练` 占位；`FeatureFlags.isLearnerProfileEnabled` 未接 |
-| 10 | **公式/几何渲染**：`MarkdownRenderer` 无 LaTeX 解析，公式显示为源码；几何图形无原生渲染。方案见 [RENDER_AST.md](./RENDER_AST.md)（M1 公式进行中 / M2 几何待启动） |
+| 10 | **公式/几何渲染**：`MarkdownRenderer` 无 LaTeX 解析，公式显示为源码；几何图形无原生渲染。方案见 [RENDER_AST.md](./RENDER_AST.md)（M1 公式实施完成，iOS CI 全绿 / M2 几何待启动） |
 
 ### P1 — Agent Memory 六项（已实现，详见 [AGENT_MEMORY.md](./AGENT_MEMORY.md)）
 
@@ -500,7 +500,7 @@ POST /api/chat
 - [ ] 部署指南 / 运维文档
 - [ ] 题库/RAG 大规模 seed
 - [ ] Chat 内图片 OCR（v2）
-- [ ] **公式渲染 M1**：后端 `Block[]` schema + 前端 `FormulaView`(iosMath) + `MarkdownRenderer(blocks:)`（见 [RENDER_AST.md](./RENDER_AST.md)）
+- [x] **公式渲染 M1**：后端 `Block[]` schema + 前端 `FormulaView`(iosMath) + `MarkdownRenderer(blocks:)`（见 [RENDER_AST.md](./RENDER_AST.md)）
 - [ ] **几何渲染 M2**：Geometry AST + `GeometryCanvasView`（提示词待补）
 
 ### Agent Memory 六项（[AGENT_MEMORY.md](./AGENT_MEMORY.md) §3）

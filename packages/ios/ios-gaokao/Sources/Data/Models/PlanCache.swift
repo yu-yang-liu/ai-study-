@@ -3,7 +3,7 @@ import SwiftData
 
 /// 学习计划缓存 SwiftData 模型
 @Model
-public final class PlanCache {
+public final class PlanCache: @unchecked Sendable {
     /// 唯一标识
     @Attribute(.unique) public var id: UUID
 

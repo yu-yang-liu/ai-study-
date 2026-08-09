@@ -1,5 +1,7 @@
 import Foundation
 
+// TODO(diag): 触发 PR CI 的临时改动，定位后回退。
+
 /// ApiContracts: AI 高中学习系统 iOS 客户端 API 模型层
 ///
 /// 所有模型严格对应后端 packages/core/src 下的 zod schema 定义：

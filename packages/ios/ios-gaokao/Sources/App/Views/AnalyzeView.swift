@@ -12,17 +12,17 @@ struct AnalyzeView: View {
             Divider()
             resultSection
         }
-        .navigationTitle("\u9898\u76ee\u5206\u6790")
+        .navigationTitle("\u{9898}\u{76ee}\u{5206}\u{6790}")
         .navigationBarTitleDisplayMode(.inline)
     }
 
     private var inputSection: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("\u5b66\u79d1")
+                Text("\u{5b66}\u{79d1}")
                     .font(.subheadline)
 
-                Picker("\u5b66\u79d1", selection: $viewModel.selectedSubject) {
+                Picker("\u{5b66}\u{79d1}", selection: $viewModel.selectedSubject) {
                     ForEach(viewModel.subjects, id: \.self) { subject in
                         Text(subject).tag(subject)
                     }
@@ -32,7 +32,7 @@ struct AnalyzeView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("\u9898\u76ee\u5185\u5bb9\uff08\u81f3\u5c1110\u5b57\uff09")
+                Text("\u{9898}\u{76ee}\u{5185}\u{5bb9}\u{ff08}\u{81f3}\u{5c11}10\u{5b57}\u{ff09}")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -51,7 +51,7 @@ struct AnalyzeView: View {
                     ProgressView()
                         .tint(.white)
                 } else {
-                    Text("\u5f00\u59cb\u5206\u6790")
+                    Text("\u{5f00}\u{59cb}\u{5206}\u{6790}")
                 }
             }
             .buttonStyle(.borderedProminent)
@@ -65,10 +65,10 @@ struct AnalyzeView: View {
     private var resultSection: some View {
         switch viewModel.result {
         case .idle:
-            EmptyPlaceholderView(message: "\u8f93\u5165\u9898\u76ee\u5185\u5bb9\uff0cAI \u5c06\u4e3a\u4f60\u5206\u6790\u9898\u5e72\u3001\u77e5\u8bc6\u70b9\u548c\u89e3\u7b54\u601d\u8def")
+            EmptyPlaceholderView(message: "\u{8f93}\u{5165}\u{9898}\u{76ee}\u{5185}\u{5bb9}\u{ff0c}AI \u{5c06}\u{4e3a}\u{4f60}\u{5206}\u{6790}\u{9898}\u{5e72}\u{3001}\u{77e5}\u{8bc6}\u{70b9}\u{548c}\u{89e3}\u{7b54}\u{601d}\u{8def}")
 
         case .loading:
-            CenteredProgressView("\u6b63\u5728\u5206\u6790...")
+            CenteredProgressView("\u{6b63}\u{5728}\u{5206}\u{6790}...")
 
         case .loaded(let response):
             ScrollView {
@@ -77,7 +77,7 @@ struct AnalyzeView: View {
             }
 
         case .empty:
-            EmptyPlaceholderView(message: "\u6682\u65e0\u5206\u6790\u7ed3\u679c")
+            EmptyPlaceholderView(message: "\u{6682}\u{65e0}\u{5206}\u{6790}\u{7ed3}\u{679c}")
 
         case .error(let error):
             ErrorPlaceholderView(error: error) {

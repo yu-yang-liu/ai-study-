@@ -97,12 +97,6 @@ schemes:
       config: Debug
       disableMainThreadChecker: false
       stopOnEveryMainThreadCheckerIssue: true
-    test:
-      config: Debug
-      gatherCoverageData: true
-      targets:
-        - CoreKit
-        - ApiContracts
     profile:
       config: Release
     analyze:

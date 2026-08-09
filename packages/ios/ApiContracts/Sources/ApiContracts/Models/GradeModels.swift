@@ -45,6 +45,22 @@ public struct GradeMathResponse: Codable, Sendable {
 
     /// 总结评价的公式块（可选）。后端 B 策略派生 `summary` string，iOS 优先渲染 blocks。
     public let summaryBlocks: [ContentBlock]?
+
+    public init(
+        score: Double,
+        maxScore: Double,
+        isCorrect: Bool,
+        steps: [GradeMathStep],
+        summary: String,
+        summaryBlocks: [ContentBlock]? = nil
+    ) {
+        self.score = score
+        self.maxScore = maxScore
+        self.isCorrect = isCorrect
+        self.steps = steps
+        self.summary = summary
+        self.summaryBlocks = summaryBlocks
+    }
 }
 
 public struct GradeMathStep: Codable, Sendable {
@@ -54,6 +70,13 @@ public struct GradeMathStep: Codable, Sendable {
 
     /// 步骤反馈的公式块（可选）。iOS 优先渲染 blocks，缺省回退 `feedback` string。
     public let feedbackBlocks: [ContentBlock]?
+
+    public init(stepNumber: Int, isCorrect: Bool, feedback: String, feedbackBlocks: [ContentBlock]? = nil) {
+        self.stepNumber = stepNumber
+        self.isCorrect = isCorrect
+        self.feedback = feedback
+        self.feedbackBlocks = feedbackBlocks
+    }
 }
 
 // MARK: - Essay Grade Response

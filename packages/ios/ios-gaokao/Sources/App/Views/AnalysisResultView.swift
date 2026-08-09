@@ -9,14 +9,14 @@ struct AnalysisResultView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
-                InfoBadge(label: "\u5b66\u79d1", value: result.subject, color: .blue)
-                InfoBadge(label: "\u9898\u578b", value: result.questionType, color: .purple)
-                InfoBadge(label: "\u96be\u5ea6", value: "\(result.difficulty)/10", color: .orange)
+                InfoBadge(label: "\u{5b66}\u{79d1}", value: result.subject, color: .blue)
+                InfoBadge(label: "\u{9898}\u{578b}", value: result.questionType, color: .purple)
+                InfoBadge(label: "\u{96be}\u{5ea6}", value: "\(result.difficulty)/10", color: .orange)
             }
 
             if !result.knowledgePoints.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("\u6d89\u53ca\u77e5\u8bc6\u70b9")
+                    Text("\u{6d89}\u{53ca}\u{77e5}\u{8bc6}\u{70b9}")
                         .font(.headline)
 
                     FlowLayout(spacing: 6) {
@@ -34,7 +34,7 @@ struct AnalysisResultView: View {
 
             if hasAnswer {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\u53c2\u8003\u7b54\u6848")
+                    Text("\u{53c2}\u{8003}\u{7b54}\u{6848}")
                         .font(.headline)
                     MarkdownRenderer(blocks: result.answerBlocks ?? [.text(content: result.answer ?? "")])
                         .padding(12)
@@ -44,14 +44,14 @@ struct AnalysisResultView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("\u89e3\u6790")
+                Text("\u{89e3}\u{6790}")
                     .font(.headline)
                 MarkdownRenderer(blocks: result.analysisBlocks ?? [.text(content: result.analysis)])
             }
 
             if hasExamPoints {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\u8003\u70b9\u8bf4\u660e")
+                    Text("\u{8003}\u{70b9}\u{8bf4}\u{660e}")
                         .font(.headline)
                     MarkdownRenderer(blocks: result.examPointsBlocks ?? [.text(content: result.examPoints ?? "")])
                 }
@@ -59,14 +59,14 @@ struct AnalysisResultView: View {
         }
     }
 
-    /// \u53c2\u8003\u7b54\u6848\u662f\u5426\u53ef\u6e32\u67d3\uff1ablocks \u975e\u7a7a OR string \u975e\u7a7a\uff08\u6a21\u578b\u53ef\u80fd\u53ea\u8f93\u51fa blocks\uff09\u3002
+    /// \u{53c2}\u{8003}\u{7b54}\u{6848}\u{662f}\u{5426}\u{53ef}\u{6e32}\u{67d3}\u{ff1a}blocks \u{975e}\u{7a7a} OR string \u{975e}\u{7a7a}\u{ff08}\u{6a21}\u{578b}\u{53ef}\u{80fd}\u{53ea}\u{8f93}\u{51fa} blocks\u{ff09}\u{3002}
     private var hasAnswer: Bool {
         if let blocks = result.answerBlocks, !blocks.isEmpty { return true }
         if let answer = result.answer, !answer.isEmpty { return true }
         return false
     }
 
-    /// \u8003\u70b9\u8bf4\u660e\u662f\u5426\u53ef\u6e32\u67d3\u3002
+    /// \u{8003}\u{70b9}\u{8bf4}\u{660e}\u{662f}\u{5426}\u{53ef}\u{6e32}\u{67d3}\u{3002}
     private var hasExamPoints: Bool {
         if let blocks = result.examPointsBlocks, !blocks.isEmpty { return true }
         if let examPoints = result.examPoints, !examPoints.isEmpty { return true }

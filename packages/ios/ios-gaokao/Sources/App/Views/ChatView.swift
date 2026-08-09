@@ -110,7 +110,8 @@ struct ChatView: View {
     }
 
     private var inputBar: some View {
-        VStack(spacing: 0) {
+        let pendingImageTint: Color = viewModel.pendingImageData == nil ? Color.brandPrimary : .secondary
+        return VStack(spacing: 0) {
             // 待发送图片预览
             if let image = viewModel.pendingImagePreview {
                 pendingImagePreviewBar(image: image)
@@ -119,7 +120,7 @@ struct ChatView: View {
                 PhotosPicker(selection: $pickerItem, matching: .images) {
                     Image(systemName: "photo.fill")
                         .font(.title3)
-                        .foregroundStyle(viewModel.pendingImageData == nil ? Color.brandPrimary : .secondary)
+                        .foregroundStyle(pendingImageTint)
                 }
                 .disabled(viewModel.isSending)
 

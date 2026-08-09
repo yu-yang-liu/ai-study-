@@ -396,7 +396,7 @@ public struct MarkdownRenderer: View {
                     .padding(12)
             }
         }
-        .background(Color(.systemGray6))
+        .background(Color.gray.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding(.vertical, 6)
     }
@@ -433,7 +433,7 @@ public struct MarkdownRenderer: View {
     private func blockquoteView(text: String) -> some View {
         HStack(spacing: 0) {
             Rectangle()
-                .fill(Color(.systemGray4))
+                .fill(Color.gray.opacity(0.25))
                 .frame(width: 3)
             styledText(for: text)
                 .font(.body)
@@ -480,9 +480,6 @@ public struct MarkdownRenderer: View {
             return Text(str)
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.pink)
-                .padding(.horizontal, 4)
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 4))
         case .link(let text, _):
             // 内嵌 HTML 渲染禁止：链接仅作显示，不执行跳转
             return Text(text)

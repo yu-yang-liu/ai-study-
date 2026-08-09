@@ -13,7 +13,7 @@ struct UploadView: View {
             Divider()
             resultSection
         }
-        .navigationTitle("\u62cd\u7167\u5206\u6790")
+        .navigationTitle("\u{62cd}\u{7167}\u{5206}\u{6790}")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: pickerItem) { _, newItem in
             Task { await loadPickerItem(newItem) }
@@ -23,9 +23,9 @@ struct UploadView: View {
     private var inputSection: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("\u5b66\u79d1")
+                Text("\u{5b66}\u{79d1}")
                     .font(.subheadline)
-                Picker("\u5b66\u79d1", selection: $viewModel.selectedSubject) {
+                Picker("\u{5b66}\u{79d1}", selection: $viewModel.selectedSubject) {
                     ForEach(viewModel.subjects, id: \.self) { subject in
                         Text(subject).tag(subject)
                     }
@@ -35,7 +35,7 @@ struct UploadView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             PhotosPicker(selection: $pickerItem, matching: .images) {
-                Label("\u9009\u62e9\u9898\u76ee\u56fe\u7247", systemImage: "photo.on.rectangle.angled")
+                Label("\u{9009}\u{62e9}\u{9898}\u{76ee}\u{56fe}\u{7247}", systemImage: "photo.on.rectangle.angled")
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
             }
@@ -56,14 +56,14 @@ struct UploadView: View {
                     if viewModel.uploadState.isLoading {
                         ProgressView().tint(.white)
                     } else {
-                        Text(viewModel.imageUrl == nil ? "\u4e0a\u4f20\u5230\u4e91\u7aef" : "\u5df2\u4e0a\u4f20")
+                        Text(viewModel.imageUrl == nil ? "\u{4e0a}\u{4f20}\u{5230}\u{4e91}\u{7aef}" : "\u{5df2}\u{4e0a}\u{4f20}")
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.imageData == nil || viewModel.imageUrl != nil || viewModel.uploadState.isLoading)
 
                 if viewModel.imageData != nil {
-                    Button("\u91cd\u65b0\u9009\u62e9") {
+                    Button("\u{91cd}\u{65b0}\u{9009}\u{62e9}") {
                         pickerItem = nil
                         viewModel.reset()
                     }
@@ -78,7 +78,7 @@ struct UploadView: View {
                     if viewModel.analyzeState.isLoading {
                         ProgressView().tint(.white)
                     } else {
-                        Text("\u5f00\u59cb AI \u5206\u6790")
+                        Text("\u{5f00}\u{59cb} AI \u{5206}\u{6790}")
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -98,11 +98,11 @@ struct UploadView: View {
                     Task { await viewModel.upload() }
                 }
             } else {
-                EmptyPlaceholderView(message: "\u4e0a\u4f20\u9898\u76ee\u56fe\u7247\u540e\uff0cAI \u5c06\u81ea\u52a8\u8bc6\u522b\u5e76\u5206\u6790")
+                EmptyPlaceholderView(message: "\u{4e0a}\u{4f20}\u{9898}\u{76ee}\u{56fe}\u{7247}\u{540e}\u{ff0c}AI \u{5c06}\u{81ea}\u{52a8}\u{8bc6}\u{522b}\u{5e76}\u{5206}\u{6790}")
             }
 
         case .loading:
-            CenteredProgressView("\u6b63\u5728\u5206\u6790...")
+            CenteredProgressView("\u{6b63}\u{5728}\u{5206}\u{6790}...")
 
         case .loaded(let response):
             ScrollView {
@@ -111,7 +111,7 @@ struct UploadView: View {
             }
 
         case .empty:
-            EmptyPlaceholderView(message: "\u6682\u65e0\u5206\u6790\u7ed3\u679c")
+            EmptyPlaceholderView(message: "\u{6682}\u{65e0}\u{5206}\u{6790}\u{7ed3}\u{679c}")
 
         case .error(let error):
             ErrorPlaceholderView(error: error) {

@@ -3,7 +3,7 @@ import SwiftData
 
 /// 批改记录 SwiftData 模型
 @Model
-public final class GradeRecord {
+public final class GradeRecord: @unchecked Sendable {
     /// 唯一标识
     @Attribute(.unique) public var id: UUID
 

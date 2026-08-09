@@ -1,5 +1,5 @@
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
 
 /// 本地通知管理器
 /// 负责权限申请、学习提醒调度、通知取消
@@ -28,7 +28,7 @@ public final class NotificationManager: NSObject, ObservableObject, Sendable {
 
     /// 检查当前通知设置
     public func checkAuthorizationStatus() async {
-        let settings = await center.notificationSettings()
+        nonisolated(unsafe) let settings = await center.notificationSettings()
         isAuthorized = settings.authorizationStatus == .authorized
     }
 
@@ -80,7 +80,8 @@ public final class NotificationManager: NSObject, ObservableObject, Sendable {
 
     /// 获取所有待处理通知（调试用）
     public func pendingReminders() async -> [UNNotificationRequest] {
-        return await center.pendingNotificationRequests()
+        nonisolated(unsafe) let requests = await center.pendingNotificationRequests()
+        return requests
     }
 }
 

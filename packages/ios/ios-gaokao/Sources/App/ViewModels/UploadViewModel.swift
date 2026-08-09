@@ -5,7 +5,7 @@ import UIKit
 
 @MainActor
 final class UploadViewModel: ObservableObject {
-    @Published var selectedSubject: String = "\u6570\u5b66"
+    @Published var selectedSubject: String = "\u{6570}\u{5b66}"
     @Published var imageData: Data?
     @Published var previewImage: UIImage?
     @Published var imageUrl: String?

@@ -26,41 +26,49 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
 
       - name: Show Xcode version
         run: xcodebuild -version
 
       # ── ApiContracts Package ──
       - name: Build ApiContracts
+        shell: bash
         run: |
+          set -euo pipefail
           cd packages/ios/ApiContracts
-          swift build --configuration debug
-          swift test --configuration debug
+          swift build --configuration debug 2>&1 | tee /tmp/apc-build.log
+          swift test --configuration debug 2>&1 | tee /tmp/apc-test.log
 
       # ── CoreKit Package ──
       - name: Build CoreKit
+        shell: bash
         run: |
+          set -euo pipefail
           cd packages/ios/CoreKit
-          swift build --configuration debug
-          swift test --configuration debug
+          swift build --configuration debug 2>&1 | tee /tmp/core-build.log
+          swift test --configuration debug 2>&1 | tee /tmp/core-test.log
 
       # ── ios-gaokao (single high-school app target; directory name retained) ──
       - name: Generate ios-gaokao.xcodeproj
+        shell: bash
         run: |
-          brew install xcodegen
+          set -euo pipefail
+          brew install xcodegen 2>&1 | tee /tmp/xcodegen-brew.log
           cd packages/ios/ios-gaokao
-          xcodegen generate --spec project.yml
+          xcodegen generate --spec project.yml 2>&1 | tee /tmp/xcodegen.log
 
       - name: Build ios-gaokao (Debug)
+        shell: bash
         run: |
+          set -euo pipefail
           xcodebuild build \
-            -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
-            -scheme ios-gaokao \
-            -configuration Debug \
-            -destination "platform=iOS Simulator,name=iPhone 17" \
-            -derivedDataPath DerivedData \
-            CODE_SIGNING_ALLOWED=NO
+              -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
+              -scheme ios-gaokao \
+              -configuration Debug \
+              -destination "generic/platform=iOS Simulator" \
+              -derivedDataPath DerivedData \
+              CODE_SIGNING_ALLOWED=NO 2>&1 | tee /tmp/app-build.log
 
       - name: Upload build logs (on failure)
         if: failure()
@@ -70,6 +78,13 @@ jobs:
           path: |
             DerivedData/Logs/
             packages/ios/ios-gaokao/*.log
+            /tmp/apc-build.log
+            /tmp/apc-test.log
+            /tmp/core-build.log
+            /tmp/core-test.log
+            /tmp/xcodegen-brew.log
+            /tmp/xcodegen.log
+            /tmp/app-build.log
           retention-days: 3
 
   lint:

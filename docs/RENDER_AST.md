@@ -1,6 +1,6 @@
 # 公式与几何渲染 — AST 渲染方案
 
-> 状态：**公式 M1 实施完成（待 CI 验证）/ 几何 M2 待启动**
+> 状态：**公式 M1 实施完成（iOS CI 全绿）/ 几何 M2 待启动**
 > 基线：2026-08-09 · 对应当前工作区代码状态（STEPS 1–7 已落地）
 > 关联：[PROJECT_REFERENCE.md](./PROJECT_REFERENCE.md) §7 P1、[AGENT_MEMORY.md](./AGENT_MEMORY.md)
 
@@ -48,7 +48,7 @@ AST 节点方案：后端直接返回结构化 `Block[]`，每个 block 自带 `
 
 ---
 
-## 2. 公式渲染（M1 — 实施完成，待 CI 验证，刚需，边界清楚）
+## 2. 公式渲染（M1 — 实施完成，iOS CI 已验证，刚需，边界清楚）
 
 ### 2.1 数据契约：`Block[]` AST
 
@@ -149,7 +149,7 @@ targets: [
 
 **project.yml**：iosMath **无需在 `packages:` 显式声明** —— XcodeGen 解析 CoreKit `Package.swift` 时传递性拉取。`xcodeVersion` bump `"16.0"` → `"16.2"`（macOS-15 runner 有 `Xcode_16.2.app`；CI `ios-ci.yml` 同步 `xcode-select` 到该路径）。fallback：若 CI 实测 xcodegen 未传递 iosMath，再在 `packages:` 显式加。
 
-**严格并发**：`MTMathUILabel` 是 `UIView` → 天然 `@MainActor`。`IosMathBackend` 标 `@MainActor`，`render` 标 `nonisolated`（构造视图值不触 actor 隔离态，`makeUIView` / `updateUIView` 由 SwiftUI 调度到主线程）。`defaultBackend` 是只读 `static var`，无并发写竞争。Swift 6 `complete` 模式预期无警告（待 CI 验证）。
+**严格并发**：`MTMathUILabel` 是 `UIView` → 天然 `@MainActor`。`IosMathBackend` 标 `@MainActor`，`render` 标 `nonisolated`（构造视图值不触 actor 隔离态，`makeUIView` / `updateUIView` 由 SwiftUI 调度到主线程）。`defaultBackend` 是只读 `static var`，无并发写竞争。Swift 6 `complete` 模式无警告（iOS CI 已验证）。
 
 **LaTeX 覆盖**（iosMath 已支持）：`\frac` / `\sqrt` / `^_` / 希腊字母 / `\sum \int \lim` / matrix / `array`(v2.5.0) / `cases` / `\left( \right)` / `aligned` / `split` / `gather` / `\text{}` CJK(v2.2.0) / `\phantom` `\smash` `\overset` `\underset`(v2.4.0) / `\textcolor`(v2.5.0) / accents / `\cancel`(v2.5.0)。**不支持**：`align` / `equation` 环境、多行换行、mhchem 化学方程式、`\newcommand`。v2.4.0+ 全局字体/符号表线程安全。
 
@@ -244,7 +244,7 @@ GeometryAST
 
 ## 4. 推进顺序
 
-1. **M1 公式**（实施完成，待 CI 验证）：后端 Block[] schema + 派生 string + prompt → 前端 ContentBlock + FormulaView（MathBackend 协议：UnicodeMathBackend 阶段一 + IosMathBackend 阶段二）+ MarkdownRenderer(blocks:) 升级 → App 视图接入 → iosMath SPM 集成（`kostub/iosMath from:2.5.0`）。纯 Swift 降级实现跑通管线为去风险基线，iosMath 增量替换。
+1. **M1 公式**（实施完成，iOS CI 全绿）：后端 Block[] schema + 派生 string + prompt → 前端 ContentBlock + FormulaView（MathBackend 协议：UnicodeMathBackend 阶段一 + IosMathBackend 阶段二）+ MarkdownRenderer(blocks:) 升级 → App 视图接入 → iosMath SPM 集成（`kostub/iosMath from:2.5.0`）。纯 Swift 降级实现跑通管线为去风险基线，iosMath 增量替换。
 2. **M2 几何**（后续，独立）：先设计 Geometry AST schema v1 → 验 AI 输出准确率 → 写 GeometryCanvasView + 两 demo → 扩节点类型。后端提示词待用户补充后接入。
 
 ---
@@ -259,4 +259,4 @@ GeometryAST
 
 ---
 
-*文档版本：2026-08-09 · 公式 M1 实施完成（待 CI）/ 几何 M2 待启动（提示词待补）*
+*文档版本：2026-08-09 · 公式 M1 实施完成（iOS CI 全绿）/ 几何 M2 待启动（提示词待补）*

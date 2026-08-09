@@ -18,15 +18,15 @@ enum SidebarItem: String, Identifiable, CaseIterable {
 
     var title: String {
         switch self {
-        case .dashboard:       return "\u4eea\u8868\u76d8"
-        case .chat:            return "AI \u5b66\u4e60\u52a9\u624b"
-        case .analyze:         return "\u9898\u76ee\u5206\u6790"
-        case .upload:          return "\u62cd\u7167\u5206\u6790"
-        case .grade:           return "\u4f5c\u4e1a\u6279\u6539"
-        case .wrongQuestions:  return "\u9519\u9898\u590d\u4e60"
-        case .stats:           return "\u5b66\u4e60\u7edf\u8ba1"
-        case .plan:            return "\u5b66\u4e60\u8ba1\u5212"
-        case .realExam:        return "\u771f\u9898\u6f14\u7ec3"
+        case .dashboard:       return "\u{4eea}\u{8868}\u{76d8}"
+        case .chat:            return "AI \u{5b66}\u{4e60}\u{52a9}\u{624b}"
+        case .analyze:         return "\u{9898}\u{76ee}\u{5206}\u{6790}"
+        case .upload:          return "\u{62cd}\u{7167}\u{5206}\u{6790}"
+        case .grade:           return "\u{4f5c}\u{4e1a}\u{6279}\u{6539}"
+        case .wrongQuestions:  return "\u{9519}\u{9898}\u{590d}\u{4e60}"
+        case .stats:           return "\u{5b66}\u{4e60}\u{7edf}\u{8ba1}"
+        case .plan:            return "\u{5b66}\u{4e60}\u{8ba1}\u{5212}"
+        case .realExam:        return "\u{771f}\u{9898}\u{6f14}\u{7ec3}"
         }
     }
 

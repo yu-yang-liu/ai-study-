@@ -51,9 +51,7 @@ struct AILearningApp: App {
                     await appCoordinator.authManager.restoreSession()
                     await appCoordinator.notificationManager.checkAuthorizationStatus()
                     // 智能检测考试年份是否需要更新
-                    if let repo = appCoordinator.dataRepository {
-                        await checkAndPromptExamYearUpdate(repo: repo, auth: appCoordinator.authManager)
-                    }
+                    await checkAndPromptExamYearUpdate(repo: appCoordinator.dataRepository, auth: appCoordinator.authManager)
                 }
             }
         }
@@ -73,6 +71,7 @@ final class AppCoordinator: ObservableObject {
     private let tokenStorage: TokenStorage
 
     init() {
+        let unauthorizedHandler = UnauthorizedHandler()
         do {
             modelContainer = try ModelContainer(for: ChatHistoryRecord.self, GradeRecord.self, PlanCache.self, UserSettings.self)
         } catch {
@@ -82,19 +81,16 @@ final class AppCoordinator: ObservableObject {
         apiClient = APIClient(
             baseURL: AppEnvironment.baseURL,
             tokenProvider: { [tokenStorage] in await tokenStorage.getAccessToken() },
-            onUnauthorized: { [weak self] in
-                guard let self else { return false }
-                let refreshed = await self.authManager.refreshAfterUnauthorized()
-                if !refreshed {
-                    await MainActor.run { self.isAuthenticated = false }
-                }
-                return refreshed
+            onUnauthorized: { [unauthorizedHandler] in
+                guard let coordinator = unauthorizedHandler.coordinator else { return false }
+                return await coordinator.handleUnauthorized()
             }
         )
         authManager = AuthManager(apiClient: apiClient, tokenStorage: tokenStorage)
         dataRepository = DataRepository(modelContainer: modelContainer)
         networkMonitor = NetworkMonitor()
         notificationManager = NotificationManager()
+        unauthorizedHandler.coordinator = self
         Task { @MainActor in
             for await authenticated in authManager.$isAuthenticated.values {
                 self.isAuthenticated = authenticated
@@ -102,6 +98,19 @@ final class AppCoordinator: ObservableObject {
         }
     }
 
+    /// 401 未授权：尝试刷新 Token，失败则登出
+    private func handleUnauthorized() async -> Bool {
+        let refreshed = await authManager.refreshAfterUnauthorized()
+        if !refreshed {
+            isAuthenticated = false
+        }
+        return refreshed
+    }
+}
+
+/// 401 处理器中转：避免 init 中构造 apiClient 时闭包提前捕获未初始化的 self
+private final class UnauthorizedHandler: @unchecked Sendable {
+    weak var coordinator: AppCoordinator?
 }
 
 // MARK: - 智能考试年份检测
