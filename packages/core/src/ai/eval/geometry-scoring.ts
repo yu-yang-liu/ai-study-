@@ -129,10 +129,13 @@ function pointsOf(element: GeometryElement): Array<[number, number]> {
   }
 }
 
-/** 两个元素点集的最小匹配距离（贪心最近邻）。 */
-function pointSetDistance(a: Array<[number, number]>, b: Array<[number, number]>): number {
+// ── Eval v2：几何等价匹配（平移 / 旋转 / 缩放不变性）──
+
+/** 贪心最近邻匹配的平均距离（b 中每点至多被用一次）。 */
+function greedyAvgDistance(a: Array<[number, number]>, b: Array<[number, number]>): number {
   if (a.length === 0 || b.length === 0) return Number.POSITIVE_INFINITY;
   let total = 0;
+  let usedCount = 0;
   const used = new Set<number>();
   for (const [ax, ay] of a) {
     let best = Number.POSITIVE_INFINITY;
@@ -150,9 +153,143 @@ function pointSetDistance(a: Array<[number, number]>, b: Array<[number, number]>
     if (bestIndex >= 0) {
       used.add(bestIndex);
       total += best;
+      usedCount++;
     }
   }
-  return total / a.length;
+  return usedCount === 0 ? Number.POSITIVE_INFINITY : total / usedCount;
+}
+
+/** 质心 + RMS 单位化（平移、缩放不变）。 */
+function normalizePoints(points: Array<[number, number]>): Array<[number, number]> {
+  if (points.length === 0) return [];
+  let cx = 0;
+  let cy = 0;
+  for (const [x, y] of points) {
+    cx += x;
+    cy += y;
+  }
+  cx /= points.length;
+  cy /= points.length;
+  let sq = 0;
+  for (const [x, y] of points) {
+    sq += (x - cx) ** 2 + (y - cy) ** 2;
+  }
+  const rms = Math.sqrt(sq / points.length);
+  if (rms < 1e-9) return points.map(() => [0, 0]);
+  return points.map(([x, y]) => [(x - cx) / rms, (y - cy) / rms]);
+}
+
+function centroidOf(points: Array<[number, number]>): [number, number] {
+  let cx = 0;
+  let cy = 0;
+  for (const [x, y] of points) {
+    cx += x;
+    cy += y;
+  }
+  return [cx / points.length, cy / points.length];
+}
+
+/** 仅平移对齐（质心归零）后的平均距离，绝对单位。 */
+function translationDistance(a: Array<[number, number]>, b: Array<[number, number]>): number {
+  if (a.length === 0 || b.length === 0) return Number.POSITIVE_INFINITY;
+  const [ax, ay] = centroidOf(a);
+  const [bx, by] = centroidOf(b);
+  const shiftedA = a.map(([x, y]): [number, number] => [x - ax, y - ay]);
+  const shiftedB = b.map(([x, y]): [number, number] => [x - bx, y - by]);
+  return greedyAvgDistance(shiftedA, shiftedB);
+}
+
+/** Kabsch 2D：把 a 旋转到 b 的最小二乘最佳角度。 */
+function bestRotationAngle(a: Array<[number, number]>, b: Array<[number, number]>): number {
+  let s = 0;
+  let c = 0;
+  const n = Math.min(a.length, b.length);
+  for (let i = 0; i < n; i++) {
+    const [ax, ay] = a[i] ?? [0, 0];
+    const [bx, by] = b[i] ?? [0, 0];
+    s += ax * by - ay * bx;
+    c += ax * bx + ay * by;
+  }
+  return Math.atan2(s, c);
+}
+
+function rotatePoints(points: Array<[number, number]>, theta: number): Array<[number, number]> {
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
+  return points.map(([x, y]) => [x * cos - y * sin, x * sin + y * cos]);
+}
+
+/**
+ * 相似变换对齐距离：
+ * - `allowRotation`：平移 + 缩放 + 旋转（Kabsch）→ 归一化单位；
+ * - 否则仅平移对齐 → 绝对单位。
+ */
+function similarityDistance(
+  a: Array<[number, number]>,
+  b: Array<[number, number]>,
+): number {
+  if (a.length === 0 || b.length === 0) return Number.POSITIVE_INFINITY;
+  const na = normalizePoints(a);
+  const nb = normalizePoints(b);
+  if (na.length < 2 || nb.length < 2) {
+    return greedyAvgDistance(na, nb);
+  }
+  // 先用贪心对应建立配对，再求最佳旋转，最后重算对齐距离。
+  const pairs: Array<{ a: [number, number]; b: [number, number] }> = [];
+  const used = new Set<number>();
+  for (const pa of na) {
+    let best = Number.POSITIVE_INFINITY;
+    let bestIndex = -1;
+    for (let i = 0; i < nb.length; i++) {
+      if (used.has(i)) continue;
+      const pb = nb[i];
+      if (!pb) continue;
+      const d = Math.hypot(pa[0] - pb[0], pa[1] - pb[1]);
+      if (d < best) {
+        best = d;
+        bestIndex = i;
+      }
+    }
+    if (bestIndex >= 0) {
+      used.add(bestIndex);
+      pairs.push({ a: pa, b: nb[bestIndex]! });
+    }
+  }
+  if (pairs.length < 2) return greedyAvgDistance(na, nb);
+  const theta = bestRotationAngle(
+    pairs.map((p) => p.a),
+    pairs.map((p) => p.b),
+  );
+  return greedyAvgDistance(rotatePoints(na, theta), nb);
+}
+
+/** 相似变换的归一化容差（单位 RMS 下）。 */
+const SIMILARITY_TOLERANCE = 0.05;
+/** 仅平移对齐的绝对容差（沿用 v1 的 0.5）。 */
+const TRANSLATION_TOLERANCE = 0.5;
+
+function distanceToScore(distance: number, tolerance: number): number {
+  if (!Number.isFinite(distance)) return 0;
+  return distance <= tolerance ? 1 : Math.max(0, 1 - (distance - tolerance) / tolerance);
+}
+
+/** 单个元素对的坐标相似度（0–1）。 */
+function elementSimilarity(exp: GeometryElement, act: GeometryElement): number {
+  if (exp.type === 'circle' || exp.type === 'arc') {
+    // 圆心整体平移等价；半径按比例比较（缩放等价）。
+    const expRadius = exp.radius;
+    const actRadius = (act as { radius?: number }).radius ?? 0;
+    const radiusRatio = Math.abs(expRadius - actRadius) / Math.max(expRadius, actRadius);
+    return radiusRatio <= 0.08 ? 1 : Math.max(0, 1 - (radiusRatio - 0.08) / 0.2);
+  }
+  const expPoints = pointsOf(exp);
+  const actPoints = pointsOf(act);
+  if (expPoints.length === 0 || actPoints.length === 0) return 0;
+  if (exp.type === 'vector') {
+    // 方向与模长是物理语义：仅平移对齐，不做缩放/旋转。
+    return distanceToScore(translationDistance(expPoints, actPoints), TRANSLATION_TOLERANCE);
+  }
+  return distanceToScore(similarityDistance(expPoints, actPoints), SIMILARITY_TOLERANCE);
 }
 
 function coordinateScore(expected: GeometryElement[], actual: GeometryElement[]): number {
@@ -160,22 +297,21 @@ function coordinateScore(expected: GeometryElement[], actual: GeometryElement[])
   let count = 0;
   const used = new Set<number>();
   for (const exp of expected) {
-    const points = pointsOf(exp);
-    if (points.length === 0) continue;
+    if (exp.type === 'label' || exp.type === 'functionCurve') continue;
     let bestIndex = -1;
-    let bestDistance = Number.POSITIVE_INFINITY;
+    let bestScore = Number.NEGATIVE_INFINITY;
     for (let i = 0; i < actual.length; i++) {
       const act = actual[i];
       if (!act || act.type !== exp.type || used.has(i)) continue;
-      const distance = pointSetDistance(points, pointsOf(act));
-      if (distance < bestDistance) {
-        bestDistance = distance;
+      const score = elementSimilarity(exp, act);
+      if (score > bestScore) {
+        bestScore = score;
         bestIndex = i;
       }
     }
     if (bestIndex >= 0) {
       used.add(bestIndex);
-      total += bestDistance <= 0.5 ? 1 : Math.max(0, 1 - (bestDistance - 0.5));
+      total += bestScore;
       count++;
     }
   }
@@ -183,8 +319,9 @@ function coordinateScore(expected: GeometryElement[], actual: GeometryElement[])
 }
 
 function angleScore(expected: GeometryElement[], actual: GeometryElement[]): number {
-  const exp = expected.filter((e) => e.type === 'angle' && e.degrees !== undefined);
-  const act = actual.filter((e) => e.type === 'angle' && e.degrees !== undefined);
+  type AngleElement = Extract<GeometryElement, { type: 'angle' }>;
+  const exp = expected.filter((e): e is AngleElement => e.type === 'angle' && e.degrees !== undefined);
+  const act = actual.filter((e): e is AngleElement => e.type === 'angle' && e.degrees !== undefined);
   if (exp.length === 0) return 1;
   if (act.length === 0) return 0;
   let total = 0;
@@ -196,8 +333,9 @@ function angleScore(expected: GeometryElement[], actual: GeometryElement[]): num
 }
 
 function expressionScore(expected: GeometryElement[], actual: GeometryElement[]): number {
-  const exp = expected.filter((e) => e.type === 'functionCurve');
-  const act = actual.filter((e) => e.type === 'functionCurve');
+  type CurveElement = Extract<GeometryElement, { type: 'functionCurve' }>;
+  const exp = expected.filter((e): e is CurveElement => e.type === 'functionCurve');
+  const act = actual.filter((e): e is CurveElement => e.type === 'functionCurve');
   if (exp.length === 0) return 1;
   if (act.length === 0) return 0;
   let total = 0;
@@ -227,6 +365,7 @@ function labelsScore(expected: GeometryElement[], actual: GeometryElement[]): nu
   const collect = (elements: GeometryElement[]): string[] =>
     elements.flatMap((e) => {
       if (e.type === 'triangle' || e.type === 'polygon') return e.labels ?? [];
+      if (e.type === 'label') return e.text ? [e.text] : [];
       return e.label ? [e.label] : [];
     });
   const expectedLabels = collect(expected);

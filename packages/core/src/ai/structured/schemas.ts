@@ -114,33 +114,104 @@ export const sceneBoundsSchema = z.object({
 
 const vec2Schema = z.tuple([z.number(), z.number()]);
 
-/** 几何元素（10 种类型共用宽松对象，渲染器按 type 分发；非法字段由对应校验兜底）。 */
-export const geometryElementSchema = z.object({
-  type: z.enum(['point', 'line', 'vector', 'triangle', 'polygon', 'circle', 'arc', 'angle', 'functionCurve', 'label']),
+const baseElementFields = {
   label: z.string().max(200).optional(),
   color: z.string().optional(),
   visible: z.boolean().optional(),
-  x: z.number().optional(),
-  y: z.number().optional(),
-  from: vec2Schema.optional(),
-  to: vec2Schema.optional(),
-  vertices: z.array(vec2Schema).min(3).max(3).optional(),
-  points: z.array(vec2Schema).min(3).optional(),
+} as const;
+
+const pointElementSchema = z.object({
+  type: z.literal('point'),
+  x: z.number().min(-100).max(100),
+  y: z.number().min(-100).max(100),
+  ...baseElementFields,
+});
+
+const lineElementSchema = z.object({
+  type: z.literal('line'),
+  from: vec2Schema,
+  to: vec2Schema,
+  style: z.enum(['solid', 'dashed']).optional(),
+  ...baseElementFields,
+});
+
+const vectorElementSchema = z.object({
+  type: z.literal('vector'),
+  from: vec2Schema,
+  to: vec2Schema,
+  ...baseElementFields,
+});
+
+const triangleElementSchema = z.object({
+  type: z.literal('triangle'),
+  vertices: z.array(vec2Schema).length(3),
+  labels: z.array(z.string()).max(3).optional(),
+  ...baseElementFields,
+});
+
+const polygonElementSchema = z.object({
+  type: z.literal('polygon'),
+  points: z.array(vec2Schema).min(3),
   labels: z.array(z.string()).optional(),
-  center: vec2Schema.optional(),
-  radius: z.number().gt(0).optional(),
+  ...baseElementFields,
+});
+
+const circleElementSchema = z.object({
+  type: z.literal('circle'),
+  center: vec2Schema,
+  radius: z.number().gt(0).max(100),
   fill: z.enum(['none', 'light']).optional(),
-  startAngle: z.number().optional(),
-  endAngle: z.number().optional(),
-  vertex: vec2Schema.optional(),
+  ...baseElementFields,
+});
+
+const arcElementSchema = z.object({
+  type: z.literal('arc'),
+  center: vec2Schema,
+  radius: z.number().gt(0).max(100),
+  startAngle: z.number(),
+  endAngle: z.number(),
+  ...baseElementFields,
+});
+
+const angleElementSchema = z.object({
+  type: z.literal('angle'),
+  vertex: vec2Schema,
+  from: vec2Schema,
+  to: vec2Schema,
   degrees: z.number().optional(),
-  expr: z.string().min(1).max(80).optional(),
+  ...baseElementFields,
+});
+
+const functionCurveElementSchema = z.object({
+  type: z.literal('functionCurve'),
+  expr: z.string().min(1).max(80),
   xRange: vec2Schema.optional(),
   samples: z.number().int().min(2).max(1000).optional(),
-  text: z.string().min(1).optional(),
-  anchor: z.enum(['start', 'middle', 'end']).optional(),
-  style: z.enum(['solid', 'dashed']).optional(),
+  ...baseElementFields,
 });
+
+const labelElementSchema = z.object({
+  type: z.literal('label'),
+  x: z.number().min(-100).max(100),
+  y: z.number().min(-100).max(100),
+  text: z.string().min(1).max(200),
+  anchor: z.enum(['start', 'middle', 'end']).optional(),
+  ...baseElementFields,
+});
+
+/** 几何元素（10 种类型，按 type 判别、关键字段必填；渲染器按 type 分发）。 */
+export const geometryElementSchema = z.discriminatedUnion('type', [
+  pointElementSchema,
+  lineElementSchema,
+  vectorElementSchema,
+  triangleElementSchema,
+  polygonElementSchema,
+  circleElementSchema,
+  arcElementSchema,
+  angleElementSchema,
+  functionCurveElementSchema,
+  labelElementSchema,
+]);
 export type GeometryElement = z.infer<typeof geometryElementSchema>;
 
 /** Geometry AST 根节点（scene / coordinateSystem）。 */
@@ -149,6 +220,13 @@ export const geometryAstSchema = z.discriminatedUnion('type', [
     type: z.literal('scene'),
     elements: z.array(geometryElementSchema).max(20),
     bounds: sceneBoundsSchema.optional(),
+  }).superRefine((value, ctx) => {
+    if (value.elements.some((element) => element.type === 'functionCurve')) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'scene 不能包含 functionCurve，函数图像应使用 coordinateSystem 根节点',
+      });
+    }
   }),
   z.object({
     type: z.literal('coordinateSystem'),
@@ -190,7 +268,7 @@ export const analyzeOutput = z.object({
    * 双字段过渡期：blocks 为源、string 为派生，二者一致。
    */
   answer: z.string().optional(),
-  analysis: z.string(),
+  analysis: z.string().optional(),
   examPoints: z.string().optional(),
   answerBlocks: z.array(blockSchema).optional(),
   analysisBlocks: z.array(blockSchema).optional(),
@@ -201,14 +279,14 @@ export type AnalyzeOutput = z.infer<typeof analyzeOutput>;
 export const gradeMathOutput = z.object({
   score: z.number().min(0),
   maxScore: z.number().min(1).default(100),
-  isCorrect: z.boolean(),
-  steps: z.array(z.object({
-    stepNumber: z.number().int(),
     isCorrect: z.boolean(),
-    feedback: z.string(),
-    feedbackBlocks: z.array(blockSchema).optional(),
-  })),
-  summary: z.string(),
+    steps: z.array(z.object({
+      stepNumber: z.number().int(),
+      isCorrect: z.boolean(),
+      feedback: z.string().optional(),
+      feedbackBlocks: z.array(blockSchema).optional(),
+    })),
+  summary: z.string().optional(),
   summaryBlocks: z.array(blockSchema).optional(),
 });
 export type GradeMathOutput = z.infer<typeof gradeMathOutput>;

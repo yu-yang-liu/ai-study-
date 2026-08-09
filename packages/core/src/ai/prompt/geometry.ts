@@ -57,8 +57,11 @@ functionCurve.expr 语法（严格白名单）：
  * 让模型在需要图形时输出 `visual` block（kind="geometry" + geometry AST）。
  */
 export const GEOMETRY_BLOCK_INSTRUCTION = `
-- 需要图形时，在 blocks 中输出 { "type": "visual", "kind": "geometry", "geometry": {...} }（geometry 为合法 Geometry AST：scene 或 coordinateSystem，含 point/line/vector/triangle/polygon/circle/arc/angle/functionCurve/label 元素）；不需要图形时不输出。
-- geometry 必须用数学坐标（x 右、y 上），角度单位度，禁止图片 URL / TikZ / UI 代码。`;
+需要图形时（几何证明/计算、函数图像、力学示意、立体图形），必须在相关 blocks 数组中输出 visual geometry 块，例如：
+{ "type": "visual", "kind": "geometry", "geometry": {"type":"scene","elements":[{"type":"triangle","vertices":[[0,0],[5,0],[2,3.5]],"labels":["A","B","C"]},{"type":"angle","vertex":[0,0],"from":[5,0],"to":[2,3.5],"degrees":60}]} }
+- 用 kind:"geometry"，不要用 kind:"placeholder" 代替图形；纯代数/概念问答/无需图形时不输出 visual 块。
+- geometry 必须是合法 Geometry AST（scene/coordinateSystem；元素：point/line/vector/triangle/polygon/circle/arc/angle/functionCurve/label）。
+- 数学坐标 x 右 y 上，角度单位度；禁止图片 URL / TikZ / UI 代码。`;
 
 /** 组装 geometry task 的用户提示词。 */
 export function buildGeometryUserPrompt(question: string, hint?: string): string {

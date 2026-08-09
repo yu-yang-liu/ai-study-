@@ -1,0 +1,48 @@
+name: Geometry Eval
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "packages/core/**"
+      - ".github/workflows/geometry-eval.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/core/src/ai/prompt/**"
+      - "packages/core/src/ai/structured/**"
+      - "packages/core/src/ai/eval/**"
+      - "packages/core/src/learning/**"
+      - ".github/workflows/geometry-eval.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  geometry-eval:
+    name: Geometry Eval (DeepSeek)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck core
+        run: pnpm --filter @ai-study/core exec tsc --noEmit
+
+      - name: Run geometry eval (requires DEEPSEEK_API_KEY)
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: pnpm --filter @ai-study/core eval:geometry

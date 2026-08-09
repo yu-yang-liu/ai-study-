@@ -1,6 +1,6 @@
 # 公式与几何渲染 — AST 渲染方案
 
-> 状态：**公式 M1 实施完成（iOS CI 全绿）/ 几何 M2 待启动**
+> 状态：**公式 M1 实施完成（iOS CI 全绿）/ 几何 M2 核心完成（M-D 端到端通过，2026-08-09）**
 > 基线：2026-08-09 · 对应当前工作区代码状态（STEPS 1–7 已落地）
 > 关联：[PROJECT_REFERENCE.md](./PROJECT_REFERENCE.md) §7 P1、[AGENT_MEMORY.md](./AGENT_MEMORY.md)
 
@@ -181,7 +181,7 @@ targets: [
 
 ---
 
-## 3. 几何渲染（M2 — 待启动，尽量，边界开放，独立推进）
+## 3. 几何渲染（M2 — 核心完成，边界开放，扩展见 [GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md)）
 
 > 用户："图像的提示词随后跟上。" 本节先定 schema 草案与渲染架构，后端提示词待用户补充后填入。
 
@@ -227,8 +227,8 @@ GeometryAST
 
 ### 3.4 后端提示词（待用户补充）
 
-> 占位：用户表示"图像的提示词随后跟上"。待提示词定稿后，填入 `tasks.ts` 的 analyze（几何题）分支，并在本节记录。
-> 待定项：几何题如何识别为"需几何图" → 是新增 `geometryAst` 字段，还是 ocr blocks 中新增 `type: "geometry"` block？
+> 已定（2026-08-09）：几何图作为 `visual` block（`kind:"geometry"` + Geometry AST）表达；生产链路采用「独立 `geometry` task 后置检测 + attach 到 analysisBlocks」（analyze 主提示词只保留弱信号，实测不可靠）。
+> 协议决策与 M-D 实施记录见 [GEOMETRY_PROMPT_EVAL.md](./GEOMETRY_PROMPT_EVAL.md)。
 
 ### 3.5 受影响文件（M2）
 
@@ -245,7 +245,7 @@ GeometryAST
 ## 4. 推进顺序
 
 1. **M1 公式**（实施完成，iOS CI 全绿）：后端 Block[] schema + 派生 string + prompt → 前端 ContentBlock + FormulaView（MathBackend 协议：UnicodeMathBackend 阶段一 + IosMathBackend 阶段二）+ MarkdownRenderer(blocks:) 升级 → App 视图接入 → iosMath SPM 集成（`kostub/iosMath from:2.5.0`）。纯 Swift 降级实现跑通管线为去风险基线，iosMath 增量替换。
-2. **M2 几何**（后续，独立）：先设计 Geometry AST schema v1 → 验 AI 输出准确率 → 写 GeometryCanvasView + 两 demo → 扩节点类型。后端提示词待用户补充后接入。
+2. **M2 几何**（核心完成，2026-08-09）：Geometry AST schema v1（严格字段校验）→ geometry task eval 8/8 → GeometryCanvasView + demos → analyze 生产链路端到端（后置 attach）。扩展：eval v2 相对匹配、立体/圆锥曲线节点、化学 graph 布局（见 [GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md)）。
 
 ---
 
@@ -259,4 +259,4 @@ GeometryAST
 
 ---
 
-*文档版本：2026-08-09 · 公式 M1 实施完成（iOS CI 全绿）/ 几何 M2 待启动（提示词待补）*
+*文档版本：2026-08-09 · 公式 M1 实施完成（iOS CI 全绿）/ 几何 M2 核心完成（M-D 端到端通过）*

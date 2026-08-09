@@ -159,8 +159,9 @@ type Block =
 - [x] 测试：ApiContracts `GeometryASTTests`（解码/往返/降级）、CoreKit `GeometryTests`（求值器/边界/坐标变换）。
 - [x] 后端 `geometry` task + 提示词定稿 + eval 准确率（通过率 100%，见 [GEOMETRY_PROMPT_EVAL.md](./GEOMETRY_PROMPT_EVAL.md)）。
 - [x] analyze/gradeMath/chat 生产链路接入 visual block：`sanitizeBlocks` 校验 geometry，非法降级为占位，整响应不崩。
+- [x] **M-D 端到端**：独立 `geometry` task 后置检测 + attach（数学/物理题），`analyze-geometry-e2e.test.ts` 真 key 通过（2026-08-09）。
 - [ ] 化学分子结构（图谱布局，V2 末段）。
-- [ ] iOS 构建验证：待 macOS CI。
+- [x] iOS 构建验证：macOS CI 全绿（PR #2/#3 合并，2026-08-09）。
 
 ### 4.2 交付物
 

@@ -1,6 +1,6 @@
 import type { TaskName } from '../gateway/types';
 import { CHAT_AGENT_TASK_INSTRUCTION } from './chatAgent';
-import { GEOMETRY_BLOCK_INSTRUCTION, GEOMETRY_SYSTEM_PROMPT } from './geometry';
+import { GEOMETRY_SYSTEM_PROMPT } from './geometry';
 
 const BLOCK_INSTRUCTION = `
 【分块输出】对于含数学公式的字段，请输出 blocks 数组而非纯字符串：
@@ -9,7 +9,7 @@ const BLOCK_INSTRUCTION = `
 - 表格用 { "type": "table", "headers": ["列1","列2"], "rows": [["值1","值2"]] }
 - 解题步骤用 { "type": "steps", "title": "解法", "steps": [{"title": "第一步", "blocks": [...]}] }
 - 示意图占位用 { "type": "visual", "kind": "placeholder" }
-公式与文字分别成块，不要把公式混进 text。无公式时可只用 text 块。${GEOMETRY_BLOCK_INSTRUCTION}`;
+公式与文字分别成块，不要把公式混进 text。无公式时可只用 text 块。`;
 
 const TASK_INSTRUCTIONS: Record<TaskName, string> = {
   ocr: `请识别图片中的所有文字、公式和图表。对于公式，使用 LaTeX 格式输出。`,

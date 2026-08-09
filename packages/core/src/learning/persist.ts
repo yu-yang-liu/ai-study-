@@ -61,7 +61,7 @@ export async function persistAnalyzeResult(
     knowledge_points: result.knowledgePoints,
     difficulty: result.difficulty,
     answer: result.answer ?? null,
-    analysis: result.analysis,
+    analysis: result.analysis ?? null,
     exam_points: result.examPoints ?? null,
   });
   if (aErr) console.warn('persistAnalyze question_analysis:', aErr.message);
@@ -155,7 +155,7 @@ export async function persistGradeResult(
     score: result.score,
     max_score: result.maxScore,
     user_answer: studentAnswer,
-    ai_feedback: result.summary,
+    ai_feedback: result.summary ?? null,
   });
   if (prErr) throw new Error(`grade practice_records insert: ${prErr.message}`);
 
@@ -166,7 +166,7 @@ export async function persistGradeResult(
     subject,
     question_type: questionType === 'math' ? '计算题' : '作文',
     knowledge_points: [],
-    analysis: result.summary,
+    analysis: result.summary ?? null,
   });
   if (qaErr) throw new Error(`grade question_analysis insert: ${qaErr.message}`);
 
