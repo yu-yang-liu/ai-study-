@@ -73,20 +73,40 @@ jobs:
 
       # ── ios-gaokao (single high-school app target; directory name retained) ──
       - name: Generate ios-gaokao.xcodeproj
+        shell: bash
         run: |
-          brew install xcodegen
+          set -o pipefail
+          { brew install xcodegen; } 2>&1 | tee /tmp/xcodegen-brew.log
+          brew_rc=${PIPESTATUS[0]}
           cd packages/ios/ios-gaokao
-          xcodegen generate --spec project.yml
+          { xcodegen generate --spec project.yml; } 2>&1 | tee /tmp/xcodegen.log
+          gen_rc=${PIPESTATUS[0]}
+          if [ "$brew_rc" -ne 0 ] || [ "$gen_rc" -ne 0 ]; then
+            cat /tmp/xcodegen-brew.log /tmp/xcodegen.log \
+              | grep -E 'error|Error|failed|Failed|not found|No such|Usage|brew' \
+              | while IFS= read -r line; do printf '::error::%s\n' "$line"; done \
+              | head -60
+            exit 1
+          fi
 
       - name: Build ios-gaokao (Debug)
+        shell: bash
         run: |
-          xcodebuild build \
-            -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
-            -scheme ios-gaokao \
-            -configuration Debug \
-            -destination "generic/platform=iOS Simulator" \
-            -derivedDataPath DerivedData \
-            CODE_SIGNING_ALLOWED=NO
+          set -o pipefail
+          { xcodebuild build \
+              -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
+              -scheme ios-gaokao \
+              -configuration Debug \
+              -destination "generic/platform=iOS Simulator" \
+              -derivedDataPath DerivedData \
+              CODE_SIGNING_ALLOWED=NO; } 2>&1 | tee /tmp/app-build.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E 'error:|warning:|BUILD FAILED|fatal|not found|No such' /tmp/app-build.log \
+              | while IFS= read -r line; do printf '::error::%s\n' "$line"; done \
+              | head -80
+            exit 1
+          fi
 
       - name: Upload build logs (on failure)
         if: failure()
@@ -100,6 +120,9 @@ jobs:
             /tmp/apc-test.log
             /tmp/core-build.log
             /tmp/core-test.log
+            /tmp/xcodegen-brew.log
+            /tmp/xcodegen.log
+            /tmp/app-build.log
           retention-days: 3
 
   lint:
