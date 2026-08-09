@@ -47,7 +47,7 @@ xcodegen generate --spec project.yml
 - `CoreKit/AppEnvironment.swift`：`phase = "high"`，`keychainServiceName = "com.aistudy.app"`
 - App `Info.plist` 通过 `API_BASE_URL` 注入服务端地址（Debug/Release 在 `project.yml` 配置）
 
-## 公式与几何渲染（进行中）
+## 公式与几何渲染（M1 公式实施完成，待 CI 验证）
 
 数学/理科公式与几何图形的原生渲染方案，详见 [docs/RENDER_AST.md](../../docs/RENDER_AST.md)。
 
@@ -55,16 +55,17 @@ xcodegen generate --spec project.yml
 
 | 里程碑 | 范围 | 状态 |
 |--------|------|------|
-| **M1 公式**（刚需） | 后端 `answer`/`analysis`/`examPoints`/`feedback`/`summary` 升级为 `Block[]`；前端 `ContentBlock` + `FormulaView` + `MarkdownRenderer(blocks:)` 升级；iosMath 集成 | 进行中 |
+| **M1 公式**（刚需） | 后端 `answer`/`analysis`/`examPoints`/`feedback`/`summary` 升级为 `Block[]`（B 策略：模型只出 blocks，后端 `blocksToPlainText` 派生 string，零迁移）；前端 `ContentBlock` + `FormulaView`（`MathBackend` 协议：UnicodeMathBackend 阶段一 + IosMathBackend 阶段二）+ `MarkdownRenderer(blocks:)` 升级；iosMath 集成 | 实施完成，待 CI 验证 |
 | **M2 几何**（尽量，独立） | Geometry AST schema + `GeometryCanvasView` + 各节点 drawer；后端提示词待补 | 待启动 |
 
 **当前进度**：
 - [x] 设计文档 `docs/RENDER_AST.md`
-- [ ] 后端 `format.ts` / `tasks.ts` schema 改 `Block[]`
-- [ ] ApiContracts `ContentBlock.swift`
-- [ ] `FormulaView.swift`（iosMath 包装，先纯 Swift Unicode 降级跑通管线）
-- [ ] `MarkdownRenderer(blocks:)` 升级
-- [ ] `AnalysisResultView` / `GradeResultView` 接入
-- [ ] iosMath SPM 集成（待核实 fork/版本，预期 2–3 轮 CI 试错）
+- [x] 后端 `schemas.ts` blockSchema + `blocks.ts` `blocksToPlainText` + `actions.ts` 派生回填 + `format.ts`/`tasks.ts` 分块输出
+- [x] ApiContracts `ContentBlock.swift` + `AnalyzeModels.swift`/`GradeModels.swift` `*Blocks` 字段 + `ContentBlockTests.swift`
+- [x] `FormulaView.swift`（`MathBackend` 协议 + `UnicodeMathBackend` 纯 Swift 降级跑通管线 + `IosMathBackend` 阶段二）
+- [x] `MarkdownRenderer(blocks:)` 升级
+- [x] `AnalysisResultView` / `GradeResultView` 接入（blocks 优先、回退 string-as-text-block）
+- [x] iosMath SPM 集成（`kostub/iosMath from:2.5.0`，`project.yml` xcodeVersion 16.2，`ios-ci.yml` Xcode 路径同步；预期 1–3 轮 CI 试错）
 
 > 渲染方式：**方式一** —— iosMath 管公式排版，SwiftUI 管壳与交互，不用 WebView 全包。
+> iosMath：仓库 **`kostub/iosMath`**（非 `costism`，后者 404），MIT，自 2.0.0 起原生 SPM，`swift-tools 6.0` / `.iOS(.v13)`，Pin `from: "2.5.0"`（≥2.3.1，含 #215/#217 修复）。

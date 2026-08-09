@@ -48,47 +48,52 @@ AST 节点方案：后端直接返回结构化 `Block[]`，每个 block 自带 `
 
 ---
 
-## 2. 公式渲染（M1 — 进行中，刚需，边界清楚）
+## 2. 公式渲染（M1 — 实施完成，待 CI 验证，刚需，边界清楚）
 
 ### 2.1 数据契约：`Block[]` AST
 
-把 `analyze` / `gradeMath` 中公式密集的字段从 `string` 升级为 `Block[]`。ocr 的 `blocks` 已是 typed，对齐即可。
+把 `analyze` / `gradeMath` 中公式密集的字段从 `string` 升级为 `Block[]`。ocr 的 `blocks` 已是 typed，对齐即可。采用 **B 策略**（见上「B 策略」段）：模型只输出 `*Blocks`，后端 `blocksToPlainText()` 派生同名 string 字段，二者同响应返回。string 字段**不弃用**，继续供 Web / 持久化 / chat 模板消费。
 
 **统一 Block 类型**（前后端共享，对应 `packages/core` Zod + `ApiContracts` Swift）：
 
 ```ts
-// packages/core/src/ai/prompt/format.ts（待改）
-type Block =
-  | { type: "text"; content: string }
-  | { type: "formula"; latex: string }      // 纯 LaTeX，无 $ 定界符
-  | { type: "image"; url: string; alt?: string };
+// packages/core/src/ai/structured/schemas.ts（已落地）
+const blockSchema = z.object({
+  type: z.enum(['text', 'formula', 'image']),
+  content: z.string().optional(),   // text 用；ocr 旧 blocks 的 formula 也落 content，兼容
+  latex: z.string().optional(),      // formula 用
+  url: z.string().optional(),
+  alt: z.string().optional(),
+});
+type Block = z.infer<typeof blockSchema>;
 ```
 
 ```swift
-// ApiContracts/Sources/ApiContracts/Models/ContentBlock.swift（待建）
-public enum ContentBlock: Codable, Sendable {
+// ApiContracts/Sources/ApiContracts/Models/ContentBlock.swift（已落地）
+public enum ContentBlock: Codable, Sendable, Equatable {
     case text(content: String)
-    case formula(latex: String)             // 纯 LaTeX，无 $$ 包裹
+    case formula(latex: String)             // 纯 LaTeX，无 $$ 包裹；解码时 latex 缺则回退 content（兼容 ocr 旧格式）
     case image(url: String, alt: String?)
+    // init(from:): 未知 type → 降级 .text("")，避免整响解码失败
 }
 ```
 
-**受影响字段**：
+**受影响字段**（新增可选 `*Blocks`，原 string 字段保留并由后端派生）：
 
-| 模型 | 字段 | 现状 | 目标 |
+| 模型 | 字段 | 现状 | 新增 |
 |------|------|------|------|
-| `AnalyzeResponse` | `answer` | `String?` | `[ContentBlock]?` |
-| `AnalyzeResponse` | `analysis` | `String` | `[ContentBlock]` |
-| `AnalyzeResponse` | `examPoints` | `String?` | `[ContentBlock]?` |
-| `GradeMathStep` | `feedback` | `String` | `[ContentBlock]` |
-| `GradeMathResponse` | `summary` | `String` | `[ContentBlock]` |
-| `GradeEssayResponse` | `summary` / `strengths` / `weaknesses` | `String` / `[String]` | `[ContentBlock]` / `[[ContentBlock]]`（作文公式极少，**暂不动**，留 string） |
+| `AnalyzeResponse` | `answer` | `String?` | `answerBlocks: [ContentBlock]?` |
+| `AnalyzeResponse` | `analysis` | `String` | `analysisBlocks: [ContentBlock]?` |
+| `AnalyzeResponse` | `examPoints` | `String?` | `examPointsBlocks: [ContentBlock]?` |
+| `GradeMathStep` | `feedback` | `String` | `feedbackBlocks: [ContentBlock]?` |
+| `GradeMathResponse` | `summary` | `String` | `summaryBlocks: [ContentBlock]?` |
+| `GradeEssayResponse` | `summary` / `strengths` / `weaknesses` | `String` / `[String]` | **不动**（作文公式极少，留 string） |
 
-**兼容策略**：后端可同时返回 `string` 与 `blocks` 双字段过渡，前端优先 `blocks`、缺省回退 `string`（降级为单个 `.text` block）。待后端全量切换后移除 string 字段。
+**兼容策略**：后端同响应返回 string（派生）与 blocks（模型输出）。iOS 优先 `blocks`、缺省回退 `string`（降级为单个 `.text` block）。字段全可选，旧响应缺 `*Blocks` → 解码为 nil 不崩。
 
-### 2.2 后端 prompt 改动
+### 2.2 后端 prompt 与派生改动
 
-`tasks.ts` 的 `analyze` / `gradeMath` 增加"分块输出"指令：
+`tasks.ts` 的 `analyze` / `gradeMath` / `analyzeImg` 增加"分块输出"指令：
 
 ```
 对于含数学公式的字段（answer/analysis/examPoints/feedback/summary），
@@ -96,9 +101,12 @@ public enum ContentBlock: Codable, Sendable {
 - 普通文字用 { "type": "text", "content": "..." }
 - 数学公式用 { "type": "formula", "latex": "..." }（latex 为纯 LaTeX，不要 $ 包裹）
 公式与文字分别成块，不要把公式混进 text。
+（string 字段由后端派生，模型无需输出。）
 ```
 
-`format.ts` 对应 schema 字段类型从 `z.string()` 改 `z.array(BlockSchema)`。
+`format.ts` 对应 schema 字段从 `z.string()` 改 `z.array(blockSchema)`，静态 map 展示 `*Blocks` 数组示例。
+
+**派生回填**（`learning/actions.ts`，`executeAnalyze` / `executeGrade`）：`structuredCall` 返回后、`persist*` 之前，用 `blocksToPlainText(result.answerBlocks)` 等回填同名 string 字段；`analysis` 为必填，派生作回退（`blocksToPlainText(...) || result.analysis`）。`persist*` 签名不变（仍收 string）。`runChatAgent.ts` 模板读 string 字段，**零改动**。
 
 ### 2.3 前端渲染架构
 
@@ -115,48 +123,61 @@ public enum ContentBlock: Codable, Sendable {
 - text block 走现有 `InlineParser`（`**bold**` / `*italic*` / `` `code` `` / `[link]()`）。
 - formula block 走 `FormulaView`。
 
-**`FormulaView`**（新建，`CoreKit/.../Components/FormulaView.swift`）：
+**`FormulaView`**（已落地，`CoreKit/.../Components/FormulaView.swift`）：
 - `public struct FormulaView: View`，`init(latex: String, fontSize: CGFloat = 17)`。
-- 内部 `UIViewRepresentable` 包 `MTMathUILabel`（iosMath）。
-- `@MainActor`（UIView 本身主线程隔离，Swift 6 严格并发安全）。
-- 渲染失败（latex 非法）降级：`Text(latex).font(.system(.body, design: .monospaced))`。
+- `public protocol MathBackend: Sendable { func render(latex:fontSize:) -> AnyView }` —— 阶段一 `UnicodeMathBackend`（纯 Swift Unicode 降级，零依赖，CI 可跑），阶段二 `IosMathBackend`（iosMath `MTMathUILabel`）。`defaultBackend` 用 `#if canImport(iosMath)` 切换，调用方零改动。
+- `UnicodeMathBackend.convert()` 纯函数：`\sqrt`→√、`\frac{a}{b}`→a/b、`^{2}`→²、`_{n}`→ₙ、希腊字母… 未识别命令保留字母名去反斜杠，信息不丢。13 项单测覆盖。
+- `IosMathBackend`（`@MainActor`，`nonisolated render` 返回 `AnyView`）：`UIViewRepresentable` 包 `MTMathUILabel`，抄自 iosMath `SwiftMathExample/MathLabel.swift`（MIT）。解析失败降级：`updateUIView` 设 `latex` 后读 `label.error`，非空则经 `@Binding` 翻转包装视图 `fallback`，body 切到 `UnicodeMathBackend`。`sizeThatFits` 限定宽度为提案宽度，防宽公式撑爆列宽。
 
-### 2.4 iosMath 集成路径（待核实 agent 确认 fork/版本后定稿）
+### 2.4 iosMath 集成路径（已核实并落地）
 
-**候选**：`costism/iosMath`（ObjC/C++，`MTMathUILabel`，渲染质量最佳）。
-**SPM 集成**：iosMath 原生无 SPM，需用社区 fork 或自包 wrapper。集成入 `CoreKit/Package.swift`：
+**仓库**：`kostub/iosMath`（**非 `costism`**，后者 404）。MIT。**自 2.0.0 起原生 SPM**（CocoaPods 已移除），`swift-tools-version: 6.0`，`.iOS(.v13)` / `.macOS(.v10_15)`，与 CoreKit `.iOS(.v17)` 兼容（SPM 取平台并集，无冲突）。
+
+**Pin `from: "2.5.0"`**（2026-07-14 最新）。**必须 ≥2.3.1**（issue #215 `MTMathList.h not found` 修复于 PR #217，部署目标降回 iOS 13+）。
+
+**SPM 集成**（已落地 `CoreKit/Package.swift`）：
 
 ```swift
-// CoreKit/Package.swift（待改）
 dependencies: [
     .package(path: "../ApiContracts"),
-    .package(url: "<iosMath-SPM-fork-URL>", from: "<version>"),  // 待定
+    .package(url: "https://github.com/kostub/iosMath.git", from: "2.5.0"),
 ],
 targets: [
     .target(name: "CoreKit", dependencies: ["ApiContracts", "iosMath"], path: "Sources/CoreKit"),
 ]
 ```
 
-**严格并发**：`MTMathUILabel` 是 `UIView` → `@MainActor`。`FormulaView: UIViewRepresentable` 自动 `@MainActor`，Sendable 安全。需验证 Swift 6 `complete` 模式无警告。
+**project.yml**：iosMath **无需在 `packages:` 显式声明** —— XcodeGen 解析 CoreKit `Package.swift` 时传递性拉取。`xcodeVersion` bump `"16.0"` → `"16.2"`（macOS-15 runner 有 `Xcode_16.2.app`；CI `ios-ci.yml` 同步 `xcode-select` 到该路径）。fallback：若 CI 实测 xcodegen 未传递 iosMath，再在 `packages:` 显式加。
 
-**LaTeX 覆盖**（iosMath 已支持）：`\frac` / `\sqrt` / `^_` / 希腊字母 / `\sum \int \lim` / `\begin{matrix}` / `\begin{cases}` / `\left( \right)` 自适应定界符。**不支持**：`\text{}` 中文混排（公式内中文走 text block）、化学方程式、多行 `align` 对齐环境（降级为多 block）。
+**严格并发**：`MTMathUILabel` 是 `UIView` → 天然 `@MainActor`。`IosMathBackend` 标 `@MainActor`，`render` 标 `nonisolated`（构造视图值不触 actor 隔离态，`makeUIView` / `updateUIView` 由 SwiftUI 调度到主线程）。`defaultBackend` 是只读 `static var`，无并发写竞争。Swift 6 `complete` 模式预期无警告（待 CI 验证）。
 
-**风险**（Windows 无本地构建）：iosMath C++ 依赖首次集成可能需 2–3 轮 CI（`xcodegen` + `xcodebuild`）试错。缓解：先在 `FormulaView` 用纯 Swift Unicode 降级实现跑通管线，iosMath 作为可切换后端（`protocol MathBackend`）增量替换，**接口不变**。
+**LaTeX 覆盖**（iosMath 已支持）：`\frac` / `\sqrt` / `^_` / 希腊字母 / `\sum \int \lim` / matrix / `array`(v2.5.0) / `cases` / `\left( \right)` / `aligned` / `split` / `gather` / `\text{}` CJK(v2.2.0) / `\phantom` `\smash` `\overset` `\underset`(v2.4.0) / `\textcolor`(v2.5.0) / accents / `\cancel`(v2.5.0)。**不支持**：`align` / `equation` 环境、多行换行、mhchem 化学方程式、`\newcommand`。v2.4.0+ 全局字体/符号表线程安全。
+
+**风险**（Windows 无本地构建）：iosMath C++ 依赖首次集成预期 1–3 轮 CI 试错。缓解：`MathBackend` 协议 + 纯 Swift `UnicodeMathBackend` 降级实现已跑通全管线（阶段一 CI 必须全绿，这是去风险基线），iosMath 作为可替换后端第二步接入，**接口不变**。即使 iosMath 首轮挂，STEP 1–5/7 已可用。
 
 ### 2.5 受影响文件
 
 | 文件 | 改动 |
 |------|------|
-| `packages/core/src/ai/prompt/format.ts` | analyze/gradeMath schema：string → Block[] |
-| `packages/core/src/ai/prompt/tasks.ts` | analyze/gradeMath 指令加分块输出 |
-| `packages/ios/ApiContracts/.../ContentBlock.swift` | **新建** ContentBlock enum |
-| `packages/ios/ApiContracts/.../AnalyzeModels.swift` | answer/analysis/examPoints → [ContentBlock] |
-| `packages/ios/ApiContracts/.../GradeModels.swift` | feedback/summary → [ContentBlock] |
-| `packages/ios/CoreKit/Package.swift` | 加 iosMath 依赖（待核实） |
-| `packages/ios/CoreKit/.../Components/FormulaView.swift` | **新建** iosMath 包装 |
+| `packages/core/src/ai/structured/schemas.ts` | blockSchema + analyze/gradeMath 新增 `*Blocks` 可选字段 |
+| `packages/core/src/ai/structured/blocks.ts` | **新建** `blocksToPlainText()` 纯函数（派生 string，单源真相） |
+| `packages/core/src/ai/structured/blocks.test.ts` | **新建** `blocksToPlainText` 单测（三类 block / 空 / null） |
+| `packages/core/src/learning/actions.ts` | `executeAnalyze`/`executeGrade` 派生回填 string 字段 |
+| `packages/core/src/ai/prompt/format.ts` | analyze/gradeMath schema 展示 `*Blocks` 数组示例 |
+| `packages/core/src/ai/prompt/tasks.ts` | analyze/gradeMath/analyzeImg 指令加分块输出 |
+| `packages/core/src/index.ts` | 导出 `blocksToPlainText`、`Block` |
+| `packages/ios/ApiContracts/.../ContentBlock.swift` | **新建** ContentBlock enum（判别 Codable，未知 type 降级） |
+| `packages/ios/ApiContracts/.../AnalyzeModels.swift` | answer/analysis/examPoints 加 `*Blocks` + CodingKeys |
+| `packages/ios/ApiContracts/.../GradeModels.swift` | feedback/summary 加 `*Blocks` |
+| `packages/ios/ApiContracts/Tests/.../ContentBlockTests.swift` | **新建** 14 项解码/容错/整响测试 |
+| `packages/ios/CoreKit/Package.swift` | 加 iosMath `from: "2.5.0"` 依赖 |
+| `packages/ios/CoreKit/.../Components/FormulaView.swift` | **新建** MathBackend 协议 + UnicodeMathBackend（阶段一）+ IosMathBackend（阶段二） |
+| `packages/ios/CoreKit/Tests/.../UnicodeMathBackendTests.swift` | **新建** 13 项 convert 单测 + defaultBackend 条件断言 |
 | `packages/ios/CoreKit/.../Components/MarkdownRenderer.swift` | 加 `init(blocks:)`，formula block 走 FormulaView |
-| `packages/ios/ios-gaokao/.../AnalysisResultView.swift` | `Text(answer)` → `MarkdownRenderer(blocks:)` |
+| `packages/ios/ios-gaokao/.../AnalysisResultView.swift` | `Text(answer)` → `MarkdownRenderer(blocks:)`（blocks 优先、回退 string） |
+| `packages/ios/ios-gaokao/project.yml` | `xcodeVersion` "16.0"→"16.2" |
 | `packages/ios/CoreKit/.../Components/GradeResultView.swift` | feedback/summary → MarkdownRenderer(blocks:) |
+| `.github/workflows/ios-ci.yml` | `xcode-select` 路径 → `Xcode_16.2.app` |
 
 ---
 
@@ -223,17 +244,19 @@ GeometryAST
 
 ## 4. 推进顺序
 
-1. **M1 公式**（当前）：后端 Block[] schema + prompt → 前端 ContentBlock + FormulaView + MarkdownRenderer 升级 → iosMath 集成（待核实 agent 确认 fork）。先以纯 Swift Unicode 降级实现跑通管线，iosMath 增量替换。
+1. **M1 公式**（实施完成，待 CI 验证）：后端 Block[] schema + 派生 string + prompt → 前端 ContentBlock + FormulaView（MathBackend 协议：UnicodeMathBackend 阶段一 + IosMathBackend 阶段二）+ MarkdownRenderer(blocks:) 升级 → App 视图接入 → iosMath SPM 集成（`kostub/iosMath from:2.5.0`）。纯 Swift 降级实现跑通管线为去风险基线，iosMath 增量替换。
 2. **M2 几何**（后续，独立）：先设计 Geometry AST schema v1 → 验 AI 输出准确率 → 写 GeometryCanvasView + 两 demo → 扩节点类型。后端提示词待用户补充后接入。
 
 ---
 
 ## 5. 验证
 
-无法本地构建（Windows）。验证 = 读级审查（Swift 6 / 严格并发 / Sendable / `missing_docs`）+ 推非 main 分支触发 `ios-ci.yml`（macOS runner：ApiContracts/CoreKit `swift build`+`swift test` → `xcodegen generate` → `xcodebuild build`）。
+无法本地构建（Windows，无 swift toolchain）。验证 = 读级审查（Swift 6 / 严格并发 / Sendable / `missing_docs`）+ 推非 main 分支触发 `ios-ci.yml`（macOS-15 runner：ApiContracts/CoreKit `swift build`+`swift test` → `xcodegen generate` → `xcodebuild build`，失败上传 `xcode-logs` artifact）。
 
-iosMath C++ 依赖集成阶段预期需 2–3 轮 CI 试错（Windows 无本地 Mac，调试周期长）。纯 Swift 降级实现可读级审查覆盖大部分风险。
+**阶段一（纯 Swift Unicode 降级）CI 必须全绿** —— 无 iosMath 依赖，应一次过，这是去风险基线。**阶段二（加 iosMath）** 进入 1–3 轮 CI 试错窗口：首轮关注 `MTMathList.h not found`（已 pin ≥2.3.1）、module 未解析（project.yml 显式加 iosMath package）、C++ 链接。即使 iosMath 首轮挂，STEP 1–5/7 已可用（降级路径保证管线本身可独立验证）。
+
+后端验证：`pnpm exec tsc --noEmit && pnpm exec vitest run`（含 `blocksToPlainText` 单测）。人工核零破坏：Web chat/grade 页、API 路由、RAG、chat 模板继续吃 string 字段不崩。
 
 ---
 
-*文档版本：2026-08-08 · 公式 M1 进行中 / 几何 M2 待启动（提示词待补）*
+*文档版本：2026-08-09 · 公式 M1 实施完成（待 CI）/ 几何 M2 待启动（提示词待补）*

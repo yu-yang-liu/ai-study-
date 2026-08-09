@@ -14,9 +14,20 @@ packages/ios/tools/node_modules/
 # IDE / editor
 .cursor/
 .idea/
+.claude/
 .vscode/*
 !.vscode/extensions.json
 *.swp
 
 # OS
 Thumbs.db
+
+# Android / Gradle
+packages/android/local.properties
+packages/android/.gradle/
+packages/android/**/build/
+*.apk
+*.aab
+*.keystore
+*.jks
+packages/android/captures/

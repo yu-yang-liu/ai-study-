@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  启动图标前景层（自适应图标）。
+  108x108dp 画布，内层 72x72dp 安全区承载标记（品牌首字母「学」简化为 A 字样）。
+  透明背景，由 adaptive-icon 的 background 填充品牌色。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 居中圆角底板，营造标记与背景的层次。 -->
+    <path
+        android:pathData="M54,30 m-22,0 a22,22 0 1,0 44,0 a22,22 0 1,0 -44,0 z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.12" />
+    <!-- 字母 A：两条斜杠 + 横档，居中（安全区内）。 -->
+    <path
+        android:pathData="M54,40 L44,64 L49,64 L51.2,57 L56.8,57 L59,64 L64,64 L54,40 Z M52.4,53 L54,47.5 L55.6,53 Z"
+        android:fillColor="#FFFFFF" />
+</vector>
