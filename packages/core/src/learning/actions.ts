@@ -1,7 +1,7 @@
 import { composeMessages } from '../ai/prompt/compose';
 import { structuredCall } from '../ai/structured/call';
 import { TASK_SCHEMA } from '../ai/structured/schemas';
-import { blocksToPlainText } from '../ai/structured/blocks';
+import { blocksToPlainText, sanitizeBlocks } from '../ai/structured/blocks';
 import { retrieveReferences } from '../ai/rag';
 import { getLearnerContext } from '../ai/learner/context';
 import type { AnalyzeOutput, GradeMathOutput, GradeEssayOutput, PlanOutput, Block } from '../ai/structured/schemas';
@@ -72,6 +72,11 @@ export async function executeAnalyze(opts: {
     phase: 'high',
   })) as AnalyzeOutput;
 
+  // M-D：几何 visual block 校验——非法 geometry 降级为占位，不影响整响应。
+  if (result.answerBlocks) result.answerBlocks = sanitizeBlocks(result.answerBlocks);
+  if (result.analysisBlocks) result.analysisBlocks = sanitizeBlocks(result.analysisBlocks);
+  if (result.examPointsBlocks) result.examPointsBlocks = sanitizeBlocks(result.examPointsBlocks);
+
   // B 策略派生回填：模型只输出 *Blocks，这里派生同名 string 字段。
   // string 字段供 persist(TEXT 列)/RAG/chat 模板/Web 等字符串消费者使用，blocks 供 iOS 公式渲染。
   if (result.analysisBlocks && !result.analysis) {
@@ -122,6 +127,12 @@ export async function executeGrade(opts: {
   // B 策略派生回填（仅 gradeMath 有 blocks 字段；essay 不动）。
   if (task === 'gradeMath') {
     const math = result as GradeMathOutput;
+    if (math.summaryBlocks) math.summaryBlocks = sanitizeBlocks(math.summaryBlocks);
+    if (math.steps) {
+      for (const step of math.steps) {
+        if (step.feedbackBlocks) step.feedbackBlocks = sanitizeBlocks(step.feedbackBlocks);
+      }
+    }
     if (math.summaryBlocks && !math.summary) {
       math.summary = blocksToPlainText(math.summaryBlocks) || math.summary;
     }

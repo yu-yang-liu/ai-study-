@@ -1,4 +1,4 @@
-import type { Block } from './schemas';
+import { geometryAstSchema, type Block } from './schemas';
 
 /**
  * 将 `Block[]` 压平为纯文本，填回现有的 string 字段（持久化 TEXT 列 / chat 模板 / eval / Web）。
@@ -48,4 +48,30 @@ export function blocksToPlainText(blocks?: Block[] | null): string {
     })
     .join(' ')
     .trim();
+}
+
+/**
+ * 校验并降级 blocks 中的几何数据（M-D：生产链路接入 visual block）。
+ *
+ * - `visual` 块 `kind == "geometry"` 且 `geometry` 非法时，降级为
+ *   `{ type: "visual", kind: "placeholder" }`，保证 analyze/chat 整响应不崩；
+ * - `steps` 块递归处理内部 blocks；
+ * - 输入为空（null/undefined）时原样返回，避免把「缺省」变成「空数组」。
+ */
+export function sanitizeBlocks(blocks?: Block[] | null): Block[] | undefined {
+  if (!blocks || blocks.length === 0) return blocks ?? undefined;
+  return blocks.map((block) => {
+    if (block.type === 'visual' && block.kind === 'geometry' && block.geometry !== undefined) {
+      if (!geometryAstSchema.safeParse(block.geometry).success) {
+        return { type: 'visual', kind: 'placeholder' };
+      }
+    }
+    if (block.type === 'steps') {
+      return {
+        ...block,
+        steps: block.steps.map((step) => ({ ...step, blocks: sanitizeBlocks(step.blocks) ?? [] })),
+      };
+    }
+    return block;
+  });
 }

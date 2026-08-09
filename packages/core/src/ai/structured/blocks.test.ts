@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { blocksToPlainText } from './blocks';
+import { blocksToPlainText, sanitizeBlocks } from './blocks';
 import type { Block } from './schemas';
 
 describe('blocksToPlainText', () => {
@@ -91,5 +91,48 @@ describe('blocksToPlainText', () => {
       { type: 'text', content: 'world' },
     ];
     expect(blocksToPlainText(blocks)).toBe('hello   world');
+  });
+});
+
+describe('sanitizeBlocks（M-D 几何校验）', () => {
+  it('合法 geometry 的 visual block 原样保留', () => {
+    const blocks: Block[] = [
+      { type: 'visual', kind: 'geometry', geometry: { type: 'scene', elements: [] } },
+    ];
+    expect(sanitizeBlocks(blocks)).toEqual(blocks);
+  });
+
+  it('非法 geometry 降级为 placeholder', () => {
+    const blocks: Block[] = [
+      { type: 'visual', kind: 'geometry', geometry: { type: 'picture', elements: [] } },
+    ];
+    expect(sanitizeBlocks(blocks)).toEqual([{ type: 'visual', kind: 'placeholder' }]);
+  });
+
+  it('geometry 为 null 时降级为 placeholder', () => {
+    const blocks: Block[] = [{ type: 'visual', kind: 'geometry', geometry: null }];
+    expect(sanitizeBlocks(blocks)).toEqual([{ type: 'visual', kind: 'placeholder' }]);
+  });
+
+  it('steps 内部 blocks 递归校验', () => {
+    const blocks: Block[] = [
+      {
+        type: 'steps',
+        title: '解法',
+        steps: [
+          { blocks: [{ type: 'visual', kind: 'geometry', geometry: { bad: true } }] },
+        ],
+      },
+    ];
+    const output = sanitizeBlocks(blocks)!;
+    expect(output[0]?.type).toBe('steps');
+    const inner = (output[0] as { steps: Array<{ blocks: Block[] }> }).steps[0]!.blocks[0];
+    expect(inner).toEqual({ type: 'visual', kind: 'placeholder' });
+  });
+
+  it('null/undefined 保持 undefined；显式空数组保持空数组', () => {
+    expect(sanitizeBlocks(undefined)).toBeUndefined();
+    expect(sanitizeBlocks(null)).toBeUndefined();
+    expect(sanitizeBlocks([])).toEqual([]);
   });
 });

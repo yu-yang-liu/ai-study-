@@ -157,7 +157,8 @@ type Block =
 - [x] CoreKit `GeometryCanvasView.swift`：SwiftUI `Canvas` + 每元素 drawer（point/line/vector/triangle/polygon/circle/arc/angle/functionCurve/label）+ 坐标轴/网格/刻度 + 3 个 #Preview（三角形+角、坐标系+函数曲线、力的合成）。
 - [x] `ContentBlock.visual` 携带 `geometry` 数据；`MarkdownRenderer` 对 `kind == "geometry"` 渲染 `GeometryCanvasView`，否则占位。
 - [x] 测试：ApiContracts `GeometryASTTests`（解码/往返/降级）、CoreKit `GeometryTests`（求值器/边界/坐标变换）。
-- [ ] 后端 `geometry` task + prompt 接入 analyze 几何分支（AI 输出 geometryAst + eval 准确率）。
+- [x] 后端 `geometry` task + 提示词定稿 + eval 准确率（通过率 100%，见 [GEOMETRY_PROMPT_EVAL.md](./GEOMETRY_PROMPT_EVAL.md)）。
+- [x] analyze/gradeMath/chat 生产链路接入 visual block：`sanitizeBlocks` 校验 geometry，非法降级为占位，整响应不崩。
 - [ ] 化学分子结构（图谱布局，V2 末段）。
 - [ ] iOS 构建验证：待 macOS CI。
 

@@ -19,6 +19,7 @@ import {
 } from '../../learning/actions';
 import { upsertUserFact, forgetUserFact } from '../memory/facts';
 import { storeUserMemory } from '../memory/episodic';
+import { sanitizeBlocks } from '../structured/blocks';
 
 const planArgsSchema = z.object({
   focus: z.string().optional(),
@@ -239,7 +240,7 @@ export async function runChatAgent(opts: {
   if (!parsed.tool) {
     return {
       reply: parsed.reply ?? '\u6211\u6682\u65f6\u65e0\u6cd5\u56de\u590d\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5\u3002',
-      replyBlocks: parsed.replyBlocks,
+      replyBlocks: sanitizeBlocks(parsed.replyBlocks),
     };
   }
 
@@ -252,7 +253,7 @@ export async function runChatAgent(opts: {
   const synthesized = await synthesizeReply(message, toolResult.summary, subject);
   return {
     reply: synthesized.reply,
-    replyBlocks: synthesized.replyBlocks,
+    replyBlocks: sanitizeBlocks(synthesized.replyBlocks),
     action: toolResult.action,
   };
 }
