@@ -84,7 +84,7 @@ jobs:
             -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
             -scheme ios-gaokao \
             -configuration Debug \
-            -destination "platform=iOS Simulator,name=iPhone 17" \
+            -destination "generic/platform=iOS Simulator" \
             -derivedDataPath DerivedData \
             CODE_SIGNING_ALLOWED=NO
 

@@ -79,10 +79,10 @@ final class UnicodeMathBackendTests: XCTestCase {
     // MARK: FormulaView 默认后端
 
     func testDefaultBackendIsAvailable() {
-        // defaultBackend：iosMath 可导入时为 IosMathBackend，否则回退 UnicodeMathBackend。
-        // CoreKit 测试目标依赖 iosMath，故此处应为 IosMathBackend。
+        // defaultBackend：iOS 且 iosMath 可导入时为 IosMathBackend，否则回退 UnicodeMathBackend
+        // （macOS CI 无 UIKit，走 Unicode 降级）。
         let backend = FormulaView.defaultBackend
-        #if canImport(iosMath)
+        #if canImport(UIKit) && canImport(iosMath)
         XCTAssertTrue(backend is IosMathBackend, "expected IosMathBackend when iosMath available, got \(type(of: backend))")
         #else
         XCTAssertTrue(backend is UnicodeMathBackend, "expected UnicodeMathBackend fallback, got \(type(of: backend))")
