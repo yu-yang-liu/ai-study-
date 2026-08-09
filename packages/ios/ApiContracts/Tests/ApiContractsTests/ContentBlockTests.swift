@@ -228,13 +228,40 @@ final class ContentBlockTests: XCTestCase {
     func testDecodeVisualBlockDefaultsToPlaceholder() throws {
         let json = #"{"type":"visual"}"#.data(using: .utf8)!
         let block = try JSONDecoder().decode(ContentBlock.self, from: json)
-        XCTAssertEqual(block, .visual(kind: "placeholder"))
+        XCTAssertEqual(block, .visual(kind: "placeholder", geometry: nil))
     }
 
     func testDecodeVisualGeometryKind() throws {
         let json = #"{"type":"visual","kind":"geometry"}"#.data(using: .utf8)!
         let block = try JSONDecoder().decode(ContentBlock.self, from: json)
-        XCTAssertEqual(block, .visual(kind: "geometry"))
+        XCTAssertEqual(block, .visual(kind: "geometry", geometry: nil))
+    }
+
+    func testDecodeVisualWithGeometryAST() throws {
+        let json = """
+        {
+          "type": "visual",
+          "kind": "geometry",
+          "geometry": {
+            "type": "scene",
+            "elements": [
+              {"type": "triangle", "vertices": [[0,0],[5,0],[2,3.5]], "labels": ["A","B","C"]},
+              {"type": "angle", "vertex": [0,0], "from": [5,0], "to": [2,3.5], "degrees": 60}
+            ]
+          }
+        }
+        """.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        guard case .visual(let kind, let geometry) = block else {
+            return XCTFail("expected visual block")
+        }
+        XCTAssertEqual(kind, "geometry")
+        guard case .scene(let elements, _) = geometry else {
+            return XCTFail("expected scene geometry")
+        }
+        XCTAssertEqual(elements.count, 2)
+        XCTAssertEqual(elements[0].type, "triangle")
+        XCTAssertEqual(elements[1].type, "angle")
     }
 
     func testEncodeRoundTripTable() throws {
@@ -249,6 +276,19 @@ final class ContentBlockTests: XCTestCase {
             title: "解法",
             steps: [StepContent(blocks: [.formula(latex: "x=2")], isCorrect: true)],
             interaction: InteractionHint(collapsible: true)
+        )
+        let data = try JSONEncoder().encode(block)
+        let decoded = try JSONDecoder().decode(ContentBlock.self, from: data)
+        XCTAssertEqual(block, decoded)
+    }
+
+    func testEncodeRoundTripVisualWithGeometry() throws {
+        let block: ContentBlock = .visual(
+            kind: "geometry",
+            geometry: .scene(
+                elements: [.point(x: 1, y: 2, label: "P")],
+                bounds: nil
+            )
         )
         let data = try JSONEncoder().encode(block)
         let decoded = try JSONDecoder().decode(ContentBlock.self, from: data)

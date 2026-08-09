@@ -26,8 +26,9 @@ public enum ContentBlock: Codable, Sendable, Equatable {
     case table(headers: [String]?, rows: [[String]])
     /// 解题步骤（Solution AST），可递归包含公式 / 表格等块。
     case steps(title: String?, steps: [StepContent], interaction: InteractionHint?)
-    /// 视觉内容（Visual AST）。Phase 1 为占位；Phase 2 由 Geometry AST + Swift Canvas/Shape 渲染。
-    case visual(kind: String)
+    /// 视觉内容（Visual AST）。Phase 2：`kind == "geometry"` 且携带 `GeometryAST` 时，
+    /// 由 `GeometryCanvasView`（Swift Canvas/Shape）动态渲染；否则显示占位。
+    case visual(kind: String, geometry: GeometryAST?)
 
     // MARK: CodingKeys
 
@@ -43,6 +44,7 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case steps
         case interaction
         case kind
+        case geometry
     }
 
     // MARK: Decodable
@@ -75,7 +77,8 @@ public enum ContentBlock: Codable, Sendable, Equatable {
             self = .steps(title: title, steps: steps, interaction: interaction)
         case "visual":
             let kind = try container.decodeIfPresent(String.self, forKey: .kind) ?? "placeholder"
-            self = .visual(kind: kind)
+            let geometry = try container.decodeIfPresent(GeometryAST.self, forKey: .geometry)
+            self = .visual(kind: kind, geometry: geometry)
         default:
             // 未知 type 降级为空文本，保证整响可解码。
             self = .text(content: "")
@@ -106,9 +109,10 @@ public enum ContentBlock: Codable, Sendable, Equatable {
             try container.encodeIfPresent(title, forKey: .title)
             try container.encode(steps, forKey: .steps)
             try container.encodeIfPresent(interaction, forKey: .interaction)
-        case .visual(let kind):
+        case .visual(let kind, let geometry):
             try container.encode("visual", forKey: .type)
             try container.encode(kind, forKey: .kind)
+            try container.encodeIfPresent(geometry, forKey: .geometry)
         }
     }
 }

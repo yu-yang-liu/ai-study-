@@ -283,8 +283,12 @@ public struct MarkdownRenderer: View {
             if !steps.isEmpty {
                 StepsBlockView(title: title, steps: steps, interaction: interaction)
             }
-        case .visual(let kind):
-            VisualPlaceholderView(kind: kind)
+        case .visual(let kind, let geometry):
+            if kind == "geometry", let geometry {
+                GeometryCanvasView(ast: geometry)
+            } else {
+                VisualPlaceholderView(kind: kind)
+            }
         }
     }
 
