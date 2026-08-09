@@ -97,7 +97,7 @@ jobs:
               -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
               -scheme ios-gaokao \
               -configuration Debug \
-              -destination "generic/platform=iOS Simulator" \
+              -sdk iphonesimulator \
               -derivedDataPath DerivedData \
               CODE_SIGNING_ALLOWED=NO; } 2>&1 | tee /tmp/app-build.log
           rc=${PIPESTATUS[0]}
