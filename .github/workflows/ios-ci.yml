@@ -95,7 +95,7 @@ jobs:
           set -o pipefail
           { xcodebuild build \
               -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
-              -scheme ios-gaokao \
+              -target ios-gaokao \
               -configuration Debug \
               -sdk iphonesimulator \
               -derivedDataPath DerivedData \
