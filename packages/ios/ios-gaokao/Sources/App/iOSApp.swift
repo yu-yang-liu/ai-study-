@@ -62,7 +62,7 @@ struct AILearningApp: App {
 @MainActor
 final class AppCoordinator: ObservableObject {
     @Published var isAuthenticated = false
-    lazy var authManager: AuthManager = AuthManager(apiClient: apiClient, tokenStorage: tokenStorage)
+    let authManager: AuthManager
     let apiClient: APIClient
     let dataRepository: DataRepository
     let networkMonitor: NetworkMonitor
@@ -71,6 +71,7 @@ final class AppCoordinator: ObservableObject {
     private let tokenStorage: TokenStorage
 
     init() {
+        let unauthorizedHandler = UnauthorizedHandler()
         do {
             modelContainer = try ModelContainer(for: ChatHistoryRecord.self, GradeRecord.self, PlanCache.self, UserSettings.self)
         } catch {
@@ -80,14 +81,16 @@ final class AppCoordinator: ObservableObject {
         apiClient = APIClient(
             baseURL: AppEnvironment.baseURL,
             tokenProvider: { [tokenStorage] in await tokenStorage.getAccessToken() },
-            onUnauthorized: { [weak self] in
-                guard let self else { return false }
-                return await self.handleUnauthorized()
+            onUnauthorized: { [unauthorizedHandler] in
+                guard let coordinator = unauthorizedHandler.coordinator else { return false }
+                return await coordinator.handleUnauthorized()
             }
         )
+        authManager = AuthManager(apiClient: apiClient, tokenStorage: tokenStorage)
         dataRepository = DataRepository(modelContainer: modelContainer)
         networkMonitor = NetworkMonitor()
         notificationManager = NotificationManager()
+        unauthorizedHandler.coordinator = self
         Task { @MainActor in
             for await authenticated in authManager.$isAuthenticated.values {
                 self.isAuthenticated = authenticated
@@ -103,6 +106,11 @@ final class AppCoordinator: ObservableObject {
         }
         return refreshed
     }
+}
+
+/// 401 处理器中转：避免 init 中构造 apiClient 时闭包提前捕获未初始化的 self
+private final class UnauthorizedHandler: @unchecked Sendable {
+    weak var coordinator: AppCoordinator?
 }
 
 // MARK: - 智能考试年份检测
