@@ -33,10 +33,23 @@ jobs:
 
       # ── ApiContracts Package ──
       - name: Build ApiContracts
+        shell: bash
         run: |
+          set -o pipefail
           cd packages/ios/ApiContracts
-          swift build --configuration debug
-          swift test --configuration debug
+          swift build --configuration debug 2>&1 | tee /tmp/apc-build.log
+          build_rc=${PIPESTATUS[0]}
+          swift test --configuration debug 2>&1 | tee /tmp/apc-test.log
+          test_rc=${PIPESTATUS[0]}
+          rc=0
+          if [ "$build_rc" -ne 0 ] || [ "$test_rc" -ne 0 ]; then rc=1; fi
+          if [ "$rc" -ne 0 ]; then
+            cat /tmp/apc-build.log /tmp/apc-test.log \
+              | grep -E 'error:|warning:|FAILED|BUILD FAILED|Test Case.*failed|XCTAssert|Fatal error|Unhandled' \
+              | while IFS= read -r line; do printf '::error::%s\n' "$line"; done \
+              | head -80
+          fi
+          exit "$rc"
 
       # ── CoreKit Package ──
       - name: Build CoreKit
