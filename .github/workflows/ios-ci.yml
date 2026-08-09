@@ -11,6 +11,7 @@ on:
     branches: [main]
     paths:
       - "packages/ios/**"
+      - ".github/workflows/ios-ci.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
