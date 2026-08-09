@@ -12,6 +12,32 @@ import {
 } from './geometry-scoring';
 import { geometrySamples } from './geometry-samples';
 
+/** 对 scene 元素整体应用点变换（平移/旋转/缩放/镜像），angle 顶点一并变换。 */
+function transformSceneElements(
+  ast: NonNullable<GeometryOutput['geometry']>,
+  transform: (p: [number, number]) => [number, number],
+): NonNullable<GeometryOutput['geometry']> {
+  const clone = structuredClone(ast) as unknown as {
+    type: 'scene';
+    elements: Array<{
+      type: string;
+      vertices?: [number, number][];
+      vertex?: [number, number];
+      from?: [number, number];
+      to?: [number, number];
+      center?: [number, number];
+    }>;
+  };
+  for (const element of clone.elements) {
+    if (element.vertices) element.vertices = element.vertices.map(transform);
+    if (element.vertex) element.vertex = transform(element.vertex);
+    if (element.from) element.from = transform(element.from);
+    if (element.to) element.to = transform(element.to);
+    if (element.center) element.center = transform(element.center);
+  }
+  return clone as NonNullable<GeometryOutput['geometry']>;
+}
+
 describe('geometry-scoring 纯函数', () => {
   it('完美输出接近满分', () => {
     const sample = geometrySamples[0]!;
@@ -50,31 +76,61 @@ describe('geometry-scoring 纯函数', () => {
     expect(geometryOverallScore(dimensions)).toBeLessThan(1);
   });
 
-  it('坐标偏移被惩罚', () => {
+  it('整体平移视为等价（v2）', () => {
     const sample = geometrySamples[0]!;
     const expected = sample.expected!;
-    const shifted = structuredClone(expected) as unknown as {
-      type: 'scene';
-      elements: Array<{
-        type: string;
-        vertices?: [number, number][];
-        vertex?: [number, number];
-        from?: [number, number];
-        to?: [number, number];
-      }>;
-    };
-    // 整体平移 (3,3)：坐标维度应显著下降。
-    for (const element of shifted.elements) {
-      if (element.vertices) element.vertices = element.vertices.map((v) => [v[0] + 3, v[1] + 3]);
-      if (element.vertex) element.vertex = [element.vertex[0] + 3, element.vertex[1] + 3];
-      if (element.from) element.from = [element.from[0] + 3, element.from[1] + 3];
-      if (element.to) element.to = [element.to[0] + 3, element.to[1] + 3];
-    }
+    const shifted = transformSceneElements(expected, (p) => [p[0] + 3, p[1] + 3]);
     const dimensions = scoreGeometry(
       { geometry: shifted as unknown as GeometryOutput['geometry'], reason: 'x' },
       expected,
     );
-    expect(geometryOverallScore(dimensions)).toBeLessThan(0.9);
+    expect(geometryOverallScore(dimensions)).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it('整体旋转视为等价（v2）', () => {
+    const sample = geometrySamples[0]!;
+    const expected = sample.expected!;
+    const rotated = transformSceneElements(expected, (p) => [-p[1], p[0]]);
+    const dimensions = scoreGeometry(
+      { geometry: rotated as unknown as GeometryOutput['geometry'], reason: 'x' },
+      expected,
+    );
+    expect(geometryOverallScore(dimensions)).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it('整体缩放视为等价（v2）', () => {
+    const sample = geometrySamples[0]!;
+    const expected = sample.expected!;
+    const scaled = transformSceneElements(expected, (p) => [p[0] * 2, p[1] * 2]);
+    const dimensions = scoreGeometry(
+      { geometry: scaled as unknown as GeometryOutput['geometry'], reason: 'x' },
+      expected,
+    );
+    expect(geometryOverallScore(dimensions)).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it('镜像不视为等价（v2）', () => {
+    const sample = geometrySamples[8]!; // geometry-09：仅三角形，避免单点元素稀释
+    const expected = sample.expected!;
+    const mirrored = transformSceneElements(expected, (p) => [-p[0], p[1]]);
+    const dimensions = scoreGeometry(
+      { geometry: mirrored as unknown as GeometryOutput['geometry'], reason: 'x' },
+      expected,
+    );
+    const byName = Object.fromEntries(dimensions.map((d) => [d.name, d.score]));
+    expect(byName.coordinate).toBeLessThan(0.5);
+  });
+
+  it('向量方向敏感（v2，不做旋转等价）', () => {
+    const sample = geometrySamples[3]!; // force-diagram
+    const expected = sample.expected!;
+    const rotated = transformSceneElements(expected, (p) => [-p[1], p[0]]);
+    const dimensions = scoreGeometry(
+      { geometry: rotated as unknown as GeometryOutput['geometry'], reason: 'x' },
+      expected,
+    );
+    const byName = Object.fromEntries(dimensions.map((d) => [d.name, d.score]));
+    expect(byName.coordinate).toBeLessThan(0.6);
   });
 
   it('表达式不一致被惩罚', () => {

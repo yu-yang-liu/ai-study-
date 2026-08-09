@@ -108,4 +108,32 @@ export const geometrySamples: GeometryEvalCase[] = [
       ],
     },
   },
+  {
+    id: 'geometry-09-translation-equivalent',
+    question: '画一个与 △ABC（A(1,1)、B(6,1)、C(3,4.5)）全等的三角形，位置不限。',
+    expected: {
+      type: 'scene',
+      elements: [
+        { type: 'triangle', vertices: [[1, 1], [6, 1], [3, 4.5]], labels: ['A', 'B', 'C'] },
+      ],
+    },
+  },
+  {
+    id: 'geometry-10-rotation-equivalent',
+    question: '把 △ABC（A(1,1)、B(5,1)、C(3,4)）绕原点旋转 90° 后画出。',
+    expected: {
+      type: 'scene',
+      elements: [
+        { type: 'triangle', vertices: [[-1, 1], [-1, 5], [-4, 3]], labels: ['A', 'B', 'C'] },
+      ],
+    },
+  },
+  {
+    id: 'geometry-11-scale-equivalent',
+    question: '画一个半径 2.5 的圆，圆心位置不限。',
+    expected: {
+      type: 'scene',
+      elements: [{ type: 'circle', center: [0, 0], radius: 2.5 }],
+    },
+  },
 ];
