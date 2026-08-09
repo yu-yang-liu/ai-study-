@@ -1,7 +1,7 @@
 import Foundation
 
 /// 网络层错误类型
-public enum NetworkError: Error, Sendable, LocalizedError {
+public enum NetworkError: Error, Sendable, LocalizedError, Equatable {
     case invalidURL(String)
     case requestFailed(statusCode: Int, message: String)
     case decodingFailed(String)
@@ -32,6 +32,31 @@ public enum NetworkError: Error, Sendable, LocalizedError {
             return "请求超时，请检查网络后重试"
         case .unknown(let err):
             return "操作失败，请稍后再试"
+        }
+    }
+}
+
+public extension NetworkError {
+    static func == (lhs: NetworkError, rhs: NetworkError) -> Bool {
+        switch (lhs, rhs) {
+        case let (.invalidURL(a), .invalidURL(b)):
+            return a == b
+        case let (.requestFailed(codeA, msgA), .requestFailed(codeB, msgB)):
+            return codeA == codeB && msgA == msgB
+        case let (.decodingFailed(a), .decodingFailed(b)):
+            return a == b
+        case (.unauthorized, .unauthorized):
+            return true
+        case let (.rateLimited(a), .rateLimited(b)):
+            return a == b
+        case (.networkUnavailable, .networkUnavailable):
+            return true
+        case (.timeout, .timeout):
+            return true
+        case let (.unknown(a), .unknown(b)):
+            return String(describing: a) == String(describing: b)
+        default:
+            return false
         }
     }
 }

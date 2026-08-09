@@ -4,7 +4,7 @@ import SwiftData
 /// 用户个性化设置 SwiftData 模型
 /// 单例记录（通过固定 UUID 保证唯一性）
 @Model
-public final class UserSettings {
+public final class UserSettings: @unchecked Sendable {
     /// 固定标识（单例）
     @Attribute(.unique) public var id: UUID
 

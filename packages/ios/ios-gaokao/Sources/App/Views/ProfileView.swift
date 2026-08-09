@@ -159,6 +159,7 @@ struct ProfileView: View {
     /// 受 FeatureFlags.isLearnerProfileEnabled 控制：
     /// - 开启：跳转学习画像（后续版本接入学情快照端点）
     /// - 未开启（当前默认）：展示「敬请期待」占位，不造数据
+    @ViewBuilder
     private var learnerProfileEntry: some View {
         if FeatureFlags.isLearnerProfileEnabled {
             // 预留：后续接入学情快照端点后，此处导航到 LearnerProfileView
