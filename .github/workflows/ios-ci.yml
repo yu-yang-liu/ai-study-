@@ -35,78 +35,40 @@ jobs:
       - name: Build ApiContracts
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           cd packages/ios/ApiContracts
           swift build --configuration debug 2>&1 | tee /tmp/apc-build.log
-          build_rc=${PIPESTATUS[0]}
           swift test --configuration debug 2>&1 | tee /tmp/apc-test.log
-          test_rc=${PIPESTATUS[0]}
-          rc=0
-          if [ "$build_rc" -ne 0 ] || [ "$test_rc" -ne 0 ]; then rc=1; fi
-          if [ "$rc" -ne 0 ]; then
-            cat /tmp/apc-build.log /tmp/apc-test.log \
-              | grep -E 'error:|warning:|FAILED|BUILD FAILED|Test Case.*failed|XCTAssert|Fatal error|Unhandled' \
-              | while IFS= read -r line; do printf '::error::%s\n' "$line"; done \
-              | head -80
-          fi
-          exit "$rc"
 
       # ── CoreKit Package ──
       - name: Build CoreKit
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           cd packages/ios/CoreKit
           swift build --configuration debug 2>&1 | tee /tmp/core-build.log
-          build_rc=${PIPESTATUS[0]}
           swift test --configuration debug 2>&1 | tee /tmp/core-test.log
-          test_rc=${PIPESTATUS[0]}
-          rc=0
-          if [ "$build_rc" -ne 0 ] || [ "$test_rc" -ne 0 ]; then rc=1; fi
-          if [ "$rc" -ne 0 ]; then
-            cat /tmp/core-build.log /tmp/core-test.log \
-              | grep -E 'error:|warning:|FAILED|BUILD FAILED|Test Case.*failed|XCTAssert|Fatal error|Unhandled' \
-              | while IFS= read -r line; do printf '::error::%s\n' "$line"; done \
-              | head -80
-          fi
-          exit "$rc"
 
       # ── ios-gaokao (single high-school app target; directory name retained) ──
       - name: Generate ios-gaokao.xcodeproj
         shell: bash
         run: |
-          set -o pipefail
-          { brew install xcodegen; } 2>&1 | tee /tmp/xcodegen-brew.log
-          brew_rc=${PIPESTATUS[0]}
+          set -euo pipefail
+          brew install xcodegen 2>&1 | tee /tmp/xcodegen-brew.log
           cd packages/ios/ios-gaokao
-          { xcodegen generate --spec project.yml; } 2>&1 | tee /tmp/xcodegen.log
-          gen_rc=${PIPESTATUS[0]}
-          if [ "$brew_rc" -ne 0 ] || [ "$gen_rc" -ne 0 ]; then
-            cat /tmp/xcodegen-brew.log /tmp/xcodegen.log \
-              | grep -E 'error|Error|failed|Failed|not found|No such|Usage|brew' \
-              | while IFS= read -r line; do printf '::error::%s\n' "$line"; done \
-              | head -60
-            exit 1
-          fi
+          xcodegen generate --spec project.yml 2>&1 | tee /tmp/xcodegen.log
 
       - name: Build ios-gaokao (Debug)
         shell: bash
         run: |
-          set -o pipefail
-          { xcodebuild build \
+          set -euo pipefail
+          xcodebuild build \
               -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
               -scheme ios-gaokao \
               -configuration Debug \
               -destination "generic/platform=iOS Simulator" \
               -derivedDataPath DerivedData \
-              CODE_SIGNING_ALLOWED=NO; } 2>&1 | tee /tmp/app-build.log
-          rc=${PIPESTATUS[0]}
-          if [ "$rc" -ne 0 ]; then
-            grep -E 'error:|warning:|BUILD FAILED|fatal|not found|No such' /tmp/app-build.log \
-              | while IFS= read -r line; do printf '::error::%s\n' "$line"; done \
-              | head -80
-            exit 1
-          fi
+              CODE_SIGNING_ALLOWED=NO 2>&1 | tee /tmp/app-build.log
 
       - name: Upload build logs (on failure)
         if: failure()
