@@ -56,11 +56,10 @@ final class UnicodeMathBackendTests: XCTestCase {
 
     func testComplexFormula() {
         // \sum_{i=1}^{n} i = \frac{n(n+1)}{2}
-        let result = UnicodeMathBackend.convert(#"\sum_{i=1}^{n} i = \frac{n(n+1)}{2}"#)
-        XCTAssertTrue(result.contains("∑"), "expected ∑ in: \(result)")
-        XCTAssertTrue(result.contains("ₙ"), "expected subscript n in: \(result)")
-        XCTAssertTrue(result.contains("²"), "expected superscript 2 in: \(result)")
-        XCTAssertTrue(result.contains("/"), "expected fraction slash in: \(result)")
+        XCTAssertEqual(
+            UnicodeMathBackend.convert(#"\sum_{i=1}^{n} i = \frac{n(n+1)}{2}"#),
+            "∑i₌₁ⁿ i = n(n+1)/2"
+        )
     }
 
     func testPythagoreanTheorem() {
