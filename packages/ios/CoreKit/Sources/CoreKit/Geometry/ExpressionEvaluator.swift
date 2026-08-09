@@ -183,7 +183,7 @@ public enum ExpressionEvaluator {
 
     // MARK: - 函数表
 
-    private static let functions: [String: (arity: Int, eval: ([Double]) -> Double?)] = [
+    nonisolated(unsafe) private static let functions: [String: (arity: Int, eval: ([Double]) -> Double?)] = [
         "sqrt": (1, { $0[0] < 0 ? nil : $0[0].squareRoot() }),
         "sin": (1, { sin($0[0]) }),
         "cos": (1, { cos($0[0]) }),

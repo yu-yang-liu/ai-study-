@@ -37,16 +37,19 @@ public struct CoordinateTransformer: Sendable {
 
     /// 退化边界（宽/高为 0）时各向外扩 0.5，避免除零与重叠。
     private static func degenerateSafe(_ bounds: SceneBounds) -> SceneBounds {
-        var result = bounds
-        if result.xMax - result.xMin < 1e-6 {
-            result.xMin -= 0.5
-            result.xMax += 0.5
+        var xMin = bounds.xMin
+        var yMin = bounds.yMin
+        var xMax = bounds.xMax
+        var yMax = bounds.yMax
+        if bounds.xMax - bounds.xMin < 1e-6 {
+            xMin -= 0.5
+            xMax += 0.5
         }
-        if result.yMax - result.yMin < 1e-6 {
-            result.yMin -= 0.5
-            result.yMax += 0.5
+        if bounds.yMax - bounds.yMin < 1e-6 {
+            yMin -= 0.5
+            yMax += 0.5
         }
-        return result
+        return SceneBounds(xMin: xMin, yMin: yMin, xMax: xMax, yMax: yMax)
     }
 }
 

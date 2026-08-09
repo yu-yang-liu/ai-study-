@@ -42,7 +42,7 @@ public struct GradeResultView: View {
             }
 
             // 总结
-            if hasSummary {
+            if hasSummary(result) {
                 Text("评语")
                     .font(.headline)
                     .padding(.top, 8)
@@ -54,7 +54,7 @@ public struct GradeResultView: View {
     }
 
     /// 评语是否可渲染：blocks 非空 OR string 非空。
-    private var hasSummary: Bool {
+    private func hasSummary(_ result: GradeMathResponse) -> Bool {
         if let blocks = result.summaryBlocks, !blocks.isEmpty { return true }
         return !result.summary.isEmpty
     }
@@ -146,7 +146,7 @@ public struct GradeResultView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.gray.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
@@ -178,7 +178,7 @@ private struct StepCard: View {
             }
         }
         .padding(12)
-        .background(Color(.systemGray6))
+        .background(Color.gray.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
@@ -208,7 +208,7 @@ private struct DimensionBar: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(.systemGray5))
+        .fill(Color.gray.opacity(0.18))
                         .frame(height: 8)
 
                     RoundedRectangle(cornerRadius: 4)

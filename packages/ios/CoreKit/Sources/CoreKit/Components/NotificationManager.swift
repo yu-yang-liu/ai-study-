@@ -28,7 +28,7 @@ public final class NotificationManager: NSObject, ObservableObject, Sendable {
 
     /// 检查当前通知设置
     public func checkAuthorizationStatus() async {
-        let settings = await center.notificationSettings()
+        nonisolated(unsafe) let settings = await center.notificationSettings()
         isAuthorized = settings.authorizationStatus == .authorized
     }
 
@@ -80,7 +80,8 @@ public final class NotificationManager: NSObject, ObservableObject, Sendable {
 
     /// 获取所有待处理通知（调试用）
     public func pendingReminders() async -> [UNNotificationRequest] {
-        return await center.pendingNotificationRequests()
+        nonisolated(unsafe) let requests = await center.pendingNotificationRequests()
+        return requests
     }
 }
 

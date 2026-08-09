@@ -544,7 +544,7 @@ public struct GeometryCanvasView: View {
 
     /// 选择视觉舒适的刻度步长（1/2/2.5/5 × 10^k）。
     private static func niceStep(min: Double, max: Double, targetCount: Double) -> Double {
-        let raw = max((max - min) / max(targetCount, 1), 1e-9)
+        let raw = Swift.max((max - min) / Swift.max(targetCount, 1), 1e-9)
         let power = pow(10, floor(log10(raw)))
         for candidate in [1.0, 2.0, 2.5, 5.0, 10.0] where raw <= candidate * power {
             return candidate * power

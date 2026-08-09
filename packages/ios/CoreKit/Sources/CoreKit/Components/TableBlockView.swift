@@ -29,11 +29,11 @@ public struct TableBlockView: View {
                         }
                     }
                 }
-                .background(Color(.systemBackground))
+                .background(Color.secondary.opacity(0.06))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(.systemGray4), lineWidth: 1)
+                        .stroke(Color.gray.opacity(0.25), lineWidth: 1)
                 )
             }
             .padding(.vertical, 6)
@@ -55,7 +55,7 @@ private struct GridRowView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(isHeader ? Color(.systemGray6) : Color.clear)
+                        .background(isHeader ? Color.gray.opacity(0.12) : Color.clear)
                 }
             }
         }
