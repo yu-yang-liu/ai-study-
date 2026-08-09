@@ -18,6 +18,8 @@ public struct ChatRequest: Codable, Sendable {
 /// POST /api/chat 响应体
 public struct ChatResponse: Codable, Sendable {
     public let reply: String
+    /// 结构化回复块（双字段过渡：reply 恒有，replyBlocks 供 iOS 优先渲染）。
+    public let replyBlocks: [ContentBlock]?
     public let conversationId: String?
     public let action: ChatActionPayload?
 }

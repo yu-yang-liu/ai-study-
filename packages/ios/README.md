@@ -46,3 +46,25 @@ xcodegen generate --spec project.yml
 
 - `CoreKit/AppEnvironment.swift`：`phase = "high"`，`keychainServiceName = "com.aistudy.app"`
 - App `Info.plist` 通过 `API_BASE_URL` 注入服务端地址（Debug/Release 在 `project.yml` 配置）
+
+## 公式与几何渲染（进行中）
+
+数学/理科公式与几何图形的原生渲染方案，详见 [docs/RENDER_AST.md](../../docs/RENDER_AST.md)。
+
+**核心思路**：不依赖 Markdown `$$` 定界符，公式作为 AST 节点（`ContentBlock.formula(latex:)`），由 `FormulaView`（底层 iosMath）渲染；几何采用 Geometry AST + Swift `Canvas`/`Shape` 动态渲染，不依赖图 URL / TikZ。
+
+| 里程碑 | 范围 | 状态 |
+|--------|------|------|
+| **M1 公式**（刚需） | 后端 `answer`/`analysis`/`examPoints`/`feedback`/`summary` 升级为 `Block[]`；前端 `ContentBlock` + `FormulaView` + `MarkdownRenderer(blocks:)` 升级；iosMath 集成 | 进行中 |
+| **M2 几何**（尽量，独立） | Geometry AST schema + `GeometryCanvasView` + 各节点 drawer；后端提示词待补 | 待启动 |
+
+**当前进度**：
+- [x] 设计文档 `docs/RENDER_AST.md`
+- [ ] 后端 `format.ts` / `tasks.ts` schema 改 `Block[]`
+- [ ] ApiContracts `ContentBlock.swift`
+- [ ] `FormulaView.swift`（iosMath 包装，先纯 Swift Unicode 降级跑通管线）
+- [ ] `MarkdownRenderer(blocks:)` 升级
+- [ ] `AnalysisResultView` / `GradeResultView` 接入
+- [ ] iosMath SPM 集成（待核实 fork/版本，预期 2–3 轮 CI 试错）
+
+> 渲染方式：**方式一** —— iosMath 管公式排版，SwiftUI 管壳与交互，不用 WebView 全包。

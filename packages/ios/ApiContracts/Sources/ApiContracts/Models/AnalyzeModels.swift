@@ -42,6 +42,18 @@ public struct AnalyzeResponse: Codable, Sendable {
     /// 考点说明（可选）
     public let examPoints: String?
 
+    // MARK: 公式块（M1）
+
+    /// 参考答案的公式块（可选）。后端 B 策略：模型输出 blocks，派生同名 string。
+    /// iOS 优先渲染 blocks，缺省回退 `answer` string（降级为单个 text block）。
+    public let answerBlocks: [ContentBlock]?
+
+    /// 解析的公式块（可选）。
+    public let analysisBlocks: [ContentBlock]?
+
+    /// 考点说明的公式块（可选）。
+    public let examPointsBlocks: [ContentBlock]?
+
     enum CodingKeys: String, CodingKey {
         case subject
         case questionType
@@ -50,6 +62,9 @@ public struct AnalyzeResponse: Codable, Sendable {
         case answer
         case analysis
         case examPoints
+        case answerBlocks
+        case analysisBlocks
+        case examPointsBlocks
     }
 }
 

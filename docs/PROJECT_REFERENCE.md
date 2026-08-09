@@ -11,7 +11,7 @@
 
 面向高中学习场景的 AI 学习平台，采用 **pnpm monorepo** 架构，目标提供 **iOS 与 Android 原生客户端**及 Web 端，支持试卷解析、智能识别、AI 辅助批改、错题管理、学习计划、学习数据分析与智能对话等核心学习功能。
 
-> **多端现状**：iOS（`packages/ios`）已实现；**Android 为规划中，尚未实现**。Web（`apps/web`）同时承担前端与 API 后端。
+> **多端现状**：iOS（`packages/ios`）已实现；**Android（`packages/android`）开发中，与 iOS 功能对齐**。Web（`apps/web`）同时承担前端与 API 后端。
 
 `packages` 体系承载平台共享能力，包括 AI 能力编排、多模型服务接入、知识检索增强（RAG）、学习算法（SM2 间隔重复）、智能 Agent（含 Agent Memory）、数据访问抽象、API 契约与通用业务逻辑，实现核心能力模块化管理与跨端复用。
 
@@ -26,7 +26,7 @@
 | Web | `apps/web` — Next.js 15 App Router，`@ai-study/web`（前端 + API 路由） |
 | Core | `packages/core` — 共享 TS 库，`@ai-study/core` |
 | iOS | `packages/ios` — Swift 客户端，App 目录名保留 `ios-gaokao` |
-| Android | 规划中，未实现 |
+| Android | `packages/android` — Kotlin + Jetpack Compose 客户端（`:apicontracts`/`:corekit`/`:app` 三层），开发中，与 iOS 功能对齐 |
 | 学段 | `APP_PHASE = 'high'`（`packages/core/src/constants.ts`） |
 | 学科 | `HIGH_SUBJECTS` 九科统一常量（语文…地理） |
 
@@ -40,12 +40,16 @@ ai-study/
 │   ├── ApiContracts/         # Swift API 模型
 │   ├── CoreKit/              # 网络、认证、共享 UI
 │   └── ios-gaokao/           # App Target（目录名历史遗留）
-├── .github/workflows/        # ios-ci.yml、web-ci.yml
+├── packages/android/         # Kotlin + Compose 客户端（独立 Gradle 工程，不纳入 pnpm）
+│   ├── apicontracts/         # 纯 JVM 数据契约（@Serializable）
+│   ├── corekit/              # OkHttp/Retrofit、Bearer+refresh、配置、品牌色
+│   └── app/                  # Compose UI、ViewModel、Room 缓存
+├── .github/workflows/        # ios-ci.yml、web-ci.yml、android-ci.yml
 ├── docs/                     # 本文档等
 └── README.md
 ```
 
-`pnpm-workspace.yaml` 仅包含 `apps/*` 与 `packages/core`；iOS 为独立 Xcode 工程。
+`pnpm-workspace.yaml` 仅包含 `apps/*` 与 `packages/core`；iOS 为独立 Xcode 工程，Android 为独立 Gradle 工程，二者均不纳入 pnpm workspace。
 
 ---
 
@@ -216,6 +220,14 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 - 已部署 Web 的 HTTPS 地址（`project.yml` 中 `API_BASE_URL`）
 - iOS **不需要**单独配 AI Key，全部走 Web API
 
+### 4.6 Android 额外需要
+
+- JDK 17（Temurin）
+- Android SDK（compileSdk 35 / minSdk 26 / targetSdk 35）
+- Gradle 8.9（项目自带 wrapper；首次需生成 `gradle-wrapper.jar`，见 [packages/android/README.md](../packages/android/README.md)）
+- 已部署 Web 的 HTTPS 地址（`app/build.gradle.kts` 的 `API_BASE_URL`，与 iOS `project.yml` 同址）
+- Android **不需要**单独配 AI Key，全部走 Web API（与 iOS 一致）
+
 ---
 
 ## 5. 使用形式（用户怎么用）
@@ -333,6 +345,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | 6 | `learning_events` 中 `practice` 类型尚无写入（待真题演练功能实现后接入） |
 | 7 | 统计/dashboard 算法与可视化仍偏基础 |
 | 8 | iOS `真题演练` 占位；`FeatureFlags.isLearnerProfileEnabled` 未接 |
+| 10 | **公式/几何渲染**：`MarkdownRenderer` 无 LaTeX 解析，公式显示为源码；几何图形无原生渲染。方案见 [RENDER_AST.md](./RENDER_AST.md)（M1 公式进行中 / M2 几何待启动） |
 
 ### P1 — Agent Memory 六项（已实现，详见 [AGENT_MEMORY.md](./AGENT_MEMORY.md)）
 
@@ -376,6 +389,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 2. Chat 内接 `imageUrl`（upload 后带回对话）
 3. 部署指南 + 监控
 4. DB `phase_type` 迁移（可选）
+5. **公式/几何渲染**（见 [RENDER_AST.md](./RENDER_AST.md)）：M1 公式 AST + iosMath；M2 几何 AST + Canvas
 
 ### Agent Memory 迭代（见 [AGENT_MEMORY.md](./AGENT_MEMORY.md)）
 
@@ -390,6 +404,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 
 | 类别 | 路径 |
 |------|------|
+| **公式/几何渲染方案** | [docs/RENDER_AST.md](./RENDER_AST.md) |
 | **Agent Memory 专项** | [docs/AGENT_MEMORY.md](./AGENT_MEMORY.md) |
 | 环境变量模板 | `apps/web/.env.example` |
 | DB 迁移 | `packages/core/src/db/migrations/0000_initial.sql`、`0001_conversation_summaries.sql`、`0002_user_memory_facts.sql`、`0003_user_memories.sql` |
@@ -411,7 +426,10 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | iOS Chat | `packages/ios/ios-gaokao/Sources/App/Views/ChatView.swift` |
 | iOS Dashboard | `packages/ios/ios-gaokao/Sources/App/Views/DashboardView.swift` |
 | iOS 配置 | `packages/ios/ios-gaokao/project.yml` |
-| CI | `.github/workflows/ios-ci.yml`、`web-ci.yml` |
+| Android API 客户端 | `packages/android/corekit/src/main/kotlin/com/aistudy/corekit/net/ApiClient.kt` |
+| Android 入口 | `packages/android/app/src/main/kotlin/com/aistudy/app/MainActivity.kt` |
+| Android README | `packages/android/README.md` |
+| CI | `.github/workflows/ios-ci.yml`、`web-ci.yml`、`android-ci.yml` |
 
 ### Chat Agent 数据流
 
@@ -482,6 +500,8 @@ POST /api/chat
 - [ ] 部署指南 / 运维文档
 - [ ] 题库/RAG 大规模 seed
 - [ ] Chat 内图片 OCR（v2）
+- [ ] **公式渲染 M1**：后端 `Block[]` schema + 前端 `FormulaView`(iosMath) + `MarkdownRenderer(blocks:)`（见 [RENDER_AST.md](./RENDER_AST.md)）
+- [ ] **几何渲染 M2**：Geometry AST + `GeometryCanvasView`（提示词待补）
 
 ### Agent Memory 六项（[AGENT_MEMORY.md](./AGENT_MEMORY.md) §3）
 

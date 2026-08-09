@@ -1,9 +1,10 @@
 import { composeMessages } from '../ai/prompt/compose';
 import { structuredCall } from '../ai/structured/call';
 import { TASK_SCHEMA } from '../ai/structured/schemas';
+import { blocksToPlainText } from '../ai/structured/blocks';
 import { retrieveReferences } from '../ai/rag';
 import { getLearnerContext } from '../ai/learner/context';
-import type { AnalyzeOutput, GradeMathOutput, GradeEssayOutput, PlanOutput } from '../ai/structured/schemas';
+import type { AnalyzeOutput, GradeMathOutput, GradeEssayOutput, PlanOutput, Block } from '../ai/structured/schemas';
 import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
 import { persistAnalyzeResult, persistPlanResult, persistGradeResult } from './persist';
@@ -23,6 +24,9 @@ export type GradeResult = {
   isCorrect?: boolean;
   summary: string;
   steps?: Array<{ stepNumber: number; isCorrect: boolean; feedback: string }>;
+  /** 公式块（M1 公式渲染）：存在时 iOS 优先渲染 blocks，缺省回退 summary string。由 executeGrade 从模型输出透传。 */
+  summaryBlocks?: Block[];
+  stepsBlocks?: Array<{ stepNumber: number; feedbackBlocks?: Block[] }>;
 };
 
 export interface WrongQuestionSummary {
@@ -68,6 +72,18 @@ export async function executeAnalyze(opts: {
     phase: 'high',
   })) as AnalyzeOutput;
 
+  // B 策略派生回填：模型只输出 *Blocks，这里派生同名 string 字段。
+  // string 字段供 persist(TEXT 列)/RAG/chat 模板/Web 等字符串消费者使用，blocks 供 iOS 公式渲染。
+  if (result.analysisBlocks && !result.analysis) {
+    result.analysis = blocksToPlainText(result.analysisBlocks) || result.analysis;
+  }
+  if (result.answerBlocks) {
+    result.answer = result.answer ?? blocksToPlainText(result.answerBlocks);
+  }
+  if (result.examPointsBlocks) {
+    result.examPoints = result.examPoints ?? blocksToPlainText(result.examPointsBlocks);
+  }
+
   try {
     await persistAnalyzeResult(userId, { subject, content: content ?? '', imageUrl }, result);
   } catch (persistErr) {
@@ -103,12 +119,36 @@ export async function executeGrade(opts: {
     phase: 'high',
   })) as GradeMathOutput | GradeEssayOutput;
 
+  // B 策略派生回填（仅 gradeMath 有 blocks 字段；essay 不动）。
+  if (task === 'gradeMath') {
+    const math = result as GradeMathOutput;
+    if (math.summaryBlocks && !math.summary) {
+      math.summary = blocksToPlainText(math.summaryBlocks) || math.summary;
+    }
+    if (math.steps) {
+      for (const step of math.steps) {
+        if (step.feedbackBlocks && !step.feedback) {
+          step.feedback = blocksToPlainText(step.feedbackBlocks) || step.feedback;
+        }
+      }
+    }
+  }
+
   const gradeResult: GradeResult = {
     score: result.score,
     maxScore: result.maxScore,
     summary: result.summary,
     isCorrect: 'isCorrect' in result ? result.isCorrect : undefined,
     steps: 'steps' in result ? result.steps : undefined,
+    // 透传 blocks 供 API 响应携带，iOS 优先渲染。
+    summaryBlocks: 'summaryBlocks' in result ? (result as GradeMathOutput).summaryBlocks : undefined,
+    stepsBlocks:
+      'steps' in result
+        ? (result as GradeMathOutput).steps.map((s) => ({
+            stepNumber: s.stepNumber,
+            feedbackBlocks: s.feedbackBlocks,
+          }))
+        : undefined,
   };
 
   const isCorrect = gradeResult.isCorrect ?? gradeResult.score >= gradeResult.maxScore * GRADE_PASS_RATIO;

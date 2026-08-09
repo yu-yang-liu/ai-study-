@@ -1,4 +1,5 @@
 import SwiftUI
+import ApiContracts
 
 // MARK: - Markdown 节点类型
 
@@ -216,28 +217,107 @@ struct InlineParser {
 // MARK: - SwiftUI 原生 Markdown 渲染视图
 
 public struct MarkdownRenderer: View {
-    private let markdown: String
+    private let markdown: String?
+    private let blocks: [ContentBlock]?
+
     @State private var nodes: [MarkdownNode] = []
 
     private let parser = MarkdownParser()
     private let inlineParser = InlineParser()
 
+    /// 纯文本初始化（Chat/Plan 等场景保留）。内部走 Markdown 解析路径。
     public init(_ markdown: String) {
         self.markdown = markdown
+        self.blocks = nil
+    }
+
+    /// 结构化块初始化（M1 公式渲染）。
+    ///
+    /// `text` 块复用现有 Markdown 段落渲染（保留 `**bold**` 等内联），`formula` 块交
+    /// `FormulaView`，`image` 块用 `AsyncImage` + 文字降级（M1 极少，占位）。
+    public init(blocks: [ContentBlock]) {
+        self.blocks = blocks
+        self.markdown = nil
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(nodes.indices, id: \.self) { index in
-                nodeView(for: nodes[index])
+            if let blocks {
+                ForEach(blocks.indices, id: \.self) { index in
+                    blockView(for: blocks[index])
+                }
+            } else if let markdown {
+                ForEach(nodes.indices, id: \.self) { index in
+                    nodeView(for: nodes[index])
+                }
             }
         }
         .onAppear {
-            nodes = parser.parse(markdown)
+            if let markdown { nodes = parser.parse(markdown) }
         }
         .onChange(of: markdown) { _, newValue in
-            nodes = parser.parse(newValue)
+            if let newValue { nodes = parser.parse(newValue) }
         }
+    }
+
+    // MARK: - Block 渲染（M1）
+
+    @ViewBuilder
+    private func blockView(for block: ContentBlock) -> some View {
+        switch block {
+        case .text(let content):
+            if !content.isEmpty {
+                paragraphView(text: content)
+            }
+        case .formula(let latex):
+            if !latex.isEmpty {
+                FormulaView(latex: latex)
+            }
+        case .image(let url, let alt):
+            imageView(url: url, alt: alt)
+        case .table(let headers, let rows):
+            if !rows.isEmpty {
+                TableBlockView(headers: headers, rows: rows)
+            }
+        case .steps(let title, let steps, let interaction):
+            if !steps.isEmpty {
+                StepsBlockView(title: title, steps: steps, interaction: interaction)
+            }
+        case .visual(let kind):
+            VisualPlaceholderView(kind: kind)
+        }
+    }
+
+    private func imageView(url: String, alt: String?) -> some View {
+        Group {
+            if let url = URL(string: url) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(maxWidth: .infinity, minHeight: 120)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFit()
+                    case .failure:
+                        Text(alt ?? "")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, minHeight: 60)
+                    @unknown default:
+                        Text(alt ?? "")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else {
+                Text(alt ?? "")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 6)
     }
 
     @ViewBuilder

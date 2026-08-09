@@ -13,7 +13,7 @@ struct PlanView: View {
                     Text("显示的是本地缓存的计划").font(.caption)
                 }
                 .foregroundStyle(.white).frame(maxWidth: .infinity)
-                .padding(.vertical, 6).background(Color.blue)
+                .padding(.vertical, 6).background(Color.semanticInfo)
             }
             if viewModel.isOffline {
                 HStack(spacing: 6) {
@@ -21,7 +21,7 @@ struct PlanView: View {
                     Text("离线模式，显示最新可用计划").font(.caption)
                 }
                 .foregroundStyle(.white).frame(maxWidth: .infinity)
-                .padding(.vertical, 6).background(Color.orange)
+                .padding(.vertical, 6).background(Color.semanticWarning)
             }
             inputSection
             Divider()
@@ -64,7 +64,7 @@ struct PlanView: View {
         case .idle:
             EmptyPlaceholderView(message: "选择学科，AI 将为你量身定制学习计划")
         case .loading:
-            Spacer(); ProgressView("正在生成计划..."); Spacer()
+            CenteredProgressView("正在生成计划...")
         case .loaded(let plan):
             planContentView(plan)
         case .empty:

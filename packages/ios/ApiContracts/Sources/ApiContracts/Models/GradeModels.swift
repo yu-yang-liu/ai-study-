@@ -40,12 +40,20 @@ public struct GradeMathResponse: Codable, Sendable {
     public let isCorrect: Bool
     public let steps: [GradeMathStep]
     public let summary: String
+
+    // MARK: 公式块（M1）
+
+    /// 总结评价的公式块（可选）。后端 B 策略派生 `summary` string，iOS 优先渲染 blocks。
+    public let summaryBlocks: [ContentBlock]?
 }
 
 public struct GradeMathStep: Codable, Sendable {
     public let stepNumber: Int
     public let isCorrect: Bool
     public let feedback: String
+
+    /// 步骤反馈的公式块（可选）。iOS 优先渲染 blocks，缺省回退 `feedback` string。
+    public let feedbackBlocks: [ContentBlock]?
 }
 
 // MARK: - Essay Grade Response

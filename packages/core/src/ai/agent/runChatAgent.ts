@@ -8,6 +8,7 @@ import {
   TASK_SCHEMA,
   type ChatAction,
   type ChatAgentResult,
+  type Block,
 } from '../structured/schemas';
 import type { ConversationMessage } from '../../learning/conversation';
 import {
@@ -50,7 +51,11 @@ function historyToMessages(history: ConversationMessage[]): ChatMessage[] {
   }));
 }
 
-async function synthesizeReply(userMessage: string, toolSummary: string, subject: string): Promise<string> {
+async function synthesizeReply(
+  userMessage: string,
+  toolSummary: string,
+  subject: string,
+): Promise<{ reply: string; replyBlocks?: Block[] }> {
   const messages: ChatMessage[] = [
     {
       role: 'system',
@@ -69,7 +74,8 @@ async function synthesizeReply(userMessage: string, toolSummary: string, subject
     phase: 'high',
   });
 
-  return (result as { reply: string }).reply;
+  const output = result as { reply: string; replyBlocks?: Block[] };
+  return { reply: output.reply, replyBlocks: output.replyBlocks };
 }
 
 async function executeTool(
@@ -231,7 +237,10 @@ export async function runChatAgent(opts: {
   const parsed = agentStep;
 
   if (!parsed.tool) {
-    return { reply: parsed.reply ?? '\u6211\u6682\u65f6\u65e0\u6cd5\u56de\u590d\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5\u3002' };
+    return {
+      reply: parsed.reply ?? '\u6211\u6682\u65f6\u65e0\u6cd5\u56de\u590d\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5\u3002',
+      replyBlocks: parsed.replyBlocks,
+    };
   }
 
   const toolResult = await executeTool(userId, subject, parsed.tool.name, parsed.tool.args ?? {});
@@ -240,6 +249,10 @@ export async function runChatAgent(opts: {
     return { reply: toolResult.directReply };
   }
 
-  const reply = await synthesizeReply(message, toolResult.summary, subject);
-  return { reply, action: toolResult.action };
+  const synthesized = await synthesizeReply(message, toolResult.summary, subject);
+  return {
+    reply: synthesized.reply,
+    replyBlocks: synthesized.replyBlocks,
+    action: toolResult.action,
+  };
 }

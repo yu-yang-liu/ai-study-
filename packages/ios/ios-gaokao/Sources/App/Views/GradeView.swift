@@ -13,7 +13,7 @@ struct GradeView: View {
                     Text("离线模式，可查看历史批改记录").font(.caption)
                 }
                 .foregroundStyle(.white).frame(maxWidth: .infinity)
-                .padding(.vertical, 6).background(Color.orange)
+                .padding(.vertical, 6).background(Color.semanticWarning)
             }
             TabView {
                 inputSection.tabItem { Label("新批改", systemImage: "pencil.and.list.clipboard") }
@@ -21,6 +21,7 @@ struct GradeView: View {
             }
             Divider()
             resultSection
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationTitle("作业批改")
         .navigationBarTitleDisplayMode(.inline)
@@ -95,9 +96,9 @@ struct GradeView: View {
     @ViewBuilder
     private var resultSection: some View {
         switch viewModel.result {
-        case .idle: Empty()
+        case .idle: EmptyView()
         case .loading:
-            Spacer(); ProgressView("正在批改..."); Spacer()
+            CenteredProgressView("正在批改...")
         case .loaded(let gradeResult):
             GradeResultView(result: gradeResult)
         case .empty:

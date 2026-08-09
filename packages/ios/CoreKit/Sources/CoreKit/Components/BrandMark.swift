@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 纯代码矢量品牌标志（无需图片资源）
-/// 高端极简风：纯色深墨底 + 白色字形
+/// 明亮学习风：品牌渐变底（靛蓝 → 紫罗兰）+ 白色字形
 public struct BrandMark: View {
     private let size: CGFloat
 
@@ -21,7 +21,7 @@ public struct BrandMark: View {
     public var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
-                .fill(Color.brandPrimary)
+                .fill(LinearGradient.brandGradient)
 
             Text(character)
                 .font(.system(size: size * 0.58, weight: .heavy, design: .rounded))

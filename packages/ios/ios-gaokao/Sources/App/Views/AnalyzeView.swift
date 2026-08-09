@@ -68,9 +68,7 @@ struct AnalyzeView: View {
             EmptyPlaceholderView(message: "\u8f93\u5165\u9898\u76ee\u5185\u5bb9\uff0cAI \u5c06\u4e3a\u4f60\u5206\u6790\u9898\u5e72\u3001\u77e5\u8bc6\u70b9\u548c\u89e3\u7b54\u601d\u8def")
 
         case .loading:
-            Spacer()
-            ProgressView("\u6b63\u5728\u5206\u6790...")
-            Spacer()
+            CenteredProgressView("\u6b63\u5728\u5206\u6790...")
 
         case .loaded(let response):
             ScrollView {

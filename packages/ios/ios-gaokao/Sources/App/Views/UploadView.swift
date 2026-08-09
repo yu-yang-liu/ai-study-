@@ -102,9 +102,7 @@ struct UploadView: View {
             }
 
         case .loading:
-            Spacer()
-            ProgressView("\u6b63\u5728\u5206\u6790...")
-            Spacer()
+            CenteredProgressView("\u6b63\u5728\u5206\u6790...")
 
         case .loaded(let response):
             ScrollView {

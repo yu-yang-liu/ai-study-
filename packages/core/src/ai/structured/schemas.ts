@@ -6,6 +6,103 @@ export const subjectSchema = z.enum([
   '语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理',
 ]);
 
+/**
+ * Phase 1 Science AST —— 统一内容块（判别联合，AI → AST → Renderer）。
+ *
+ * 四类子 AST 映射：
+ * - Text AST       → text / formula / image / table
+ * - Visual AST     → visual（Phase 1 为占位；Phase 2 由 Geometry AST 真实渲染）
+ * - Solution AST   → steps（可展示的解题轨迹，含步骤对错/标签）
+ * - Interaction AST→ steps.interaction（折叠/可选择等交互元数据；几何交互在 Phase 2 扩展）
+ *
+ * 校验策略：后端严格判别联合（非法结构直接拒绝并重试），
+ * iOS 解码端保持容错（未知/缺失字段降级不崩），保证客户端解析稳定。
+ */
+export interface StepContent {
+  /** 步骤标题，如「第一步：化简」。 */
+  title?: string;
+  /** 步骤内容块（可递归包含公式/表格等）。 */
+  blocks: Block[];
+  /** 该步骤对错（批改场景）。 */
+  isCorrect?: boolean;
+  /** 能力点 / 方法标签，如「配方法」。 */
+  tag?: string;
+}
+
+export type Block =
+  | { type: 'text'; content: string }
+  | { type: 'formula'; latex: string }
+  | { type: 'image'; url: string; alt?: string }
+  | { type: 'table'; headers?: string[]; rows: string[][] }
+  | {
+      type: 'steps';
+      title?: string;
+      steps: StepContent[];
+      interaction?: { collapsible?: boolean; selectable?: boolean };
+    }
+  | { type: 'visual'; kind: 'placeholder' | 'geometry'; geometry?: unknown };
+
+const textBlockSchema = z.object({
+  type: z.literal('text'),
+  content: z.string(),
+});
+
+const formulaBlockSchema = z.object({
+  type: z.literal('formula'),
+  /** 纯 LaTeX 源串，无 `$` 定界符（设计文件：公式是 AST 节点，latex 是其字段）。 */
+  latex: z.string(),
+});
+
+const imageBlockSchema = z.object({
+  type: z.literal('image'),
+  url: z.string(),
+  alt: z.string().optional(),
+});
+
+const tableBlockSchema = z.object({
+  type: z.literal('table'),
+  headers: z.array(z.string()).optional(),
+  rows: z.array(z.array(z.string())).min(1),
+});
+
+/** 解题步骤（Solution AST）。steps 内可递归包含 formula/table 等块。 */
+export const stepContentSchema = z.object({
+  title: z.string().optional(),
+  blocks: z.array(z.lazy(() => blockSchema)),
+  isCorrect: z.boolean().optional(),
+  tag: z.string().optional(),
+});
+
+const stepsBlockSchema = z.object({
+  type: z.literal('steps'),
+  title: z.string().optional(),
+  steps: z.array(stepContentSchema).min(1),
+  /** Interaction AST（Phase 1 最小子集）：折叠 / 可选择。 */
+  interaction: z
+    .object({
+      collapsible: z.boolean().optional(),
+      selectable: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+const visualBlockSchema = z.object({
+  type: z.literal('visual'),
+  /** Phase 1 只允许 placeholder；Phase 2 引入 geometry 后由 Swift Canvas/Shape 渲染。 */
+  kind: z.enum(['placeholder', 'geometry']).default('placeholder'),
+  /** Phase 2：Geometry AST（scene / coordinateSystem）。 */
+  geometry: z.unknown().optional(),
+});
+
+export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
+  textBlockSchema,
+  formulaBlockSchema,
+  imageBlockSchema,
+  tableBlockSchema,
+  stepsBlockSchema,
+  visualBlockSchema,
+]);
+
 export const ocrOutput = z.object({
   text: z.string(),
   blocks: z.array(z.object({
@@ -21,9 +118,17 @@ export const analyzeOutput = z.object({
   questionType: z.enum(['选择题', '填空题', '简答题', '计算题', '证明题', '作文']),
   knowledgePoints: z.array(knowledgePointSchema),
   difficulty: z.number().int().min(1).max(10),
+  /**
+   * 字符串字段由后端从对应 `*Blocks` 派生（见 `blocksToPlainText`），模型无需直接输出。
+   * 保留它们是为了零破坏：persist(TEXT 列)、Web chat/grade 页、RAG、chat 模板等字符串消费者继续可用。
+   * 双字段过渡期：blocks 为源、string 为派生，二者一致。
+   */
   answer: z.string().optional(),
   analysis: z.string(),
   examPoints: z.string().optional(),
+  answerBlocks: z.array(blockSchema).optional(),
+  analysisBlocks: z.array(blockSchema).optional(),
+  examPointsBlocks: z.array(blockSchema).optional(),
 });
 export type AnalyzeOutput = z.infer<typeof analyzeOutput>;
 
@@ -35,8 +140,10 @@ export const gradeMathOutput = z.object({
     stepNumber: z.number().int(),
     isCorrect: z.boolean(),
     feedback: z.string(),
+    feedbackBlocks: z.array(blockSchema).optional(),
   })),
   summary: z.string(),
+  summaryBlocks: z.array(blockSchema).optional(),
 });
 export type GradeMathOutput = z.infer<typeof gradeMathOutput>;
 
@@ -65,7 +172,11 @@ export const planOutput = z.object({
 });
 export type PlanOutput = z.infer<typeof planOutput>;
 
-export const chatOutput = z.object({ reply: z.string() });
+export const chatOutput = z.object({
+  reply: z.string(),
+  /** Chat 内容也走 AST：回复含公式/表格/步骤时输出结构化块（双字段过渡）。 */
+  replyBlocks: z.array(blockSchema).optional(),
+});
 export type ChatOutput = z.infer<typeof chatOutput>;
 
 export const chatAgentToolName = z.enum([
@@ -79,6 +190,7 @@ export const chatAgentToolName = z.enum([
 
 export const chatAgentOutput = z.object({
   reply: z.string().optional(),
+  replyBlocks: z.array(blockSchema).optional(),
   tool: z
     .object({
       name: chatAgentToolName,
@@ -112,6 +224,8 @@ export type ChatAction =
 
 export interface ChatAgentResult {
   reply: string;
+  /** 结构化回复块（双字段过渡：reply 恒有，replyBlocks 供 iOS 优先渲染）。 */
+  replyBlocks?: Block[];
   action?: ChatAction;
 }
 

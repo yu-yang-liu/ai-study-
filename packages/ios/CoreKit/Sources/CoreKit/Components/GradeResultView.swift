@@ -42,16 +42,21 @@ public struct GradeResultView: View {
             }
 
             // 总结
-            if !result.summary.isEmpty {
+            if hasSummary {
                 Text("评语")
                     .font(.headline)
                     .padding(.top, 8)
 
-                Text(result.summary)
-                    .font(.body)
+                MarkdownRenderer(blocks: result.summaryBlocks ?? [.text(content: result.summary)])
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    /// 评语是否可渲染：blocks 非空 OR string 非空。
+    private var hasSummary: Bool {
+        if let blocks = result.summaryBlocks, !blocks.isEmpty { return true }
+        return !result.summary.isEmpty
     }
 
     // MARK: - 作文批改
@@ -169,8 +174,7 @@ private struct StepCard: View {
                 Text("第 \(step.stepNumber) 步")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text(step.feedback)
-                    .font(.body)
+                MarkdownRenderer(blocks: step.feedbackBlocks ?? [.text(content: step.feedback)])
             }
         }
         .padding(12)
@@ -229,10 +233,24 @@ private struct DimensionBar: View {
         maxScore: 100,
         isCorrect: true,
         steps: [
-            GradeMathStep(stepNumber: 1, isCorrect: true, feedback: "正确理解题意，设未知数"),
-            GradeMathStep(stepNumber: 2, isCorrect: true, feedback: "列方程正确"),
-            GradeMathStep(stepNumber: 3, isCorrect: false, feedback: "计算错误，应为 x=5 而非 x=6"),
+            GradeMathStep(stepNumber: 1, isCorrect: true, feedback: "正确理解题意，设未知数", feedbackBlocks: nil),
+            GradeMathStep(
+                stepNumber: 2,
+                isCorrect: false,
+                feedback: "计算错误",
+                feedbackBlocks: [
+                    .text(content: "应为 "),
+                    .formula(latex: "x=5"),
+                    .text(content: " 而非 "),
+                    .formula(latex: "x=6"),
+                ]
+            ),
         ],
-        summary: "解题思路清晰，但存在计算失误，需加强运算练习。"
+        summary: "解题思路清晰，但存在计算失误，需加强运算练习。",
+        summaryBlocks: [
+            .text(content: "解题思路清晰，关键步骤 "),
+            .formula(latex: "x^2-3x+2=0"),
+            .text(content: " 解法正确。"),
+        ]
     )))
 }

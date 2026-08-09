@@ -64,6 +64,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       reply: agentResult.reply,
+      replyBlocks: agentResult.replyBlocks,
       conversationId: savedConversationId,
       action: agentResult.action,
     });

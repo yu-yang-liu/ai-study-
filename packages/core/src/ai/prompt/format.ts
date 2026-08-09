@@ -20,27 +20,30 @@ export function schemaToFormatInstruction(task: TaskName): string {
   "questionType": "${qTypes}",
   "knowledgePoints": ["\u77e5\u8bc6\u70b91", "\u77e5\u8bc6\u70b92"],
   "difficulty": 1-10,
-  "answer": "\u53c2\u8003\u7b54\u6848",
-  "analysis": "\u89e3\u6790",
-  "examPoints": "\u8003\u70b9\u8bf4\u660e"
-}`,
+  "answerBlocks": [{"type": "text", "content": "\u53c2\u8003\u7b54\u6848\u6587\u5b57"}, {"type": "formula", "latex": "x^2+1"}],
+  "analysisBlocks": [{"type": "text", "content": "\u89e3\u6790\u6b65\u9aa4"}, {"type": "formula", "latex": "\\frac{1}{2}"}],
+  "examPointsBlocks": [{"type": "text", "content": "\u8003\u70b9\u8bf4\u660e"}]
+}
+\u6ce8\uff1aanswer/analysis/examPoints \u5b57\u7b26\u4e32\u5b57\u6bb5\u7531\u540e\u7aef\u6d3e\u751f\uff0c\u6a21\u578b\u65e0\u9700\u8f93\u51fa\uff1b\u8bf7\u8f93\u51fa *Blocks \u6570\u7ec4\u3002\u6587\u5b57\u7528 {type:"text",content}\uff0c\u516c\u5f0f\u7528 {type:"formula",latex}\uff08\u7eaf LaTeX\uff0c\u4e0d\u8981 $ \u5305\u88f9\uff09\uff0c\u8868\u683c\u7528 {type:"table",headers,rows}\uff0c\u89e3\u9898\u6b65\u9aa4\u7528 {type:"steps",title,steps}\uff0c\u56fe\u793a\u5360\u4f4d\u7528 {type:"visual",kind:"placeholder"}\u3002`,
     analyzeImg: `\u8bf7\u8f93\u51fa JSON\uff1a
 {
   "subject": "${subjects}",
   "questionType": "${qTypes}",
   "knowledgePoints": ["\u77e5\u8bc6\u70b91"],
   "difficulty": 1-10,
-  "answer": "\u53c2\u8003\u7b54\u6848",
-  "analysis": "\u89e3\u6790"
-}`,
+  "answerBlocks": [{"type": "text", "content": "\u53c2\u8003\u7b54\u6848"}],
+  "analysisBlocks": [{"type": "text", "content": "\u89e3\u6790"}, {"type": "formula", "latex": "\\frac{1}{2}"}]
+}
+\u6ce8\uff1a\u8bf7\u8f93\u51fa *Blocks \u6570\u7ec4\uff0c\u6587\u5b57\u7528 {type:"text",content}\uff0c\u516c\u5f0f\u7528 {type:"formula",latex}\uff08\u7eaf LaTeX\uff0c\u4e0d\u8981 $ \u5305\u88f9\uff09\uff0c\u8868\u683c\u7528 {type:"table",headers,rows}\uff0c\u89e3\u9898\u6b65\u9aa4\u7528 {type:"steps",title,steps}\u3002\u5b57\u7b26\u4e32\u5b57\u6bb5\u7531\u540e\u7aef\u6d3e\u751f\u3002`,
     gradeMath: `\u8bf7\u8f93\u51fa JSON\uff1a
 {
   "score": 85,
   "maxScore": 100,
   "isCorrect": true|false,
-  "steps": [{"stepNumber": 1, "isCorrect": true, "feedback": "\u6b65\u9aa4\u8bc4\u4ef7"}],
-  "summary": "\u603b\u4f53\u8bc4\u4ef7"
-}`,
+  "steps": [{"stepNumber": 1, "isCorrect": true, "feedbackBlocks": [{"type": "text", "content": "\u6b65\u9aa4\u8bc4\u4ef7"}, {"type": "formula", "latex": "x^2"}]}],
+  "summaryBlocks": [{"type": "text", "content": "\u603b\u4f53\u8bc4\u4ef7"}]
+}
+\u6ce8\uff1a\u8bf7\u8f93\u51fa feedbackBlocks/summaryBlocks \u6570\u7ec4\uff0c\u6587\u5b57\u7528 {type:"text",content}\uff0c\u516c\u5f0f\u7528 {type:"formula",latex}\uff08\u7eaf LaTeX\uff0c\u4e0d\u8981 $ \u5305\u88f9\uff09\uff0c\u8868\u683c\u7528 {type:"table",headers,rows}\uff0c\u89e3\u9898\u6b65\u9aa4\u7528 {type:"steps",title,steps}\u3002\u5b57\u7b26\u4e32\u5b57\u6bb5\u7531\u540e\u7aef\u6d3e\u751f\u3002`,
     gradeEssay: `\u8bf7\u8f93\u51fa JSON\uff1a
 {
   "score": 45,
@@ -56,16 +59,22 @@ export function schemaToFormatInstruction(task: TaskName): string {
   "description": "\u8ba1\u5212\u8bf4\u660e",
   "tasks": [{"title": "\u4efb\u52a1", "subject": "\u5b66\u79d1", "knowledgePoints": ["\u77e5\u8bc6\u70b9"], "estimatedMinutes": 30, "priority": "\u9ad8|\u4e2d|\u4f4e", "reason": "\u539f\u56e0"}]
 }`,
-    chat: '',
+    chat: `\u8bf7\u8f93\u51fa JSON\uff1a
+{
+  "reply": "\u56de\u590d\u6587\u672c",
+  "replyBlocks": [{"type": "text", "content": "\u56de\u590d\u6587\u672c"}, {"type": "formula", "latex": "x^2"}]
+}
+\u6ce8\uff1a\u56de\u590d\u542b\u516c\u5f0f/\u8868\u683c/\u6b65\u9aa4\u65f6\uff0creply \u4e0e replyBlocks \u90fd\u8f93\u51fa\uff1b\u7eaf\u6587\u5b57\u65f6\u53ef\u7701\u7565 replyBlocks\u3002`,
     chatAgent: `\u8bf7\u8f93\u51fa JSON\uff1a
 {
   "reply": "\u76f4\u63a5\u56de\u590d\u5b66\u751f\u7684\u6587\u672c\uff08\u65e0\u9700\u5de5\u5177\u65f6\u586b\u5199\uff09",
+  "replyBlocks": [{"type": "text", "content": "\u56de\u590d\u6587\u672c"}, {"type": "formula", "latex": "x^2"}],
   "tool": {
     "name": "generate_plan|analyze_question|grade_submission|summarize_wrong_questions",
     "args": {}
   }
 }
-\u89c4\u5219\uff1a\u82e5\u53ef\u76f4\u63a5\u56de\u7b54\u5219\u53ea\u586b reply\uff1b\u82e5\u9700\u6267\u884c\u5de5\u5177\u5219\u586b tool\u3002\u4e0d\u8981\u540c\u65f6\u586b\u5199\u65e0\u6548\u7684 tool\u3002`,
+\u89c4\u5219\uff1a\u82e5\u53ef\u76f4\u63a5\u56de\u7b54\u5219\u586b reply\uff08\u542b\u516c\u5f0f/\u8868\u683c/\u6b65\u9aa4\u65f6\u540c\u65f6\u586b replyBlocks\uff09\uff1b\u82e5\u9700\u6267\u884c\u5de5\u5177\u5219\u586b tool\u3002\u4e0d\u8981\u540c\u65f6\u586b\u5199\u65e0\u6548\u7684 tool\u3002`,
   };
 
   return FORMATS[task] ?? '\u8bf7\u8f93\u51fa\u7b26\u5408\u8981\u6c42\u7684 JSON \u683c\u5f0f';

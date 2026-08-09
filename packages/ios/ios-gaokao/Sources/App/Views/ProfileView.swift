@@ -197,7 +197,7 @@ struct ProfileView: View {
     private var avatarView: some View {
         ZStack {
             Circle()
-                .fill(Color.brandPrimary)
+                .fill(LinearGradient.brandGradient)
                 .frame(width: 56, height: 56)
             Text(avatarInitial)
                 .font(.title2)

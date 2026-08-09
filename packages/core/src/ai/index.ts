@@ -22,6 +22,7 @@ export type { TaskName, Capability, ChatMessage, ChatRequest, TokenUsage, AIProv
 export { registerProvider, pick, listProviders, getProvider } from './gateway/registry';
 export { TASK_SCHEMA } from './structured/schemas';
 export * from './structured/schemas';
+export { blocksToPlainText } from './structured/blocks';
 export { retrieveReferences } from './rag';
 export type { RAGReference, RetrieveOptions } from './rag';
 export { composePrompt, composeMessages, getPersona, personaSystemPrompt, normalizeSubject, getTaskInstruction, schemaToFormatInstruction } from './prompt';

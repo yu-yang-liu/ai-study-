@@ -10,7 +10,7 @@ struct RealExamPlaceholderView: View {
         VStack(spacing: 16) {
             Image(systemName: "book.pages.fill")
                 .font(.system(size: 48))
-                .foregroundStyle(Color.brandAccent.opacity(0.6))
+                .foregroundStyle(Color.brandAccent)
 
             Text("\u771f\u9898\u6f14\u7ec3")
                 .font(.title2)

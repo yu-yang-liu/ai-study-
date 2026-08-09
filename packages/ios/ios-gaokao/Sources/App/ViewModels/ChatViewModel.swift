@@ -13,6 +13,8 @@ struct ChatMessage: Identifiable, Sendable {
     let imagePreview: Data?
     /// 助手消息附带的图片分析结果（复用 /api/analyze(imageUrl:)）
     let analyzeResult: AnalyzeResponse?
+    /// 助手消息的结构化回复块（双字段过渡：缺省回退 content 文本）。
+    let replyBlocks: [ContentBlock]?
     enum Role: String, Sendable { case user, assistant }
 
     init(
@@ -21,7 +23,8 @@ struct ChatMessage: Identifiable, Sendable {
         timestamp: Date = Date(),
         action: ChatActionPayload? = nil,
         imagePreview: Data? = nil,
-        analyzeResult: AnalyzeResponse? = nil
+        analyzeResult: AnalyzeResponse? = nil,
+        replyBlocks: [ContentBlock]? = nil
     ) {
         self.role = role
         self.content = content
@@ -29,6 +32,7 @@ struct ChatMessage: Identifiable, Sendable {
         self.action = action
         self.imagePreview = imagePreview
         self.analyzeResult = analyzeResult
+        self.replyBlocks = replyBlocks
     }
 }
 
@@ -55,6 +59,18 @@ final class ChatViewModel: ObservableObject {
         "我的薄弱点在哪里",
         "我有哪些待复习错题",
     ]
+
+    /// 快捷入口 chip 对应的 SF Symbol 图标名。
+    /// - Parameter chip: chip 文案（与 `quickChips` 元素一致）。
+    /// - Returns: 图标名；未知 chip 兜底 `"sparkles"`。
+    func icon(for chip: String) -> String {
+        switch chip {
+        case "帮我制定今日学习计划": return "calendar.badge.clock"
+        case "我的薄弱点在哪里": return "chart.line.uptrend.xyaxis"
+        case "我有哪些待复习错题": return "checklist"
+        default: return "sparkles"
+        }
+    }
 
     init(apiClient: APIClient, dataRepository: DataRepository) {
         self.apiClient = apiClient
@@ -175,7 +191,8 @@ final class ChatViewModel: ObservableObject {
                 role: .assistant,
                 content: response.reply,
                 timestamp: Date(),
-                action: response.action
+                action: response.action,
+                replyBlocks: response.replyBlocks
             )
             appendMessage(assistantMsg)
 

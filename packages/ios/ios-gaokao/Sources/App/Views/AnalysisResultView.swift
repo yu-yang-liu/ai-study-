@@ -32,12 +32,11 @@ struct AnalysisResultView: View {
                 }
             }
 
-            if let answer = result.answer, !answer.isEmpty {
+            if hasAnswer {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\u53c2\u8003\u7b54\u6848")
                         .font(.headline)
-                    Text(answer)
-                        .font(.body)
+                    MarkdownRenderer(blocks: result.answerBlocks ?? [.text(content: result.answer ?? "")])
                         .padding(12)
                         .background(Color(.systemGray6))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -47,17 +46,31 @@ struct AnalysisResultView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("\u89e3\u6790")
                     .font(.headline)
-                MarkdownRenderer(result.analysis)
+                MarkdownRenderer(blocks: result.analysisBlocks ?? [.text(content: result.analysis)])
             }
 
-            if let examPoints = result.examPoints, !examPoints.isEmpty {
+            if hasExamPoints {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\u8003\u70b9\u8bf4\u660e")
                         .font(.headline)
-                    MarkdownRenderer(examPoints)
+                    MarkdownRenderer(blocks: result.examPointsBlocks ?? [.text(content: result.examPoints ?? "")])
                 }
             }
         }
+    }
+
+    /// \u53c2\u8003\u7b54\u6848\u662f\u5426\u53ef\u6e32\u67d3\uff1ablocks \u975e\u7a7a OR string \u975e\u7a7a\uff08\u6a21\u578b\u53ef\u80fd\u53ea\u8f93\u51fa blocks\uff09\u3002
+    private var hasAnswer: Bool {
+        if let blocks = result.answerBlocks, !blocks.isEmpty { return true }
+        if let answer = result.answer, !answer.isEmpty { return true }
+        return false
+    }
+
+    /// \u8003\u70b9\u8bf4\u660e\u662f\u5426\u53ef\u6e32\u67d3\u3002
+    private var hasExamPoints: Bool {
+        if let blocks = result.examPointsBlocks, !blocks.isEmpty { return true }
+        if let examPoints = result.examPoints, !examPoints.isEmpty { return true }
+        return false
     }
 }
 

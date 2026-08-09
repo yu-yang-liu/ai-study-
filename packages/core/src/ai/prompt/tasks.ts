@@ -1,22 +1,31 @@
 import type { TaskName } from '../gateway/types';
 import { CHAT_AGENT_TASK_INSTRUCTION } from './chatAgent';
 
+const BLOCK_INSTRUCTION = `
+【分块输出】对于含数学公式的字段，请输出 blocks 数组而非纯字符串：
+- 普通文字用 { "type": "text", "content": "..." }
+- 数学公式用 { "type": "formula", "latex": "..." }（latex 为纯 LaTeX，不要用 $ 包裹）
+- 表格用 { "type": "table", "headers": ["列1","列2"], "rows": [["值1","值2"]] }
+- 解题步骤用 { "type": "steps", "title": "解法", "steps": [{"title": "第一步", "blocks": [...]}] }
+- 示意图占位用 { "type": "visual", "kind": "placeholder" }
+公式与文字分别成块，不要把公式混进 text。无公式时可只用 text 块。`;
+
 const TASK_INSTRUCTIONS: Record<TaskName, string> = {
   ocr: `请识别图片中的所有文字、公式和图表。对于公式，使用 LaTeX 格式输出。`,
   analyze: `请分析以下题目：
 1. 判断所属学科、题型
 2. 列出涉及的知识点
 3. 评估难度（1-10）
-4. 给出答案和分析`,
+4. 给出答案和分析${BLOCK_INSTRUCTION}`,
   analyzeImg: `请分析图片中的题目：
 1. 判断所属学科、题型
 2. 列出涉及的知识点
 3. 评估难度（1-10）
-4. 给出答案和分析`,
+4. 给出答案和分析${BLOCK_INSTRUCTION}`,
   gradeMath: `请批改以下数学解答：
 1. 给出总分
 2. 逐步骤判断正误并给出反馈
-3. 总结评价`,
+3. 总结评价${BLOCK_INSTRUCTION}`,
   gradeEssay: `请批改以下作文：
 1. 给出总分和各维度得分
 2. 列出优点

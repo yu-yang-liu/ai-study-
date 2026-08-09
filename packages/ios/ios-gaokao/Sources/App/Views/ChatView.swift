@@ -18,7 +18,7 @@ struct ChatView: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
-                .background(Color.orange)
+                .background(Color.semanticWarning)
             }
             subjectPicker
             messageList
@@ -40,7 +40,7 @@ struct ChatView: View {
                 ForEach(viewModel.subjects, id: \.self) { subject in
                     Button { viewModel.selectedSubject = subject } label: {
                         Text(subject).font(.subheadline).padding(.horizontal, 12).padding(.vertical, 6)
-                            .background(viewModel.selectedSubject == subject ? Color.accentColor : Color(.systemGray6))
+                            .background(viewModel.selectedSubject == subject ? Color.brandPrimary : Color(.systemGray6))
                             .foregroundStyle(viewModel.selectedSubject == subject ? .white : .primary)
                             .clipShape(Capsule())
                     }
@@ -59,12 +59,7 @@ struct ChatView: View {
                                 Button {
                                     Task { await viewModel.sendMessage(chip) }
                                 } label: {
-                                    Text(chip)
-                                        .font(.caption)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(Color(.systemGray6))
-                                        .clipShape(Capsule())
+                                    SuggestionCard(text: chip, icon: viewModel.icon(for: chip))
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -87,11 +82,27 @@ struct ChatView: View {
                         .listRowSeparator(.hidden)
                         .id(message.id)
                     }
+                    if viewModel.isSending,
+                       let last = messages.last,
+                       last.role == .user {
+                        HStack(alignment: .top, spacing: 8) {
+                            aiAvatar
+                            TypingIndicator()
+                            Spacer(minLength: 60)
+                        }
+                        .listRowSeparator(.hidden)
+                        .id("typing-indicator")
+                    }
                 }
                 .listStyle(.plain)
                 .onChange(of: messages.count) { _, _ in
                     if let lastId = messages.last?.id {
                         withAnimation { proxy.scrollTo(lastId, anchor: .bottom) }
+                    }
+                }
+                .onChange(of: viewModel.isSending) { _, isSending in
+                    if isSending {
+                        withAnimation { proxy.scrollTo("typing-indicator", anchor: .bottom) }
                     }
                 }
             }
@@ -108,7 +119,7 @@ struct ChatView: View {
                 PhotosPicker(selection: $pickerItem, matching: .images) {
                     Image(systemName: "photo.fill")
                         .font(.title3)
-                        .foregroundStyle(viewModel.pendingImageData == nil ? .accentColor : .secondary)
+                        .foregroundStyle(viewModel.pendingImageData == nil ? Color.brandPrimary : .secondary)
                 }
                 .disabled(viewModel.isSending)
 
@@ -121,7 +132,9 @@ struct ChatView: View {
                     if viewModel.isSending {
                         ProgressView().tint(.white).frame(width: 24, height: 24)
                     } else {
-                        Image(systemName: "arrow.up.circle.fill").font(.title2)
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(Color.brandPrimary)
                     }
                 }
                 .disabled(!viewModel.canSend)
@@ -167,6 +180,53 @@ struct ChatView: View {
             viewModel.setPendingImage(data)
         }
     }
+
+    // MARK: - AI 头像（助手消息复用）
+
+    private var aiAvatar: some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient.brandGradient)
+            Image(systemName: "sparkles")
+                .font(.caption)
+                .foregroundStyle(.white)
+        }
+        .frame(width: 28, height: 28)
+    }
+}
+
+// MARK: - 建议卡片（空态快捷入口）
+
+struct SuggestionCard: View {
+    let text: String
+    let icon: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.brandPrimary.opacity(0.12))
+                Image(systemName: icon)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.brandPrimary)
+            }
+            .frame(width: 36, height: 36)
+
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .background(Color.brandPrimary.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
 }
 
 struct MessageBubble: View {
@@ -174,7 +234,17 @@ struct MessageBubble: View {
     var isUser: Bool { message.role == .user }
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            if isUser { Spacer(minLength: 60) }
+            if isUser { Spacer(minLength: 40) }
+            if !isUser {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient.brandGradient)
+                    Image(systemName: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 28, height: 28)
+            }
             VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
                 Text(isUser ? "你" : "AI老师").font(.caption2).foregroundStyle(.secondary)
                 // 用户消息附带图片：先展示图片，再展示文字（若有）
@@ -188,10 +258,11 @@ struct MessageBubble: View {
                 if !message.content.isEmpty {
                     if isUser {
                         Text(message.content).font(.body).padding(10)
-                            .background(Color.accentColor.opacity(0.15))
+                            .background(Color.brandPrimary.opacity(0.12))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     } else {
-                        MarkdownRenderer(message.content).padding(10)
+                        MarkdownRenderer(blocks: message.replyBlocks ?? [.text(content: message.content)])
+                            .padding(10)
                             .background(Color(.systemGray6))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
@@ -205,41 +276,58 @@ struct MessageBubble: View {
 struct ChatActionCard: View {
     let action: ChatActionPayload
 
+    /// 按 action 类型取左侧色条颜色（plan=靛 / grade=绿 / wrong_questions=琥珀）。
+    private var accentColor: Color {
+        switch action.type {
+        case "plan": return Color.brandPrimary
+        case "grade": return Color.semanticSuccess
+        case "wrong_questions": return Color.semanticWarning
+        default: return Color.brandPrimary
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            switch action.type {
-            case "plan":
-                if let title = action.payload["title"]?.stringValue {
-                    Text("学习计划：\(title)").font(.caption).fontWeight(.semibold)
-                }
-                if let tasks = action.payload["tasks"]?.arrayValue {
-                    ForEach(Array(tasks.prefix(3).enumerated()), id: \.offset) { _, task in
-                        if let obj = task.objectValue,
-                           let t = obj["title"]?.stringValue,
-                           let s = obj["subject"]?.stringValue {
-                            Text("• \(t) (\(s))").font(.caption2)
+        HStack(alignment: .top, spacing: 8) {
+            // 左侧色条：按 action 类型着色
+            RoundedRectangle(cornerRadius: 2)
+                .fill(accentColor)
+                .frame(width: 3)
+
+            VStack(alignment: .leading, spacing: 6) {
+                switch action.type {
+                case "plan":
+                    if let title = action.payload["title"]?.stringValue {
+                        Text("学习计划：\(title)").font(.caption).fontWeight(.semibold)
+                    }
+                    if let tasks = action.payload["tasks"]?.arrayValue {
+                        ForEach(Array(tasks.prefix(3).enumerated()), id: \.offset) { _, task in
+                            if let obj = task.objectValue,
+                               let t = obj["title"]?.stringValue,
+                               let s = obj["subject"]?.stringValue {
+                                Text("• \(t) (\(s))").font(.caption2)
+                            }
                         }
                     }
+                case "grade":
+                    if let score = action.payload["score"]?.doubleValue,
+                       let maxScore = action.payload["maxScore"]?.doubleValue {
+                        Text("批改结果：\(Int(score))/\(Int(maxScore))").font(.caption).fontWeight(.semibold)
+                    }
+                    if let summary = action.payload["summary"]?.stringValue {
+                        Text(summary).font(.caption2)
+                    }
+                case "wrong_questions":
+                    if let total = action.payload["total"]?.doubleValue {
+                        Text("错题摘要：共 \(Int(total)) 题").font(.caption).fontWeight(.semibold)
+                    }
+                default:
+                    EmptyView()
                 }
-            case "grade":
-                if let score = action.payload["score"]?.doubleValue,
-                   let maxScore = action.payload["maxScore"]?.doubleValue {
-                    Text("批改结果：\(Int(score))/\(Int(maxScore))").font(.caption).fontWeight(.semibold)
-                }
-                if let summary = action.payload["summary"]?.stringValue {
-                    Text(summary).font(.caption2)
-                }
-            case "wrong_questions":
-                if let total = action.payload["total"]?.doubleValue {
-                    Text("错题摘要：共 \(Int(total)) 题").font(.caption).fontWeight(.semibold)
-                }
-            default:
-                EmptyView()
             }
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemGray6))
+        .background(Color.brandPrimary.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
