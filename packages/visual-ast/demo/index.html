@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>visual-ast playground</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --border: #e2e8f0;
+        --muted: #64748b;
+        --accent: #2563eb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+      header {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        padding: 16px 24px;
+        background: #fff;
+        border-bottom: 1px solid var(--border);
+      }
+      header h1 { font-size: 18px; margin: 0; }
+      header p { margin: 0; color: var(--muted); font-size: 13px; }
+      main {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 0;
+        min-height: calc(100vh - 57px);
+      }
+      nav {
+        padding: 16px;
+        border-right: 1px solid var(--border);
+        background: #fff;
+      }
+      nav button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        cursor: pointer;
+        font-size: 13px;
+        color: #334155;
+      }
+      nav button:hover { background: #f1f5f9; }
+      nav button.active { background: #eff6ff; border-color: #bfdbfe; color: var(--accent); font-weight: 600; }
+      section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        padding: 16px;
+        align-items: start;
+      }
+      .panel {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .panel h2 {
+        margin: 0;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+        font-weight: 600;
+      }
+      #preview { display: flex; align-items: center; justify-content: center; min-height: 420px; padding: 12px; }
+      #preview svg { max-width: 100%; height: auto; }
+      #json {
+        width: 100%;
+        min-height: 420px;
+        border: none;
+        resize: vertical;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #1e293b;
+        outline: none;
+      }
+      #status {
+        padding: 8px 14px;
+        font-size: 12px;
+        border-top: 1px solid var(--border);
+        min-height: 32px;
+        white-space: pre-wrap;
+      }
+      #status.ok { color: #15803d; }
+      #status.error { color: #b91c1c; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>visual-ast playground</h1>
+      <p>AI → AST → Renderer · 几何 / 函数 / 力学示意图结构化渲染</p>
+    </header>
+    <main>
+      <nav id="nav"></nav>
+      <section>
+        <div class="panel">
+          <h2>渲染预览（SVG）</h2>
+          <div id="preview"></div>
+        </div>
+        <div class="panel">
+          <h2>Geometry AST JSON（可编辑）</h2>
+          <textarea id="json" spellcheck="false"></textarea>
+          <div id="status" class="ok"></div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="./visual-ast-demo.js"></script>
+  </body>
+</html>
