@@ -1,6 +1,7 @@
 name: iOS CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main, develop]
     paths:
@@ -10,6 +11,7 @@ on:
     branches: [main]
     paths:
       - "packages/ios/**"
+      - ".github/workflows/ios-ci.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,6 +26,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Cache Homebrew (xcodegen)
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: homebrew-${{ runner.os }}-${{ hashFiles('.github/workflows/ios-ci.yml') }}
+          restore-keys: homebrew-${{ runner.os }}-
+
+      - name: Cache SwiftPM build (ApiContracts/CoreKit)
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/ios/ApiContracts/.build
+            packages/ios/CoreKit/.build
+          key: spm-ios-${{ runner.os }}-${{ hashFiles('packages/ios/ApiContracts/Package.swift', 'packages/ios/CoreKit/Package.swift') }}
+          restore-keys: spm-ios-${{ runner.os }}-
+
+      - name: Cache Xcode SPM checkouts (ios-gaokao)
+        uses: actions/cache@v4
+        with:
+          path: DerivedData/SourcePackages
+          key: xcode-spm-${{ runner.os }}-${{ hashFiles('packages/ios/ios-gaokao/project.yml') }}
+          restore-keys: xcode-spm-${{ runner.os }}-
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
@@ -70,8 +95,7 @@ jobs:
               -derivedDataPath DerivedData \
               CODE_SIGNING_ALLOWED=NO 2>&1 | tee /tmp/app-build.log
 
-      - name: Upload build logs (on failure)
-        if: failure()
+      - name: Upload build logs
         uses: actions/upload-artifact@v4
         with:
           name: xcode-logs
