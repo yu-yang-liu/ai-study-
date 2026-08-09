@@ -51,9 +51,7 @@ struct AILearningApp: App {
                     await appCoordinator.authManager.restoreSession()
                     await appCoordinator.notificationManager.checkAuthorizationStatus()
                     // 智能检测考试年份是否需要更新
-                    if let repo = appCoordinator.dataRepository {
-                        await checkAndPromptExamYearUpdate(repo: repo, auth: appCoordinator.authManager)
-                    }
+                    await checkAndPromptExamYearUpdate(repo: appCoordinator.dataRepository, auth: appCoordinator.authManager)
                 }
             }
         }
