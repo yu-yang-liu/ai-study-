@@ -103,13 +103,13 @@ public struct GraphCanvasView: View {
                 with: .color(.white),
                 lineWidth: 1.5
             )
-            let label = Text(node.label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.white)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .frame(width: radius * 2, height: radius * 2)
-            context.draw(label, at: point, anchor: .center)
+            context.draw(
+                Text(node.label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white),
+                at: point,
+                anchor: .center
+            )
         }
     }
 
