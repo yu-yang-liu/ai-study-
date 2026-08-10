@@ -51,7 +51,7 @@
 | 万有引力 | 天体轨道示意 | G1/G2（circle + ellipse→conic） | 可建 | P2 |
 | 机械能/动量 | 碰撞、能量转化示意 | G1 + M（简易 flow） | 可建 | P2 |
 | 静电场 | 电场线、等势面、带电粒子轨迹 | G2（field 曲线族）+ G1 | **未建档 → 本次补** | P1 |
-| 恒定电流 | 电路图（电源/电阻/开关/电表） | M（circuit block + 符号图元库） | **未建档 → 本次补** | P1 |
+| 恒定电流 | 电路图（电源/电阻/开关/电表） | M（circuit block + 符号图元库） | 🆕 **P1-2 实施完成**（`circuit` task eval 7/7 + e2e 2/2 + iOS CircuitCanvasView，2026-08-10 待 CI） | P1 |
 | 磁场 | 磁感线、安培力/洛伦兹力方向 | G2（field）+ G1（vector） | **未建档 → 本次补** | P1 |
 | 电磁感应 | 磁通量变化、感应电流示意 | G2/G1 | 可建 | P2 |
 | 交变电流 | 正弦波形、变压器示意 | G1（functionCurve）+ M（circuit 扩展） | 可建 | P2 |
@@ -125,7 +125,7 @@
 | 批次 | 内容 | 理由 |
 |------|------|------|
 | **P1-1** | 统计图表 chart block（直方图/散点/折线/柱状） | ✅ 已实施（2026-08-10）：`chart` task + 8 样本 eval + 后置 attach + iOS ChartCanvasView；待 CI 全绿后合并 |
-| **P1-2** | 电路图 circuit block（符号图元库） | 高考物理高频；符号固定、AI 输出可靠（元件清单+连接关系） |
+| **P1-2** | 电路图 circuit block（符号图元库） | ✅ 已实施（2026-08-10）：`circuit` task + 7 样本 eval + 后置 attach + iOS CircuitCanvasView；待 CI 全绿后合并 |
 | **P1-3** | 场线 field（电场线/磁感线/等高线）+ 光路 ray | 物理高频；G2 扩展元素，几何语义清晰 |
 | **P1-4** | 遗传系谱 pedigree + 食物链/网 graph | 生物高频；符号规范，图布局可模板化 |
 | **P2** | 实验装置 lab、细胞模式图 biology、能级图 levelDiagram、流程图 flow | 覆盖面广但 AI 输出与渲染成本上升 |
