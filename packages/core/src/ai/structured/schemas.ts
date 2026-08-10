@@ -322,6 +322,34 @@ const labelElementSchema = z.object({
   ...baseElementFields,
 });
 
+/**
+ * 场线（P1-3）：匀强场平行线带 / 点电荷放射线 / 等高线（后续）。
+ * - from/to：场线方向与长度（从 from 指向 to）；
+ * - width/density：平行线带宽度与条数；
+ * - radial=true + center：从 center 向 from→to 角度区间辐射。
+ */
+const fieldElementSchema = z.object({
+  type: z.literal('field'),
+  kind: z.enum(['electric', 'magnetic', 'contour']),
+  from: vec2Schema,
+  to: vec2Schema,
+  width: z.number().gt(0).max(100).optional(),
+  density: z.number().int().min(1).max(12).optional(),
+  style: z.enum(['solid', 'dashed']).optional(),
+  radial: z.boolean().optional(),
+  center: vec2Schema.optional(),
+  ...baseElementFields,
+});
+
+/** 光路（P1-3）：折线 + 方向箭头（入射/反射/折射/透镜光线）。 */
+const rayElementSchema = z.object({
+  type: z.literal('ray'),
+  points: z.array(vec2Schema).min(2).max(8),
+  arrow: z.enum(['start', 'end', 'both', 'none']).optional(),
+  style: z.enum(['solid', 'dashed']).optional(),
+  ...baseElementFields,
+});
+
 /** 几何元素（10 种类型，按 type 判别、关键字段必填；渲染器按 type 分发）。 */
 export const geometryElementSchema = z.discriminatedUnion('type', [
   pointElementSchema,
@@ -334,6 +362,8 @@ export const geometryElementSchema = z.discriminatedUnion('type', [
   angleElementSchema,
   functionCurveElementSchema,
   labelElementSchema,
+  fieldElementSchema,
+  rayElementSchema,
 ]);
 export type GeometryElement = z.infer<typeof geometryElementSchema>;
 

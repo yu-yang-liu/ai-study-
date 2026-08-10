@@ -136,4 +136,46 @@ export const geometrySamples: GeometryEvalCase[] = [
       elements: [{ type: 'circle', center: [0, 0], radius: 2.5 }],
     },
   },
+  {
+    id: 'geometry-12-electric-field-band',
+    question: '在水平匀强电场中，画出电场线（方向水平向右）。',
+    expected: {
+      type: 'scene',
+      elements: [
+        { type: 'field', kind: 'electric', from: [0, 0], to: [6, 0], width: 4, density: 5 },
+      ],
+    },
+  },
+  {
+    id: 'geometry-13-radial-electric',
+    question: '画出正点电荷周围的电场线（放射状）。',
+    expected: {
+      type: 'scene',
+      elements: [
+        { type: 'field', kind: 'electric', radial: true, center: [0, 0], from: [4, 0], to: [0, 4], density: 6 },
+      ],
+    },
+  },
+  {
+    id: 'geometry-14-mirror-reflection',
+    question: '一束光线射到平面镜上发生反射，画出反射光路（含法线）。',
+    expected: {
+      type: 'scene',
+      elements: [
+        { type: 'ray', points: [[-4, 3], [0, 0], [4, 3]], arrow: 'end', label: '反射光线' },
+        { type: 'line', from: [0, -2], to: [0, 2], style: 'dashed', label: '法线' },
+      ],
+    },
+  },
+  {
+    id: 'geometry-15-refraction',
+    question: '光线从空气斜射入水中发生折射，画出折射光路（含法线）。',
+    expected: {
+      type: 'scene',
+      elements: [
+        { type: 'ray', points: [[-4, 3], [0, 0], [3, -2.5]], arrow: 'end', label: '折射光线' },
+        { type: 'line', from: [0, -2.5], to: [0, 2.5], style: 'dashed', label: '法线' },
+      ],
+    },
+  },
 ];

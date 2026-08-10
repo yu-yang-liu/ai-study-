@@ -124,6 +124,10 @@ function pointsOf(element: GeometryElement): Array<[number, number]> {
       return element.center ? [element.center] : [];
     case 'angle':
       return element.vertex ? [element.vertex] : [];
+    case 'field':
+      return [element.from ?? [], element.to ?? []].filter((p) => p.length >= 2) as Array<[number, number]>;
+    case 'ray':
+      return (element.points ?? []) as Array<[number, number]>;
     default:
       return [];
   }
@@ -285,8 +289,8 @@ function elementSimilarity(exp: GeometryElement, act: GeometryElement): number {
   const expPoints = pointsOf(exp);
   const actPoints = pointsOf(act);
   if (expPoints.length === 0 || actPoints.length === 0) return 0;
-  if (exp.type === 'vector') {
-    // 方向与模长是物理语义：仅平移对齐，不做缩放/旋转。
+  if (exp.type === 'vector' || exp.type === 'field' || exp.type === 'ray') {
+    // 方向/路径是物理语义：仅平移对齐，不做缩放/旋转。
     return distanceToScore(translationDistance(expPoints, actPoints), TRANSLATION_TOLERANCE);
   }
   return distanceToScore(similarityDistance(expPoints, actPoints), SIMILARITY_TOLERANCE);
