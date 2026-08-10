@@ -99,8 +99,8 @@ public struct ChartCanvasView: View {
     }
 
     private func seriesColor(index: Int, explicit: String?) -> Color {
-        if let explicit, let color = Color(hex: explicit) {
-            return color
+        if let explicit, !explicit.isEmpty {
+            return Color(hex: explicit)
         }
         let palette: [Color] = [.blue, .orange, .green, .red]
         return palette[index % palette.count]
@@ -320,21 +320,6 @@ public struct ChartCanvasView: View {
             }
         }
         .padding(.horizontal, 16)
-    }
-}
-
-// MARK: - Color(hex:)
-
-extension Color {
-    /// 解析 `#RRGGBB`；失败返回 nil。
-    init?(hex: String) {
-        var text = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.hasPrefix("#") { text.removeFirst() }
-        guard text.count == 6, let value = UInt64(text, radix: 16) else { return nil }
-        let r = Double((value >> 16) & 0xFF) / 255
-        let g = Double((value >> 8) & 0xFF) / 255
-        let b = Double(value & 0xFF) / 255
-        self.init(red: r, green: g, blue: b)
     }
 }
 
