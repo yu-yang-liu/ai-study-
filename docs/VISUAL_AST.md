@@ -90,7 +90,7 @@ type GeometryAST =
 | v1 | schema + validator + SVG renderer + 提示词 + 示例 + playground | ✅ |
 | v2 | Web React 组件 / 动态几何（拖动、轨迹）/ relation 节点（垂直、平行标记） | 待启动 |
 | v3 | iOS SwiftUI Canvas / Android Compose Canvas | iOS ✅（2026-08-09）；Android 待启动（需 Android 构建环境） |
-| v4 | 物理实验示意、化学分子结构（图谱布局）、圆锥曲线 | 待启动 |
+| v4 | 立体几何、圆锥曲线、统计图表、电路、场线/光路、遗传系谱、分子结构、图/流程 | 分批排期（见 [VISUAL_AST_COVERAGE.md](./VISUAL_AST_COVERAGE.md)） |
 | v5 | 开源发布：JSON Schema 导出、版本化协议、多语言提示词、独立仓库 | 待启动 |
 
 ## 8. 验证

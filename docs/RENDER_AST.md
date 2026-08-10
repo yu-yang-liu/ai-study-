@@ -184,6 +184,7 @@ targets: [
 ## 3. 几何渲染（M2 — 核心完成，边界开放，扩展见 [GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md)）
 
 > M2 属于 Science AST **V2（学科可视化引擎）**；V1 公式 M1 已收口，V3（知识图谱/学习智能）为长期积累型、未启动（见 [SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md)）。
+> 高中学段全学科可视化覆盖总表（含未建档项）见 [VISUAL_AST_COVERAGE.md](./VISUAL_AST_COVERAGE.md)。
 
 ### 3.1 为什么独立里程碑
 
