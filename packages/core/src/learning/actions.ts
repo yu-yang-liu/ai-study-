@@ -13,6 +13,8 @@ import type {
   GeometryOutput,
   ChartOutput,
   CircuitOutput,
+  PedigreeOutput,
+  GraphOutput,
 } from '../ai/structured/schemas';
 import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
@@ -61,6 +63,14 @@ const CHART_KEYWORDS = [
 const CIRCUIT_KEYWORDS = [
   '电路', '电阻', '电流表', '电压表', '滑动变阻器', '电源', '开关',
   '串联', '并联', '灯泡', '电表', '欧姆', '伏特', '安培', '测电阻', '电动机',
+];
+/** pedigree task 触发关键词（生物遗传系谱题）。 */
+const PEDIGREE_KEYWORDS = [
+  '遗传', '系谱', '患病', '家族', '常染色体', '伴X', '伴性', '显性', '隐性', '先证者', '携带者',
+];
+/** graph task 触发关键词（生物生态系统/食物链网题）。 */
+const GRAPH_KEYWORDS = [
+  '食物链', '食物网', '生态系统', '能量流动', '捕食', '营养级', '分解者', '生产者', '消费者',
 ];
 
 /**
@@ -167,6 +177,70 @@ export async function attachCircuitBlock(opts: {
   }
 }
 
+/**
+ * P1-4：analyze 后置遗传系谱图检测（生物）。
+ * 命中则把合法 Pedigree AST 以 `pedigree` block 追加到 analysisBlocks。失败静默降级。
+ */
+export async function attachPedigreeBlock(opts: {
+  subject: string;
+  question: string;
+  blocks: Block[] | undefined;
+}): Promise<Block[] | undefined> {
+  if (opts.subject !== '生物' || !opts.question.trim()) return opts.blocks;
+  if (!PEDIGREE_KEYWORDS.some((keyword) => opts.question.includes(keyword))) return opts.blocks;
+  try {
+    const messages = composeMessages({
+      task: 'pedigree',
+      subject: opts.subject,
+      phase: 'high',
+      userInput: opts.question,
+    });
+    const output = (await structuredCall({
+      task: 'pedigree',
+      schema: TASK_SCHEMA.pedigree,
+      messages,
+      phase: 'high',
+    })) as PedigreeOutput;
+    if (!output.pedigree) return opts.blocks;
+    return [...(opts.blocks ?? []), output.pedigree as Block];
+  } catch (err) {
+    console.warn('attachPedigreeBlock failed:', err);
+    return opts.blocks;
+  }
+}
+
+/**
+ * P1-4：analyze 后置食物链/食物网检测（生物）。
+ * 命中则把合法 Graph AST 以 `graph` block 追加到 analysisBlocks。失败静默降级。
+ */
+export async function attachGraphBlock(opts: {
+  subject: string;
+  question: string;
+  blocks: Block[] | undefined;
+}): Promise<Block[] | undefined> {
+  if (opts.subject !== '生物' || !opts.question.trim()) return opts.blocks;
+  if (!GRAPH_KEYWORDS.some((keyword) => opts.question.includes(keyword))) return opts.blocks;
+  try {
+    const messages = composeMessages({
+      task: 'graph',
+      subject: opts.subject,
+      phase: 'high',
+      userInput: opts.question,
+    });
+    const output = (await structuredCall({
+      task: 'graph',
+      schema: TASK_SCHEMA.graph,
+      messages,
+      phase: 'high',
+    })) as GraphOutput;
+    if (!output.graph) return opts.blocks;
+    return [...(opts.blocks ?? []), output.graph as Block];
+  } catch (err) {
+    console.warn('attachGraphBlock failed:', err);
+    return opts.blocks;
+  }
+}
+
 export async function executeAnalyze(opts: {
   userId: string;
   subject: string;
@@ -229,6 +303,16 @@ export async function executeAnalyze(opts: {
       blocks: result.analysisBlocks,
     });
     result.analysisBlocks = await attachCircuitBlock({
+      subject,
+      question: content,
+      blocks: result.analysisBlocks,
+    });
+    result.analysisBlocks = await attachPedigreeBlock({
+      subject,
+      question: content,
+      blocks: result.analysisBlocks,
+    });
+    result.analysisBlocks = await attachGraphBlock({
       subject,
       question: content,
       blocks: result.analysisBlocks,

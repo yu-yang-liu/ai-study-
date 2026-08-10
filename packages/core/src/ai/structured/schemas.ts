@@ -42,7 +42,9 @@ export type Block =
     }
   | { type: 'visual'; kind: 'placeholder' | 'geometry'; geometry?: unknown }
   | ChartBlock
-  | CircuitBlock;
+  | CircuitBlock
+  | PedigreeBlock
+  | GraphBlock;
 
 const textBlockSchema = z.object({
   type: z.literal('text'),
@@ -215,6 +217,84 @@ export const circuitBlockSchema = z
   });
 export type CircuitBlock = z.infer<typeof circuitBlockSchema>;
 
+// ── Pedigree block（P1-4 遗传系谱图；专用符号：世代行 + 婚姻/子女连线）──
+
+export const pedigreeIndividualSchema = z.object({
+  id: z.string().min(1).max(30),
+  gender: z.enum(['male', 'female', 'unknown']).default('unknown'),
+  affected: z.boolean().optional(),
+  carrier: z.boolean().optional(),
+  deceased: z.boolean().optional(),
+  label: z.string().max(40).optional(),
+  proband: z.boolean().optional(),
+});
+
+export const pedigreeMarriageSchema = z.object({
+  spouses: z.array(z.string()).length(2),
+  children: z.array(z.string()).max(12).optional(),
+});
+
+export const pedigreeBlockSchema = z
+  .object({
+    type: z.literal('pedigree'),
+    title: z.string().max(100).optional(),
+    generations: z
+      .array(
+        z.object({
+          label: z.string().max(10).optional(),
+          individuals: z.array(pedigreeIndividualSchema).min(1).max(20),
+        }),
+      )
+      .min(1)
+      .max(6),
+    marriages: z.array(pedigreeMarriageSchema).max(20),
+  })
+  .superRefine((value, ctx) => {
+    const ids = new Set(value.generations.flatMap((g) => g.individuals.map((i) => i.id)));
+    for (const marriage of value.marriages) {
+      for (const id of [...marriage.spouses, ...(marriage.children ?? [])]) {
+        if (!ids.has(id)) {
+          ctx.addIssue({ code: 'custom', message: `marriage 引用了不存在的个体: ${id}` });
+        }
+      }
+    }
+  });
+export type PedigreeBlock = z.infer<typeof pedigreeBlockSchema>;
+
+// ── Graph block（P1-4 食物链/网 + 通用有向图；节点 + 有向边）──
+
+export const graphNodeSchema = z.object({
+  id: z.string().min(1).max(30),
+  label: z.string().min(1).max(40),
+  kind: z.enum(['producer', 'consumer', 'decomposer', 'organism', 'default']).optional(),
+  x: z.number().min(-100).max(100),
+  y: z.number().min(-100).max(100),
+});
+
+export const graphEdgeSchema = z.object({
+  from: z.string().min(1).max(30),
+  to: z.string().min(1).max(30),
+  label: z.string().max(40).optional(),
+  style: z.enum(['solid', 'dashed']).optional(),
+});
+
+export const graphBlockSchema = z
+  .object({
+    type: z.literal('graph'),
+    title: z.string().max(100).optional(),
+    nodes: z.array(graphNodeSchema).min(2).max(30),
+    edges: z.array(graphEdgeSchema).min(1).max(40),
+  })
+  .superRefine((value, ctx) => {
+    const ids = new Set(value.nodes.map((node) => node.id));
+    for (const edge of value.edges) {
+      if (!ids.has(edge.from) || !ids.has(edge.to)) {
+        ctx.addIssue({ code: 'custom', message: `edge 引用了不存在的节点: ${edge.from}-${edge.to}` });
+      }
+    }
+  });
+export type GraphBlock = z.infer<typeof graphBlockSchema>;
+
 export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   textBlockSchema,
   formulaBlockSchema,
@@ -224,6 +304,8 @@ export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   visualBlockSchema,
   chartBlockSchema,
   circuitBlockSchema,
+  pedigreeBlockSchema,
+  graphBlockSchema,
 ]);
 
 // ── Geometry AST（Phase 2 · Visual AST；与 visual-ast v1 对齐）──
@@ -414,6 +496,20 @@ export const circuitOutputSchema = z.object({
 });
 export type CircuitOutput = z.infer<typeof circuitOutputSchema>;
 
+/** pedigree task 输出：pedigree 可为 null（不需要系谱图）。 */
+export const pedigreeOutputSchema = z.object({
+  pedigree: pedigreeBlockSchema.nullable(),
+  reason: z.string().max(200).optional(),
+});
+export type PedigreeOutput = z.infer<typeof pedigreeOutputSchema>;
+
+/** graph task 输出：graph 可为 null（不需要图）。 */
+export const graphOutputSchema = z.object({
+  graph: graphBlockSchema.nullable(),
+  reason: z.string().max(200).optional(),
+});
+export type GraphOutput = z.infer<typeof graphOutputSchema>;
+
 export const ocrOutput = z.object({
   text: z.string(),
   blocks: z.array(z.object({
@@ -552,4 +648,6 @@ export const TASK_SCHEMA: Record<TaskName, z.ZodType<unknown>> = {
   geometry: geometryOutputSchema,
   chart: chartOutputSchema,
   circuit: circuitOutputSchema,
+  pedigree: pedigreeOutputSchema,
+  graph: graphOutputSchema,
 };

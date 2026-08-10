@@ -13,7 +13,9 @@
     "lint": "tsc --noEmit",
     "eval:geometry": "vitest run src/ai/eval/geometry-eval.test.ts src/ai/eval/analyze-geometry-e2e.test.ts",
     "eval:chart": "vitest run src/ai/eval/chart-eval.test.ts src/ai/eval/analyze-chart-e2e.test.ts",
-    "eval:circuit": "vitest run src/ai/eval/circuit-eval.test.ts src/ai/eval/analyze-circuit-e2e.test.ts"
+    "eval:circuit": "vitest run src/ai/eval/circuit-eval.test.ts src/ai/eval/analyze-circuit-e2e.test.ts",
+    "eval:pedigree": "vitest run src/ai/eval/pedigree-eval.test.ts src/ai/eval/analyze-pedigree-e2e.test.ts",
+    "eval:graph": "vitest run src/ai/eval/graph-eval.test.ts src/ai/eval/analyze-graph-e2e.test.ts"
   },
   "devDependencies": {
     "@types/pg": "^8.20.0",

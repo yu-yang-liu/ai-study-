@@ -31,5 +31,25 @@ export {
   CIRCUIT_CASE_PASS_THRESHOLD,
 } from './circuit-scoring';
 export type { CircuitDimension } from './circuit-scoring';
+export { pedigreeSamples } from './pedigree-samples';
+export type { PedigreeEvalCase } from './pedigree-samples';
+export {
+  scorePedigree,
+  pedigreeOverallScore,
+  pedigreeCasePassed,
+  PEDIGREE_DIMENSIONS,
+  PEDIGREE_CASE_PASS_THRESHOLD,
+} from './pedigree-scoring';
+export type { PedigreeDimension } from './pedigree-scoring';
+export { graphSamples } from './graph-samples';
+export type { GraphEvalCase } from './graph-samples';
+export {
+  scoreGraph,
+  graphOverallScore,
+  graphCasePassed,
+  GRAPH_DIMENSIONS,
+  GRAPH_CASE_PASS_THRESHOLD,
+} from './graph-scoring';
+export type { GraphDimension } from './graph-scoring';
 export type { GeometryDimension } from './geometry-scoring';
 export { evalExpr } from './geometry-math';

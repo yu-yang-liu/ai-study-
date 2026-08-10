@@ -46,6 +46,10 @@ export function blocksToPlainText(blocks?: Block[] | null): string {
           return `[图表] ${b.title ?? b.kind}`;
         case 'circuit':
           return `[电路图] ${b.title ?? '电路'}`;
+        case 'pedigree':
+          return `[遗传系谱图] ${b.title ?? '系谱图'}`;
+        case 'graph':
+          return `[关系图] ${b.title ?? '图'}`;
         default:
           return '';
       }

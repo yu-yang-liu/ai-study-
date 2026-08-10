@@ -2,6 +2,8 @@ import type { TaskName } from '../gateway/types';
 import { GEOMETRY_BLOCK_INSTRUCTION } from './geometry';
 import { CHART_SYSTEM_PROMPT } from './chart';
 import { CIRCUIT_SYSTEM_PROMPT } from './circuit';
+import { PEDIGREE_SYSTEM_PROMPT } from './pedigree';
+import { GRAPH_SYSTEM_PROMPT } from './graph';
 
 /**
  * Generates a JSON format instruction for a given task.
@@ -96,6 +98,18 @@ export function schemaToFormatInstruction(task: TaskName): string {
   "reason": "判断依据"
 }
 注意：circuit 必须为合法 Circuit AST（nodes/wires 见系统提示词，wire 引用必须存在）；不需要电路图时 circuit 为 null。`,
+    pedigree: `请输出 JSON：
+{
+  "pedigree": {"type":"pedigree","generations":[{"label":"I","individuals":[{"id":"I1","gender":"male","affected":true}]}],"marriages":[{"spouses":["I1","I2"],"children":["II1"]}]} 或 null,
+  "reason": "判断依据"
+}
+注意：pedigree 必须为合法 Pedigree AST（generations/marriages 见系统提示词，引用必须存在）；不需要系谱图时 pedigree 为 null。`,
+    graph: `请输出 JSON：
+{
+  "graph": {"type":"graph","nodes":[{"id":"n1","label":"草","kind":"producer","x":0,"y":0},{"id":"n2","label":"兔","kind":"consumer","x":8,"y":4}],"edges":[{"from":"n1","to":"n2"}]} 或 null,
+  "reason": "判断依据"
+}
+注意：graph 必须为合法 Graph AST（nodes/edges 见系统提示词，引用必须存在）；不需要关系图时 graph 为 null。`,
   };
 
   return FORMATS[task] ?? '\u8bf7\u8f93\u51fa\u7b26\u5408\u8981\u6c42\u7684 JSON \u683c\u5f0f';
