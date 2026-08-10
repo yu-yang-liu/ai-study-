@@ -293,6 +293,10 @@ public struct MarkdownRenderer: View {
             ChartCanvasView(block: block)
         case .circuit(let block):
             CircuitCanvasView(block: block)
+        case .pedigree(let block):
+            PedigreeCanvasView(block: block)
+        case .graph(let block):
+            GraphCanvasView(block: block)
         }
     }
 

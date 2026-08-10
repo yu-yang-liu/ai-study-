@@ -144,6 +144,67 @@ final class ContentBlockTests: XCTestCase {
         XCTAssertEqual(block, .text(content: ""))
     }
 
+    // MARK: pedigree / graph（P1-4）
+
+    func testDecodePedigree() throws {
+        let json = #"""
+        {"type":"pedigree","title":"某系谱图",
+         "generations":[{"label":"I","individuals":[{"id":"I1","gender":"male","affected":true}]},
+                        {"label":"II","individuals":[{"id":"II1","gender":"female","affected":false,"proband":true}]}],
+         "marriages":[{"spouses":["I1","I2"],"children":["II1"]}]}
+        """#.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        guard case .pedigree(let pedigree) = block else {
+            return XCTFail("应为 pedigree block")
+        }
+        XCTAssertEqual(pedigree.title, "某系谱图")
+        XCTAssertEqual(pedigree.generations.count, 2)
+        XCTAssertEqual(pedigree.generations.first?.individuals.first?.affected, true)
+        XCTAssertEqual(pedigree.marriages.first?.spouses, ["I1", "I2"])
+    }
+
+    func testDecodeGraph() throws {
+        let json = #"""
+        {"type":"graph","title":"食物链",
+         "nodes":[{"id":"n1","label":"草","kind":"producer","x":0,"y":0},
+                  {"id":"n2","label":"兔","kind":"consumer","x":8,"y":4}],
+         "edges":[{"from":"n1","to":"n2"}]}
+        """#.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        guard case .graph(let graph) = block else {
+            return XCTFail("应为 graph block")
+        }
+        XCTAssertEqual(graph.title, "食物链")
+        XCTAssertEqual(graph.nodes.count, 2)
+        XCTAssertEqual(graph.nodes.first?.kind, "producer")
+        XCTAssertEqual(graph.edges.first?.to, "n2")
+    }
+
+    func testEncodeDecodePedigreeRoundtrip() throws {
+        let pedigree = PedigreeBlock(
+            title: "系谱图",
+            generations: [PedigreeGeneration(label: "I", individuals: [PedigreeIndividual(id: "I1", gender: "male", affected: true)])],
+            marriages: [PedigreeMarriage(spouses: ["I1", "I2"])]
+        )
+        let block: ContentBlock = .pedigree(block: pedigree)
+        let data = try JSONEncoder().encode(block)
+        XCTAssertEqual(try JSONDecoder().decode(ContentBlock.self, from: data), block)
+    }
+
+    func testEncodeDecodeGraphRoundtrip() throws {
+        let graph = GraphBlock(
+            title: "食物网",
+            nodes: [
+                GraphNode(id: "n1", label: "草", kind: "producer", x: 0, y: 0),
+                GraphNode(id: "n2", label: "兔", kind: "consumer", x: 8, y: 4),
+            ],
+            edges: [GraphEdge(from: "n1", to: "n2")]
+        )
+        let block: ContentBlock = .graph(block: graph)
+        let data = try JSONEncoder().encode(block)
+        XCTAssertEqual(try JSONDecoder().decode(ContentBlock.self, from: data), block)
+    }
+
     func testDecodeUnknownTypeDegradesToEmptyText() throws {
         let json = #"{"type":"geometry","content":"whatever"}"#.data(using: .utf8)!
         let block = try JSONDecoder().decode(ContentBlock.self, from: json)
