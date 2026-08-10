@@ -863,9 +863,9 @@ private extension Color {
                 GeometryElement(
                     type: "field",
                     label: "E",
-                    kind: "electric",
                     from: [0, 0],
                     to: [6, 0],
+                    kind: "electric",
                     width: 4,
                     density: 5
                 ),
