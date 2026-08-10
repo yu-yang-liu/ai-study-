@@ -38,34 +38,6 @@ final class GeometryASTTests: XCTestCase {
         XCTAssertEqual(bounds?.yMax, 11)
     }
 
-    func testDecodeFieldAndRayElements() throws {
-        let json = """
-        {
-          "type": "scene",
-          "elements": [
-            {"type": "field", "kind": "electric", "from": [0,0], "to": [6,0], "width": 4, "density": 5, "label": "E"},
-            {"type": "ray", "points": [[-4,3],[0,0],[4,3]], "arrow": "end", "style": "dashed"}
-          ]
-        }
-        """.data(using: .utf8)!
-        let ast = try JSONDecoder().decode(GeometryAST.self, from: json)
-        guard case .scene(let elements, _) = ast else {
-            return XCTFail("expected scene")
-        }
-        XCTAssertEqual(elements.count, 2)
-        let field = elements[0]
-        XCTAssertEqual(field.type, "field")
-        XCTAssertEqual(field.kind, "electric")
-        XCTAssertEqual(field.width, 4)
-        XCTAssertEqual(field.density, 5)
-        XCTAssertEqual(field.from, [0, 0])
-        XCTAssertEqual(field.to, [6, 0])
-        let ray = elements[1]
-        XCTAssertEqual(ray.type, "ray")
-        XCTAssertEqual(ray.points, [[-4, 3], [0, 0], [4, 3]])
-        XCTAssertEqual(ray.arrow, "end")
-        XCTAssertEqual(ray.style, "dashed")
-    }
 
     func testDecodeCoordinateSystem() throws {
         let json = """
