@@ -71,6 +71,16 @@ public struct GeometryElement: Codable, Sendable, Equatable {
     public let anchor: String?
     /// line 线型（solid / dashed）。
     public let style: String?
+    /// field 场线类型（electric / magnetic / contour）。
+    public let kind: String?
+    /// field 平行线带宽度。
+    public let width: Double?
+    /// field 场线条数。
+    public let density: Int?
+    /// field 是否放射状（从 center 辐射）。
+    public let radial: Bool?
+    /// ray 箭头位置（start / end / both / none）。
+    public let arrow: String?
 
     /// 显式成员初始化（字段均可选，便于预览 / 测试构造）。
     public init(
@@ -97,7 +107,12 @@ public struct GeometryElement: Codable, Sendable, Equatable {
         samples: Int? = nil,
         text: String? = nil,
         anchor: String? = nil,
-        style: String? = nil
+        style: String? = nil,
+        kind: String? = nil,
+        width: Double? = nil,
+        density: Int? = nil,
+        radial: Bool? = nil,
+        arrow: String? = nil
     ) {
         self.type = type
         self.label = label
@@ -123,6 +138,11 @@ public struct GeometryElement: Codable, Sendable, Equatable {
         self.text = text
         self.anchor = anchor
         self.style = style
+        self.kind = kind
+        self.width = width
+        self.density = density
+        self.radial = radial
+        self.arrow = arrow
     }
 
     /// 便捷构造：点。

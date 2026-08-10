@@ -63,8 +63,8 @@ public struct GeometryCanvasView: View {
 
     private static func priority(_ element: GeometryElement) -> Int {
         switch element.type {
-        case "triangle", "polygon": return 0
-        case "line", "vector", "circle": return 1
+        case "triangle", "polygon", "field": return 0
+        case "line", "vector", "circle", "ray": return 1
         case "functionCurve": return 2
         case "arc", "angle": return 3
         case "point": return 4
@@ -85,6 +85,10 @@ public struct GeometryCanvasView: View {
             drawLine(context: &context, transformer: transformer, element: element)
         case "vector":
             drawVector(context: &context, transformer: transformer, element: element)
+        case "field":
+            drawField(context: &context, transformer: transformer, element: element)
+        case "ray":
+            drawRay(context: &context, transformer: transformer, element: element)
         case "triangle":
             drawPolygon(context: &context, transformer: transformer, element: element, closed: true)
         case "polygon":
@@ -191,6 +195,132 @@ public struct GeometryCanvasView: View {
                 size: 14,
                 anchor: .leading
             )
+        }
+    }
+
+    /// 箭头（沿 from→to 方向，尖端在 to）。
+    private static func arrowHead(
+        context: inout GraphicsContext,
+        from start: CGPoint,
+        to end: CGPoint,
+        color: Color,
+        size: CGFloat
+    ) {
+        let dx = Double(end.x - start.x)
+        let dy = Double(end.y - start.y)
+        let length = hypot(dx, dy)
+        guard length > 1 else { return }
+        let ux = dx / length
+        let uy = dy / length
+        let base = CGPoint(x: end.x - CGFloat(ux * Double(size)), y: end.y - CGFloat(uy * Double(size)))
+        let perp = CGVector(
+            dx: -CGFloat(uy * Double(size) * 0.45),
+            dy: CGFloat(ux * Double(size) * 0.45)
+        )
+        var head = Path()
+        head.move(to: CGPoint(x: base.x + perp.dx, y: base.y + perp.dy))
+        head.addLine(to: CGPoint(x: base.x - perp.dx, y: base.y - perp.dy))
+        head.addLine(to: end)
+        head.closeSubpath()
+        context.fill(head, with: .color(color))
+    }
+
+    /// 场线（P1-3）：平行线带或放射线，方向由 from→to 决定。
+    private static func drawField(
+        context: inout GraphicsContext,
+        transformer: CoordinateTransformer,
+        element: GeometryElement
+    ) {
+        guard let from = element.from, from.count >= 2, let to = element.to, to.count >= 2 else { return }
+        let color = color(element.color, fallback: .blue.opacity(0.65))
+        let density = max(1, element.density ?? 5)
+        let dash: [CGFloat] = element.style == "dashed" ? [5, 4] : []
+        let style = StrokeStyle(lineWidth: 1.2, dash: dash)
+
+        let dx = to[0] - from[0]
+        let dy = to[1] - from[1]
+        let length = hypot(dx, dy)
+        guard length > 0.01 else { return }
+        let ux = dx / length
+        let uy = dy / length
+
+        if element.radial == true, let center = element.center, center.count >= 2 {
+            let startAngle = atan2(from[1] - center[1], from[0] - center[0])
+            let endAngle = atan2(to[1] - center[1], to[0] - center[0])
+            let centerPoint = CGPoint(x: transformer.x(center[0]), y: transformer.y(center[1]))
+            for i in 0..<density {
+                let t = density <= 1 ? 0 : Double(i) / Double(density - 1)
+                let angle = startAngle + (endAngle - startAngle) * t
+                let endPoint = CGPoint(
+                    x: transformer.x(center[0] + cos(angle) * length),
+                    y: transformer.y(center[1] + sin(angle) * length)
+                )
+                var path = Path()
+                path.move(to: centerPoint)
+                path.addLine(to: endPoint)
+                context.stroke(path, with: .color(color), style: style)
+                arrowHead(context: &context, from: centerPoint, to: endPoint, color: color, size: 7)
+            }
+        } else {
+            let width = element.width ?? 4
+            let nx = -uy
+            let ny = ux
+            for i in 0..<density {
+                let t = density <= 1 ? 0 : Double(i) / Double(density - 1) - 0.5
+                let offset = t * width
+                let p0x = from[0] + nx * offset
+                let p0y = from[1] + ny * offset
+                let p1x = to[0] + nx * offset
+                let p1y = to[1] + ny * offset
+                let path = segmentPath(from: [p0x, p0y], to: [p1x, p1y], transformer: transformer)
+                context.stroke(path, with: .color(color), style: style)
+                arrowHead(
+                    context: &context,
+                    from: CGPoint(x: transformer.x(p0x), y: transformer.y(p0y)),
+                    to: CGPoint(x: transformer.x(p1x), y: transformer.y(p1y)),
+                    color: color,
+                    size: 7
+                )
+            }
+        }
+    }
+
+    /// 光路（P1-3）：折线 + 方向箭头。
+    private static func drawRay(
+        context: inout GraphicsContext,
+        transformer: CoordinateTransformer,
+        element: GeometryElement
+    ) {
+        let points = element.points ?? []
+        guard points.count >= 2 else { return }
+        let color = color(element.color, fallback: .blue)
+        let dash: [CGFloat] = element.style == "dashed" ? [5, 4] : []
+        let style = StrokeStyle(lineWidth: 1.8, dash: dash)
+        var path = Path()
+        var mapped: [CGPoint] = []
+        for point in points where point.count >= 2 {
+            let p = CGPoint(x: transformer.x(point[0]), y: transformer.y(point[1]))
+            mapped.append(p)
+            if mapped.count == 1 {
+                path.move(to: p)
+            } else {
+                path.addLine(to: p)
+            }
+        }
+        context.stroke(path, with: .color(color), style: style)
+
+        let arrow = element.arrow ?? "end"
+        let size: CGFloat = 10
+        if arrow == "start" || arrow == "both", mapped.count > 1, let first = mapped.first {
+            arrowHead(context: &context, from: mapped[1], to: first, color: color, size: size)
+        }
+        if arrow == "end" || arrow == "both", mapped.count > 1, let last = mapped.last {
+            arrowHead(context: &context, from: mapped[mapped.count - 2], to: last, color: color, size: size)
+        }
+
+        if let label = element.label, mapped.count > 1 {
+            let mid = mapped[mapped.count / 2]
+            drawText(context: &context, label, at: CGPoint(x: mid.x + 8, y: mid.y - 8), color: .gray600, size: 13, anchor: .leading)
         }
     }
 
@@ -719,6 +849,33 @@ private extension Color {
                 .line(from: [3, 0], to: [4.5, 2.6], style: "dashed"),
                 .line(from: [1.5, 2.6], to: [4.5, 2.6], style: "dashed"),
                 .vector(from: [0, 0], to: [4.5, 2.6], label: "F合", color: "#2563eb"),
+            ],
+            bounds: nil
+        )
+    )
+    .padding()
+}
+
+#Preview("匀强电场 + 光路反射") {
+    GeometryCanvasView(
+        ast: .scene(
+            elements: [
+                GeometryElement(
+                    type: "field",
+                    kind: "electric",
+                    from: [0, 0],
+                    to: [6, 0],
+                    width: 4,
+                    density: 5,
+                    label: "E"
+                ),
+                GeometryElement(
+                    type: "ray",
+                    points: [[-4, 3], [0, 0], [4, 3]],
+                    arrow: "end",
+                    label: "反射光线"
+                ),
+                GeometryElement(type: "line", from: [0, -2], to: [0, 2], style: "dashed", label: "法线"),
             ],
             bounds: nil
         )
