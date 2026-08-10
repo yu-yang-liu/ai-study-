@@ -862,20 +862,20 @@ private extension Color {
             elements: [
                 GeometryElement(
                     type: "field",
+                    label: "E",
                     kind: "electric",
                     from: [0, 0],
                     to: [6, 0],
                     width: 4,
-                    density: 5,
-                    label: "E"
+                    density: 5
                 ),
                 GeometryElement(
                     type: "ray",
+                    label: "反射光线",
                     points: [[-4, 3], [0, 0], [4, 3]],
-                    arrow: "end",
-                    label: "反射光线"
+                    arrow: "end"
                 ),
-                GeometryElement(type: "line", from: [0, -2], to: [0, 2], style: "dashed", label: "法线"),
+                GeometryElement(type: "line", label: "法线", from: [0, -2], to: [0, 2], style: "dashed"),
             ],
             bounds: nil
         )
