@@ -3,6 +3,7 @@
 > 状态：**v1 已落地**（`packages/visual-ast`：schema + validator + SVG renderer + AI 提示词 + 示例 + playground）
 > 基线：2026-08-09
 > 关联：[RENDER_AST.md](./RENDER_AST.md) §3（M2 几何）、设计文件《AI Learning Intelligence Platform Architecture》§4 Visual AST / §8 Phase 2
+> **命名对照**：本子项目的 v1–v5 是 visual-ast 自身里程碑，与 Science AST 三版本（V1 基础层 / V2 可视化引擎 / V3 学习智能）是两套编号；RENDER_AST 的 M1（公式）∈ V1、M2（几何）∈ V2。V3 为长期积累型、未启动（见 [SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md)）。
 
 ---
 
@@ -56,7 +57,7 @@ type GeometryAST =
 - 定义 10 种元素与 functionCurve 表达式语法；
 - 用户提示词把题目原文 + 可选补充说明转为"仅输出 JSON"。
 
-> 待办：把提示词接入 ai-study 的 `analyze`（几何题分支），并用 `packages/core/src/ai/eval` 测 AI 输出准确率。
+> 已落地（2026-08-09）：提示词权威版在 `packages/core/src/ai/prompt/geometry.ts`，经 `geometry` task eval 8/8 真跑通过（100%，平均 0.96）；analyze 生产链路采用「后置检测 + attach 到 analysisBlocks」（仅文本题、数学/物理，见 [GEOMETRY_PROMPT_EVAL.md](./GEOMETRY_PROMPT_EVAL.md)）。
 
 ## 5. 示例
 
@@ -80,13 +81,15 @@ type GeometryAST =
    - Android：Compose `Canvas`。
 4. **内容接入**：ocr 块中新增 `type: "geometry"` 或 `analyze` 新增 `geometryAst` 字段（二选一，先定协议再定位置）。
 
+**集成状态**：1️⃣ 已完成（`geometry` task + `schemas.ts` 严格判别联合 + `prompt/geometry.ts` 权威版）；2️⃣ 已完成（8 例真跑 100%，另 09–11 等价样本，见 [GEOMETRY_PROMPT_EVAL.md](./GEOMETRY_PROMPT_EVAL.md)）；3️⃣ iOS ✅（`GeometryCanvasView`，2026-08-09），Web / Android 待启动；4️⃣ 已定：几何图走 `visual(kind:"geometry")` block，不再新增顶层字段。
+
 ## 7. 路线图
 
 | 里程碑 | 内容 | 状态 |
 |--------|------|------|
 | v1 | schema + validator + SVG renderer + 提示词 + 示例 + playground | ✅ |
 | v2 | Web React 组件 / 动态几何（拖动、轨迹）/ relation 节点（垂直、平行标记） | 待启动 |
-| v3 | iOS SwiftUI Canvas / Android Compose Canvas | 待启动（需 macOS/Android 构建环境） |
+| v3 | iOS SwiftUI Canvas / Android Compose Canvas | iOS ✅（2026-08-09）；Android 待启动（需 Android 构建环境） |
 | v4 | 物理实验示意、化学分子结构（图谱布局）、圆锥曲线 | 待启动 |
 | v5 | 开源发布：JSON Schema 导出、版本化协议、多语言提示词、独立仓库 | 待启动 |
 
@@ -99,4 +102,4 @@ tsc --noEmit -p tsconfig.json  # 类型检查
 node scripts/preview.mjs       # 生成预览
 ```
 
-*文档版本：2026-08-09 · visual-ast v1*
+*文档版本：2026-08-10 · visual-ast v1（已并入 Science AST V2 几何核心）*

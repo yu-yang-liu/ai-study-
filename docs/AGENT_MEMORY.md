@@ -1,6 +1,6 @@
 # Agent Memory 开发说明
 
-> **真理来源**：本文档描述 Chat Agent 的记忆架构、已实现能力与六项待建设能力。  
+> **真理来源**：本文档描述 Chat Agent 的记忆架构与六项能力（M1–M6 已全部落地）。  
 > 代码入口见 `packages/core/src/ai/agent/runChatAgent.ts`。  
 > 与 [PROJECT_REFERENCE.md](./PROJECT_REFERENCE.md) §7 P1、§11 待办对齐。
 
@@ -77,9 +77,9 @@ POST /api/chat
 |----|------|
 | **目标** | 统一读写入口，替代散落在 `conversation.ts` / `assistant-context.ts` / prompt 拼接中的隐式逻辑 |
 | **落点** | `packages/core/src/ai/memory/`（`types.ts` / `memory.ts` / `compose.ts` / `index.ts`） |
-| **接口** | `loadMemory(ctx)` → `AgentMemory { conversationId, shortTerm, longTerm, episodic?, isColdStart }`；`appendTurn(ctx, turn, conversationId)`；`upsertFact`（M5 空桩） |
+| **接口** | `loadMemory(ctx)` → `AgentMemory { conversationId, shortTerm, longTerm, episodic?, isColdStart }`；`appendTurn(ctx, turn, conversationId)`；`upsertFact`（M1 落地时空桩，M5 已升级为真实写入） |
 | **行为** | 编排层 on top，不改 `conversation.ts` / `assistant-context.ts` / `persist.ts` 内部实现；`/api/chat` 已切换为 `loadMemory` / `appendTurn` |
-| **前向兼容** | `episodic?` 恒 `undefined`（M4 钩子）；`upsertFact` 类型化空桩（M5 领域） |
+| **前向兼容** | `episodic?` 恒 `undefined`（M4 钩子）；`upsertFact` 已由 M5 升级为真实写入（见 M5） |
 | **验收** | `/api/chat` 仅通过 Memory 模块取上下文；单测覆盖 cold start / 有历史 / 有学情（`memory.test.ts`，4 用例） |
 
 ### M2 超长对话压缩/摘要（超过 20 条）✅ 已实现
@@ -191,4 +191,4 @@ flowchart TD
 
 ---
 
-*文档版本：2026-08-06 · 对应当前工作区代码状态（M1–M6 全部已落地）*
+*文档版本：2026-08-10 · 对应当前工作区代码状态（M1–M6 全部已落地）*

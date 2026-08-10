@@ -3,6 +3,10 @@
  *
  * 目标：让模型把题目中的几何 / 函数 / 力学情境转换为结构化 Geometry AST，
  * 而不是图片 URL、TikZ 或 UI 代码。渲染器负责坐标映射与绘制。
+ *
+ * 注意：ai-study 生产链路使用 core 的权威版提示词
+ * （packages/core/src/ai/prompt/geometry.ts）；本文件为 v1 草案，
+ * 仅随 visual-ast 独立发布时使用。
  */
 
 export const GEOMETRY_SYSTEM_PROMPT_ZH = `你是一名数学/物理/化学示意图的结构化生成器。

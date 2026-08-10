@@ -1,6 +1,6 @@
 # 公式与几何渲染 — AST 渲染方案
 
-> 状态：**公式 M1 实施完成（iOS CI 全绿）/ 几何 M2 核心完成（M-D 端到端通过，2026-08-09）**
+> 状态：**公式 M1（Science AST V1）实施完成（iOS CI 全绿）/ 几何 M2（Science AST V2）核心完成（M-D 端到端通过，2026-08-09）；V3 学习智能为长期积累型，未启动**
 > 基线：2026-08-09 · 对应当前工作区代码状态（STEPS 1–7 已落地）
 > 关联：[PROJECT_REFERENCE.md](./PROJECT_REFERENCE.md) §7 P1、[AGENT_MEMORY.md](./AGENT_MEMORY.md)
 
@@ -147,7 +147,7 @@ targets: [
 ]
 ```
 
-**project.yml**：iosMath **无需在 `packages:` 显式声明** —— XcodeGen 解析 CoreKit `Package.swift` 时传递性拉取。`xcodeVersion` bump `"16.0"` → `"16.2"`（macOS-15 runner 有 `Xcode_16.2.app`；CI `ios-ci.yml` 同步 `xcode-select` 到该路径）。fallback：若 CI 实测 xcodegen 未传递 iosMath，再在 `packages:` 显式加。
+**project.yml**：iosMath **无需在 `packages:` 显式声明** —— XcodeGen 解析 CoreKit `Package.swift` 时传递性拉取。`xcodeVersion` bump `"16.0"` → `"16.2"`（project.yml 保持 16.2；CI `ios-ci.yml` 已于 2026-08-09 切到 `Xcode_16.4.app`，macos-15 runner 已移除 16.2 模拟器运行时）。fallback：若 CI 实测 xcodegen 未传递 iosMath，再在 `packages:` 显式加。
 
 **严格并发**：`MTMathUILabel` 是 `UIView` → 天然 `@MainActor`。`IosMathBackend` 标 `@MainActor`，`render` 标 `nonisolated`（构造视图值不触 actor 隔离态，`makeUIView` / `updateUIView` 由 SwiftUI 调度到主线程）。`defaultBackend` 是只读 `static var`，无并发写竞争。Swift 6 `complete` 模式无警告（iOS CI 已验证）。
 
@@ -177,13 +177,13 @@ targets: [
 | `packages/ios/ios-gaokao/.../AnalysisResultView.swift` | `Text(answer)` → `MarkdownRenderer(blocks:)`（blocks 优先、回退 string） |
 | `packages/ios/ios-gaokao/project.yml` | `xcodeVersion` "16.0"→"16.2" |
 | `packages/ios/CoreKit/.../Components/GradeResultView.swift` | feedback/summary → MarkdownRenderer(blocks:) |
-| `.github/workflows/ios-ci.yml` | `xcode-select` 路径 → `Xcode_16.2.app` |
+| `.github/workflows/ios-ci.yml` | `xcode-select` 路径 → `Xcode_16.4.app`（16.2 → 16.4，macos-15 runner） |
 
 ---
 
 ## 3. 几何渲染（M2 — 核心完成，边界开放，扩展见 [GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md)）
 
-> 用户："图像的提示词随后跟上。" 本节先定 schema 草案与渲染架构，后端提示词待用户补充后填入。
+> M2 属于 Science AST **V2（学科可视化引擎）**；V1 公式 M1 已收口，V3（知识图谱/学习智能）为长期积累型、未启动（见 [SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md)）。
 
 ### 3.1 为什么独立里程碑
 
@@ -195,6 +195,8 @@ targets: [
 4. **覆盖面开放**：立体几何（三视图/二面角）、解析几何（圆锥曲线）、动态几何（动点轨迹）……会持续膨胀，不像公式一次收口。
 
 ### 3.2 Geometry AST schema 草案（v1 — 最小可用子集）
+
+> 以下为设计期草案（历史快照）。当前实现以 `packages/core/src/ai/structured/schemas.ts` 的**严格判别联合**为准：按 type 判别、关键字段必填、`scene` 禁 `functionCurve`（函数图像必须用 `coordinateSystem`）。
 
 ```ts
 // v1 只覆盖最常见类，立体几何/圆锥曲线往后排
@@ -225,7 +227,7 @@ GeometryAST
 - 内部 `Canvas` 绘制 + `CoordinateTransformer` 处理坐标映射。
 - v1 先跑通两 demo 验证可行性：**三角形 + 角标注**、**坐标系 + 一次/二次函数曲线**。
 
-### 3.4 后端提示词（待用户补充）
+### 3.4 后端提示词（已定稿）
 
 > 已定（2026-08-09）：几何图作为 `visual` block（`kind:"geometry"` + Geometry AST）表达；生产链路采用「独立 `geometry` task 后置检测 + attach 到 analysisBlocks」（analyze 主提示词只保留弱信号，实测不可靠）。
 > 协议决策与 M-D 实施记录见 [GEOMETRY_PROMPT_EVAL.md](./GEOMETRY_PROMPT_EVAL.md)。
@@ -234,11 +236,15 @@ GeometryAST
 
 | 文件 | 改动 |
 |------|------|
-| `packages/core/src/ai/prompt/tasks.ts` | analyze 几何分支提示词（待定） |
-| `packages/core/src/ai/prompt/format.ts` | analyze schema 加 geometryAst |
-| `packages/ios/ApiContracts/.../GeometryAST.swift` | **新建** |
-| `packages/ios/CoreKit/.../Components/GeometryCanvasView.swift` | **新建** |
-| `packages/ios/ios-gaokao/.../AnalysisResultView.swift` | 几何题渲染 GeometryCanvasView |
+| `packages/core/src/ai/structured/schemas.ts` | `visualBlockSchema`（kind: geometry）+ `geometryAstSchema` / `geometryOutputSchema`（严格判别联合，scene 禁 functionCurve） |
+| `packages/core/src/ai/prompt/geometry.ts` | **权威版**提示词：`GEOMETRY_SYSTEM_PROMPT` + `GEOMETRY_BLOCK_INSTRUCTION` + `buildGeometryUserPrompt` |
+| `packages/core/src/ai/prompt/tasks.ts` / `format.ts` | `geometry` task 注册；analyze/gradeMath/analyzeImg format 指令末尾追加几何弱信号 |
+| `packages/core/src/learning/actions.ts` | `attachGeometryVisualBlock`（数学/物理 analyze 文本题后置检测）+ `sanitizeBlocks` 校验降级 |
+| `packages/core/src/ai/eval/` | `geometry-samples.ts` / `geometry-scoring.ts` / `geometry-math.ts` + `eval:geometry`（8/8 真跑通过，09–11 等价样本） |
+| `packages/ios/ApiContracts/.../GeometryAST.swift` | 已落地：scene / coordinateSystem + 10 种元素（容错解码 + 往返编码） |
+| `packages/ios/CoreKit/.../Geometry/` | 已落地：`GeometryCanvasView` / `CoordinateTransformer` / `ExpressionEvaluator` + 测试 |
+| `packages/ios/ios-gaokao/.../AnalysisResultView.swift` | 已接入：blocks 经 `MarkdownRenderer` 渲染 `visual(kind:"geometry")` → `GeometryCanvasView` |
+| `.github/workflows/geometry-eval.yml` | 新增：真 key 跑 `eval:geometry`（DEEPSEEK_API_KEY） |
 
 ---
 
@@ -246,6 +252,7 @@ GeometryAST
 
 1. **M1 公式**（实施完成，iOS CI 全绿）：后端 Block[] schema + 派生 string + prompt → 前端 ContentBlock + FormulaView（MathBackend 协议：UnicodeMathBackend 阶段一 + IosMathBackend 阶段二）+ MarkdownRenderer(blocks:) 升级 → App 视图接入 → iosMath SPM 集成（`kostub/iosMath from:2.5.0`）。纯 Swift 降级实现跑通管线为去风险基线，iosMath 增量替换。
 2. **M2 几何**（核心完成，2026-08-09）：Geometry AST schema v1（严格字段校验）→ geometry task eval 8/8 → GeometryCanvasView + demos → analyze 生产链路端到端（后置 attach）。扩展：eval v2 相对匹配、立体/圆锥曲线节点、化学 graph 布局（见 [GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md)）。
+3. **V3 学习智能**（长期积累型，未启动）：Knowledge Graph Agent + 学习状态模型 + 个性化推荐 + 智能规划；依赖真实题目/批改/对话数据长期积累与人工审核闭环，见 [SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md) §5。
 
 ---
 
@@ -259,4 +266,4 @@ GeometryAST
 
 ---
 
-*文档版本：2026-08-09 · 公式 M1 实施完成（iOS CI 全绿）/ 几何 M2 核心完成（M-D 端到端通过）*
+*文档版本：2026-08-10 · Science AST V1（公式 M1）/ V2（几何 M2 核心）已完成；V3 学习智能为长期积累型，未启动*

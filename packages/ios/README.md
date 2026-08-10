@@ -24,7 +24,7 @@ ios-gaokao (App Target)
 
 后端契约对应：`apps/web` API 路由 + `packages/core` Zod schema。
 
-Chat / 对话历史：`POST /api/chat`、`GET /api/chat/history`（`conversationId`）。Agent Memory 路线图见仓库根目录 [docs/AGENT_MEMORY.md](../../docs/AGENT_MEMORY.md)（M1–M6 待建设；iOS `ChatViewModel` 已接 history）。
+Chat / 对话历史：`POST /api/chat`、`GET /api/chat/history`（`conversationId`）。Agent Memory 六项能力（M1–M6）已全部落地，见仓库根目录 [docs/AGENT_MEMORY.md](../../docs/AGENT_MEMORY.md)；iOS `ChatViewModel` 已接 history。
 
 ## 构建
 
@@ -47,7 +47,7 @@ xcodegen generate --spec project.yml
 - `CoreKit/AppEnvironment.swift`：`phase = "high"`，`keychainServiceName = "com.aistudy.app"`
 - App `Info.plist` 通过 `API_BASE_URL` 注入服务端地址（Debug/Release 在 `project.yml` 配置）
 
-## 公式与几何渲染（M1 公式实施完成，待 CI 验证）
+## 公式与几何渲染（Science AST V1 公式 M1 已完成，iOS CI 全绿）
 
 数学/理科公式与几何图形的原生渲染方案，详见 [docs/RENDER_AST.md](../../docs/RENDER_AST.md)。
 
@@ -55,8 +55,10 @@ xcodegen generate --spec project.yml
 
 | 里程碑 | 范围 | 状态 |
 |--------|------|------|
-| **M1 公式**（刚需） | 后端 `answer`/`analysis`/`examPoints`/`feedback`/`summary` 升级为 `Block[]`（B 策略：模型只出 blocks，后端 `blocksToPlainText` 派生 string，零迁移）；前端 `ContentBlock` + `FormulaView`（`MathBackend` 协议：UnicodeMathBackend 阶段一 + IosMathBackend 阶段二）+ `MarkdownRenderer(blocks:)` 升级；iosMath 集成 | 实施完成，待 CI 验证 |
-| **M2 几何**（尽量，独立） | Geometry AST schema + `GeometryCanvasView` + 各节点 drawer；后端提示词待补 | 待启动 |
+| **M1 公式**（Science AST V1） | 后端 `answer`/`analysis`/`examPoints`/`feedback`/`summary` 升级为 `Block[]`（B 策略：模型只出 blocks，后端 `blocksToPlainText` 派生 string，零迁移）；前端 `ContentBlock` + `FormulaView`（`MathBackend` 协议：UnicodeMathBackend 阶段一 + IosMathBackend 阶段二）+ `MarkdownRenderer(blocks:)` 升级；iosMath 集成 | 实施完成（iOS CI 全绿，2026-08-09） |
+| **M2 几何**（Science AST V2，核心） | Geometry AST schema（严格判别联合）+ `GeometryCanvasView` + 各节点 drawer + `geometry` task eval 8/8 + analyze 后置 attach（`visual(kind:"geometry")` block） | 核心完成（2026-08-09）；扩展见 [docs/GEOMETRY_V2_EXTENSIONS.md](../../docs/GEOMETRY_V2_EXTENSIONS.md) |
+
+> **三版本说明**：M1/M2 分别属于 Science AST V1/V2；V3（知识图谱 / 学习智能）为长期积累型、未启动（见 [docs/SCIENCE_AST_IOS_ROADMAP.md](../../docs/SCIENCE_AST_IOS_ROADMAP.md)）。
 
 **当前进度**：
 - [x] 设计文档 `docs/RENDER_AST.md`

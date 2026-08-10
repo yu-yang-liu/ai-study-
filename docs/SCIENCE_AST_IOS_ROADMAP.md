@@ -1,8 +1,9 @@
 # Science AST · iOS 三版本实施方案
 
-> 状态：**V1 进行中**（Phase 1 协议 + Validator + Swift Renderer 主体已落地，待 macOS CI 构建验证）
+> 状态：**V1 已完成**（iOS CI 全绿，2026-08-09）· **V2 几何核心已完成**（化学分子结构等扩展待排期）· **V3 未启动**（长期积累型，按设计不提前开发）
 > 基线：2026-08-09 · 以 **Swift / iOS 为主体**，其他端（Web / Android）本期不推进
 > 关联：[RENDER_AST.md](./RENDER_AST.md)、[PROJECT_REFERENCE.md](./PROJECT_REFERENCE.md)、[VISUAL_AST.md](./VISUAL_AST.md)、设计文件 §8/§9
+> **命名对照**：本文 V1/V2/V3 为 Science AST 三版本体系；RENDER_AST 的 M1（公式）∈ V1、M2（几何）∈ V2；visual-ast 子项目的 v1–v5 是另一套里程碑编号，勿混用。
 
 ---
 
@@ -21,13 +22,13 @@
 
 ## 1. 现状盘点（读码结论）
 
-### 1.1 已经存在的（工作区未提交 M1 公式 WIP）
+### 1.1 已经存在的（截至 2026-08-09 均已提交）
 
 - 后端 `packages/core`：`blockSchema`（text/formula/image）、`analyze`/`gradeMath` 的 `*Blocks` 字段、分块输出 prompt、`blocksToPlainText` 派生 string（B 策略双字段过渡）。
 - iOS：
   - `ApiContracts/ContentBlock.swift`：text/formula/image 三态解码（容错降级）。
   - `AnalyzeModels` / `GradeModels`：已携带 `answerBlocks` / `analysisBlocks` / `examPointsBlocks` / `summaryBlocks` / `feedbackBlocks`。
-  - `CoreKit/FormulaView.swift`：`MathBackend` 协议 + `UnicodeMathBackend`（纯 Swift Unicode 降级），**iosMath 未接入**。
+  - `CoreKit/FormulaView.swift`：`MathBackend` 协议 + `UnicodeMathBackend`（纯 Swift Unicode 降级）；iosMath 已接入（`kostub/iosMath from: "2.5.0"`，`defaultBackend` 在 `canImport(iosMath)` 时自动切 `IosMathBackend`，Unicode 作降级）。
   - `CoreKit/MarkdownRenderer.swift`：已有 `init(blocks:)`，text/formula/image 三个分支渲染。
   - `AnalysisResultView` / `GradeResultView`：已消费 blocks（缺省回退 string）。
   - 测试：`ContentBlockTests`、`UnicodeMathBackendTests`。
@@ -36,14 +37,11 @@
 
 | 缺口 | 现状 |
 |------|------|
-| 表格（Phase 1 明确要求） | `Block` 无 `table` 类型，Swift 无表格渲染 |
-| 步骤（Phase 1 明确要求） | `gradeMath.steps` 只是打分列表，无结构化步骤内容 |
-| 基础视觉内容（Phase 1） | 仅有 `image` 占位（AsyncImage），无结构化视觉节点 |
-| 公式排版质量 | 只有 Unicode 近似，无 iosMath |
-| Chat 链路 | `ChatResponse.reply` 仍是纯字符串，未走 blocks |
-| Geometry AST | 完全未接入 iOS；`visual-ast`（TS）已有协议与 SVG 渲染器可参考移植 |
-| 函数图像 / 物理示意 / 分子结构 | 未启动 |
-| Knowledge Graph Agent | 未启动 |
+| 化学分子结构（V2 末段） | 未启动（`molecular` block 规划见 [GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md) §C） |
+| 立体几何 / 圆锥曲线（V2 扩展） | 未启动（box/cylinder/cone/conic 规划见 GEOMETRY_V2_EXTENSIONS §B） |
+| 动态几何 / relation 节点（V2 扩展） | 未启动 |
+| Web / Android 渲染器 | 未推进（本期以 Swift/iOS 为主体） |
+| V3 Knowledge Graph Agent | 未启动（长期积累型，按设计不提前开发） |
 
 ---
 
@@ -59,7 +57,7 @@
 
 ---
 
-## 3. V1 — Science AST 基础层（当前优先，接续 M1 公式 WIP）
+## 3. V1 — Science AST 基础层（已完成）
 
 ### 3.0 实施记录（2026-08-09）
 
@@ -69,9 +67,9 @@
 - [x] Prompt：`tasks.ts` BLOCK_INSTRUCTION 与 `format.ts` 增加表格/步骤/视觉分块指令。
 - [x] Chat 链路：`chatAgentOutput` / `chatOutput` 增加 `replyBlocks`（双字段过渡），`runChatAgent` + `/api/chat` 透传，iOS `ChatResponse.replyBlocks` + 气泡走 blocks。
 - [x] Swift Renderer：`ContentBlock` 新增 table / steps / visual + `StepContent` / `InteractionHint`；`MarkdownRenderer(blocks:)` 三个新分支；`TableBlockView` / `StepsBlockView` / `VisualPlaceholderView` 新建。
-- [x] 后端验证：core `tsc --noEmit` 通过、vitest 92/92；web `tsc --noEmit` 通过。
-- [ ] iOS 构建验证：待 macOS CI（`swift build` + `swift test` + `xcodebuild`）。
-- [ ] iosMath 集成（待 fork/版本确认，Unicode 后端暂为默认）。
+- [x] 后端验证：core `tsc --noEmit` 通过、vitest 108 passed / 2 skipped（2 个需 `DEEPSEEK_API_KEY` 的真跑测试）；web `tsc --noEmit` 通过。
+- [x] iOS 构建验证：macOS CI 全绿（PR #2/#3，2026-08-09）。
+- [x] iosMath 集成：`kostub/iosMath from: "2.5.0"`；`IosMathBackend` 默认启用，`UnicodeMathBackend` 降级保留。
 
 ### 3.1 目标
 
@@ -195,34 +193,38 @@ public enum GeometryAST: Codable, Sendable {
 
 **4) 后端**
 
-- `geometry` task：输入题目（或 OCR blocks）→ 输出 `geometryAst`（复用 visual-ast validator + zod 适配）；
-- prompt 接入 analyze 几何分支（提示词草案见 `packages/visual-ast/src/prompt.ts`，定稿后写入 `tasks.ts`）；
-- eval：用 visual-ast 内置样例扩成 cases，测 AI 输出准确率（复用 `packages/core/src/ai/eval`）。
+- `geometry` task：输入题目文本 → 输出 `{ geometry, reason }`（schemas.ts 严格判别联合，独立移植 visual-ast 协议到 core，避免 workspace 依赖）；
+- 提示词权威版：`packages/core/src/ai/prompt/geometry.ts`（`GEOMETRY_SYSTEM_PROMPT` / `GEOMETRY_BLOCK_INSTRUCTION`）；
+- 生产链路：analyze 文本题（数学/物理）走「独立 `geometry` task 后置检测 + attach 到 analysisBlocks」（`actions.ts` `attachGeometryVisualBlock`）；gradeMath/chat 仅保留弱信号；
+- eval：`geometry-samples.ts`（11 例含负例）+ `geometry-scoring.ts`（9 维加权，eval v2 相似变换等价匹配）+ 真 key e2e（`analyze-geometry-e2e.test.ts`）。
 
 ### 4.3 涉及文件
 
 | 文件 | 动作 |
 |------|------|
-| `packages/ios/ApiContracts/.../GeometryAST.swift` | 新建 |
-| `packages/ios/CoreKit/.../Components/GeometryCanvasView.swift` | 新建 |
-| `packages/ios/CoreKit/.../Geometry/CoordinateTransformer.swift` | 新建 |
-| `packages/ios/CoreKit/.../Geometry/Drawers/*.swift` | 新建 |
-| `packages/ios/CoreKit/.../Math/ExpressionEvaluator.swift` | 新建（移植 expr.ts） |
-| `packages/ios/ios-gaokao/.../AnalysisResultView.swift` | 几何 block 渲染 |
-| `packages/core/src/ai/structured/schemas.ts` | geometryAst + geometry block |
-| `packages/core/src/ai/prompt/tasks.ts` | 几何分支提示词 |
-| `packages/core/src/ai/eval/` | 几何 AST 准确率 cases |
+| `packages/ios/ApiContracts/.../GeometryAST.swift` | 已落地 |
+| `packages/ios/CoreKit/.../Components/GeometryCanvasView.swift` | 已落地 |
+| `packages/ios/CoreKit/.../Geometry/CoordinateTransformer.swift` | 已落地 |
+| `packages/ios/CoreKit/.../Geometry/Drawers/*.swift` | 已落地 |
+| `packages/ios/CoreKit/.../Math/ExpressionEvaluator.swift` | 已落地（移植 expr.ts） |
+| `packages/ios/ios-gaokao/.../AnalysisResultView.swift` | 几何 block 渲染（已接入） |
+| `packages/core/src/ai/structured/schemas.ts` | visualBlock（kind geometry）+ geometryAstSchema/geometryOutputSchema |
+| `packages/core/src/ai/prompt/geometry.ts` | 几何提示词权威版 |
+| `packages/core/src/learning/actions.ts` | attachGeometryVisualBlock（analyze 后置检测）+ sanitizeBlocks |
+| `packages/core/src/ai/eval/` | 几何 AST 准确率 cases（11 例 + 真 key e2e） |
 
 ### 4.4 验收
 
 - 三角形+角、坐标系+函数曲线两个 demo 在 iOS 渲染正确；
 - AI 输出 geometryAst 准确率达到阈值（eval 报告）；
-- 交互（参数变化重绘）可用；
+- 交互（参数变化重绘）可用（V2 扩展项，尚未交付）；
 - 全程无图片 URL / TikZ，纯 Swift Canvas / Shape。
 
 ---
 
 ## 5. V3 — AI Learning Intelligence（设计文件 Phase 3）
+
+> **状态与节奏**：V3 **未启动**，且是**长期积累型**能力——知识图谱依赖真实题目 / 批改 / 对话数据持续积累 + 人工骨架审核闭环，不以「里程碑勾选」表达进度；设计文件明确要求"不提前开发复杂 Agent"（见 §0 第 5 条、§6）。
 
 ### 5.1 目标
 
@@ -287,4 +289,4 @@ V3（AI Learning Intelligence）→ 在 V2 的内容之上构建知识理解
 
 ---
 
-*文档版本：2026-08-09 · 严格对齐设计文件 Phase 1/2/3 · Swift/iOS 为主体，其他端不推进*
+*文档版本：2026-08-10 · 严格对齐设计文件 Phase 1/2/3 · V1/V2 核心已完成，V3 长期积累未启动 · Swift/iOS 为主体，其他端不推进*
