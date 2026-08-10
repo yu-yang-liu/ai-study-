@@ -11,5 +11,15 @@ export {
   GEOMETRY_DIMENSIONS,
   GEOMETRY_CASE_PASS_THRESHOLD,
 } from './geometry-scoring';
+export { chartSamples } from './chart-samples';
+export type { ChartEvalCase } from './chart-samples';
+export {
+  scoreChart,
+  chartOverallScore,
+  chartCasePassed,
+  CHART_DIMENSIONS,
+  CHART_CASE_PASS_THRESHOLD,
+} from './chart-scoring';
+export type { ChartDimension } from './chart-scoring';
 export type { GeometryDimension } from './geometry-scoring';
 export { evalExpr } from './geometry-math';

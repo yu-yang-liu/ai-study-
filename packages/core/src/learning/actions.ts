@@ -11,6 +11,7 @@ import type {
   PlanOutput,
   Block,
   GeometryOutput,
+  ChartOutput,
 } from '../ai/structured/schemas';
 import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
@@ -49,6 +50,12 @@ export interface StudySnapshot {
 
 /** v1 Geometry AST 覆盖的学科（化学分子结构为 graph 布局，排到扩展阶段）。 */
 const GEOMETRY_SUBJECTS = new Set(['数学', '物理']);
+/** chart task 覆盖的学科与触发关键词（统计类题目）。 */
+const CHART_SUBJECTS = new Set(['数学', '地理', '生物']);
+const CHART_KEYWORDS = [
+  '统计', '频率', '直方图', '平均数', '中位数', '众数', '方差', '标准差',
+  '样本', '分布', '占比', '饼图', '柱状图', '折线图', '散点图', '回归', '气温', '数据', '频数',
+];
 
 /**
  * M-D：analyze 后置几何检测。
@@ -81,6 +88,41 @@ export async function attachGeometryVisualBlock(opts: {
     return [visual, ...(opts.blocks ?? [])];
   } catch (err) {
     console.warn('attachGeometryVisualBlock failed:', err);
+    return opts.blocks;
+  }
+}
+
+/**
+ * P1-1：analyze 后置图表检测。
+ *
+ * 仅对统计类关键词命中的数学/地理/生物文本题调用 `chart` task；命中则把
+ * 合法 Chart AST 以 `chart` block 追加到 analysisBlocks 末尾。
+ * 失败时静默降级，不影响 analyze 结果。
+ */
+export async function attachChartBlock(opts: {
+  subject: string;
+  question: string;
+  blocks: Block[] | undefined;
+}): Promise<Block[] | undefined> {
+  if (!CHART_SUBJECTS.has(opts.subject) || !opts.question.trim()) return opts.blocks;
+  if (!CHART_KEYWORDS.some((keyword) => opts.question.includes(keyword))) return opts.blocks;
+  try {
+    const messages = composeMessages({
+      task: 'chart',
+      subject: opts.subject,
+      phase: 'high',
+      userInput: opts.question,
+    });
+    const output = (await structuredCall({
+      task: 'chart',
+      schema: TASK_SCHEMA.chart,
+      messages,
+      phase: 'high',
+    })) as ChartOutput;
+    if (!output.chart) return opts.blocks;
+    return [...(opts.blocks ?? []), output.chart as Block];
+  } catch (err) {
+    console.warn('attachChartBlock failed:', err);
     return opts.blocks;
   }
 }
@@ -137,6 +179,11 @@ export async function executeAnalyze(opts: {
   // M-D：后置几何检测（仅文本题；拍照题待 OCR 文本接入后复用）。
   if (!isImage && content?.trim()) {
     result.analysisBlocks = await attachGeometryVisualBlock({
+      subject,
+      question: content,
+      blocks: result.analysisBlocks,
+    });
+    result.analysisBlocks = await attachChartBlock({
       subject,
       question: content,
       blocks: result.analysisBlocks,

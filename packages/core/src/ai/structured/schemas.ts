@@ -40,7 +40,8 @@ export type Block =
       steps: StepContent[];
       interaction?: { collapsible?: boolean; selectable?: boolean };
     }
-  | { type: 'visual'; kind: 'placeholder' | 'geometry'; geometry?: unknown };
+  | { type: 'visual'; kind: 'placeholder' | 'geometry'; geometry?: unknown }
+  | ChartBlock;
 
 const textBlockSchema = z.object({
   type: z.literal('text'),
@@ -94,6 +95,77 @@ const visualBlockSchema = z.object({
   geometry: z.unknown().optional(),
 });
 
+// ── Chart block（P1-1 统计图表；Visual AST 扩展：数据驱动图元）──
+
+const chartMetaFields = {
+  title: z.string().max(100).optional(),
+  xLabel: z.string().max(40).optional(),
+  yLabel: z.string().max(40).optional(),
+} as const;
+
+const chartSeriesSchema = z.object({
+  name: z.string().max(40).optional(),
+  values: z.array(z.number()).min(1).max(100),
+  color: z.string().optional(),
+});
+
+/** bar / line 共用结构：分类轴 + 1–4 组数值系列。 */
+function barLineChartSchema(kind: 'bar' | 'line') {
+  return z.object({
+    type: z.literal('chart'),
+    kind: z.literal(kind),
+    categories: z.array(z.string().max(40)).min(1).max(50),
+    series: z.array(chartSeriesSchema).min(1).max(4),
+    ...chartMetaFields,
+  });
+}
+
+const scatterChartSchema = z.object({
+  type: z.literal('chart'),
+  kind: z.literal('scatter'),
+  points: z.array(z.tuple([z.number(), z.number()])).min(1).max(200),
+  ...chartMetaFields,
+});
+
+const histogramChartSchema = z.object({
+  type: z.literal('chart'),
+  kind: z.literal('histogram'),
+  bins: z
+    .array(
+      z.object({
+        range: z.tuple([z.number(), z.number()]),
+        count: z.number().int().min(0),
+      }),
+    )
+    .min(1)
+    .max(50),
+  ...chartMetaFields,
+});
+
+const pieChartSchema = z.object({
+  type: z.literal('chart'),
+  kind: z.literal('pie'),
+  slices: z
+    .array(
+      z.object({
+        label: z.string().max(40),
+        value: z.number().min(0),
+      }),
+    )
+    .min(1)
+    .max(20),
+  title: z.string().max(100).optional(),
+});
+
+export const chartBlockSchema = z.discriminatedUnion('kind', [
+  barLineChartSchema('bar'),
+  barLineChartSchema('line'),
+  scatterChartSchema,
+  histogramChartSchema,
+  pieChartSchema,
+]);
+export type ChartBlock = z.infer<typeof chartBlockSchema>;
+
 export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   textBlockSchema,
   formulaBlockSchema,
@@ -101,6 +173,7 @@ export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   tableBlockSchema,
   stepsBlockSchema,
   visualBlockSchema,
+  chartBlockSchema,
 ]);
 
 // ── Geometry AST（Phase 2 · Visual AST；与 visual-ast v1 对齐）──
@@ -247,6 +320,13 @@ export const geometryOutputSchema = z.object({
 });
 export type GeometryOutput = z.infer<typeof geometryOutputSchema>;
 
+/** chart task 输出：chart 可为 null（不需要图表）。 */
+export const chartOutputSchema = z.object({
+  chart: chartBlockSchema.nullable(),
+  reason: z.string().max(200).optional(),
+});
+export type ChartOutput = z.infer<typeof chartOutputSchema>;
+
 export const ocrOutput = z.object({
   text: z.string(),
   blocks: z.array(z.object({
@@ -383,4 +463,5 @@ export const TASK_SCHEMA: Record<TaskName, z.ZodType<unknown>> = {
   chat: chatOutput,
   chatAgent: chatAgentOutput,
   geometry: geometryOutputSchema,
+  chart: chartOutputSchema,
 };

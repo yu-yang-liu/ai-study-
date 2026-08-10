@@ -19,7 +19,8 @@ export type TaskName =
   | 'plan'
   | 'chat'
   | 'chatAgent'
-  | 'geometry';
+  | 'geometry'
+  | 'chart';
 
 export interface TaskRoute {
   capability: Capability;
@@ -38,6 +39,7 @@ export const TASK_ROUTING: Record<TaskName, TaskRoute> = {
   chat: { capability: 'fast-text', temperature: 0.7, jsonMode: false },
   chatAgent: { capability: 'fast-text', temperature: 0.3, jsonMode: true },
   geometry: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
+  chart: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
 };
 
 // ── Provider interface ──

@@ -1,5 +1,6 @@
 import type { TaskName } from '../gateway/types';
 import { GEOMETRY_BLOCK_INSTRUCTION } from './geometry';
+import { CHART_SYSTEM_PROMPT } from './chart';
 
 /**
  * Generates a JSON format instruction for a given task.
@@ -82,6 +83,12 @@ export function schemaToFormatInstruction(task: TaskName): string {
   "reason": "判断依据"
 }
 注意：geometry 必须为合法 Geometry AST（scene/coordinateSystem，元素 ≤ 20，数学坐标、角度单位度）；不需要图形时 geometry 为 null。`,
+    chart: `请输出 JSON：
+{
+  "chart": {"type":"chart","kind":"bar","categories":["A","B"],"series":[{"name":"x","values":[3,5]}]} 或 null,
+  "reason": "判断依据"
+}
+注意：chart 必须为合法 Chart AST（kind 五选一：bar/line/scatter/histogram/pie；字段见系统提示词）；不需要图表时 chart 为 null。`,
   };
 
   return FORMATS[task] ?? '\u8bf7\u8f93\u51fa\u7b26\u5408\u8981\u6c42\u7684 JSON \u683c\u5f0f';

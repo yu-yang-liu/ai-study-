@@ -42,6 +42,8 @@ export function blocksToPlainText(blocks?: Block[] | null): string {
             .join('；');
         case 'visual':
           return '[示意图]';
+        case 'chart':
+          return `[图表] ${b.title ?? b.kind}`;
         default:
           return '';
       }
