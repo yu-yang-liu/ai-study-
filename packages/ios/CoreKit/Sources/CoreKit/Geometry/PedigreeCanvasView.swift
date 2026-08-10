@@ -93,7 +93,7 @@ public struct PedigreeCanvasView: View {
 
         // 世代标签
         for (rowIndex, info) in rowInfo {
-            let label = info.label ?? Self.romanNumerals.indices.contains(rowIndex) ? Self.romanNumerals[rowIndex] : ""
+            let label = info.label ?? (Self.romanNumerals.indices.contains(rowIndex) ? Self.romanNumerals[rowIndex] : "")
             context.draw(
                 Text(label).font(.caption).foregroundStyle(.secondary),
                 at: CGPoint(x: 12, y: info.y),
