@@ -21,5 +21,15 @@ export {
   CHART_CASE_PASS_THRESHOLD,
 } from './chart-scoring';
 export type { ChartDimension } from './chart-scoring';
+export { circuitSamples } from './circuit-samples';
+export type { CircuitEvalCase } from './circuit-samples';
+export {
+  scoreCircuit,
+  circuitOverallScore,
+  circuitCasePassed,
+  CIRCUIT_DIMENSIONS,
+  CIRCUIT_CASE_PASS_THRESHOLD,
+} from './circuit-scoring';
+export type { CircuitDimension } from './circuit-scoring';
 export type { GeometryDimension } from './geometry-scoring';
 export { evalExpr } from './geometry-math';

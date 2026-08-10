@@ -41,7 +41,8 @@ export type Block =
       interaction?: { collapsible?: boolean; selectable?: boolean };
     }
   | { type: 'visual'; kind: 'placeholder' | 'geometry'; geometry?: unknown }
-  | ChartBlock;
+  | ChartBlock
+  | CircuitBlock;
 
 const textBlockSchema = z.object({
   type: z.literal('text'),
@@ -166,6 +167,54 @@ export const chartBlockSchema = z.discriminatedUnion('kind', [
 ]);
 export type ChartBlock = z.infer<typeof chartBlockSchema>;
 
+// ── Circuit block（P1-2 电路图；Visual AST 扩展：元件符号 + 拓扑）──
+
+export const circuitNodeTypeSchema = z.enum([
+  'battery', 'resistor', 'switch', 'bulb', 'ammeter', 'voltmeter',
+  'rheostat', 'motor', 'capacitor', 'diode', 'wire', 'ground',
+]);
+export type CircuitNodeType = z.infer<typeof circuitNodeTypeSchema>;
+
+export const circuitNodeSchema = z.object({
+  id: z.string().min(1).max(30),
+  type: circuitNodeTypeSchema,
+  x: z.number().min(-100).max(100),
+  y: z.number().min(-100).max(100),
+  /** 元件朝向；缺省 horizontal。 */
+  orientation: z.enum(['horizontal', 'vertical']).optional(),
+  label: z.string().max(40).optional(),
+  /** 元件参数，如 "6V"、"10Ω"。 */
+  value: z.string().max(20).optional(),
+  /** 开关是否断开；缺省闭合。 */
+  open: z.boolean().optional(),
+});
+
+export const circuitWireSchema = z.object({
+  from: z.string().min(1).max(30),
+  to: z.string().min(1).max(30),
+  style: z.enum(['solid', 'dashed']).optional(),
+});
+
+export const circuitBlockSchema = z
+  .object({
+    type: z.literal('circuit'),
+    title: z.string().max(100).optional(),
+    nodes: z.array(circuitNodeSchema).min(2).max(30),
+    wires: z.array(circuitWireSchema).min(1).max(40),
+  })
+  .superRefine((value, ctx) => {
+    const ids = new Set(value.nodes.map((node) => node.id));
+    for (const wire of value.wires) {
+      if (!ids.has(wire.from) || !ids.has(wire.to)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `wire 引用了不存在的节点: ${wire.from}-${wire.to}`,
+        });
+      }
+    }
+  });
+export type CircuitBlock = z.infer<typeof circuitBlockSchema>;
+
 export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   textBlockSchema,
   formulaBlockSchema,
@@ -174,6 +223,7 @@ export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   stepsBlockSchema,
   visualBlockSchema,
   chartBlockSchema,
+  circuitBlockSchema,
 ]);
 
 // ── Geometry AST（Phase 2 · Visual AST；与 visual-ast v1 对齐）──
@@ -327,6 +377,13 @@ export const chartOutputSchema = z.object({
 });
 export type ChartOutput = z.infer<typeof chartOutputSchema>;
 
+/** circuit task 输出：circuit 可为 null（不需要电路图）。 */
+export const circuitOutputSchema = z.object({
+  circuit: circuitBlockSchema.nullable(),
+  reason: z.string().max(200).optional(),
+});
+export type CircuitOutput = z.infer<typeof circuitOutputSchema>;
+
 export const ocrOutput = z.object({
   text: z.string(),
   blocks: z.array(z.object({
@@ -464,4 +521,5 @@ export const TASK_SCHEMA: Record<TaskName, z.ZodType<unknown>> = {
   chatAgent: chatAgentOutput,
   geometry: geometryOutputSchema,
   chart: chartOutputSchema,
+  circuit: circuitOutputSchema,
 };
