@@ -15,6 +15,9 @@ const PRICING: Record<string, { input: number; output: number }> = {
   // DeepSeek
   'deepseek-chat': { input: 0.001, output: 0.002 },
   'deepseek-reasoner': { input: 0.004, output: 0.016 },
+  // DeepSeek v4 pricing (USD per 1K tokens; cache-miss input rates).
+  'deepseek-v4-flash': { input: 0.00014, output: 0.00028 },
+  'deepseek-v4-pro': { input: 0.000435, output: 0.00087 },
   // DashScope (????
   'qwen-vl-max': { input: 0.005, output: 0.015 },
   'qwen-vl-ocr': { input: 0.003, output: 0.009 },

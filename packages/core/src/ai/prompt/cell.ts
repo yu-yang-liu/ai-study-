@@ -36,7 +36,8 @@ export const CELL_SYSTEM_PROMPT = `你是一名高中生物细胞模式图的结
 - 必备部件：cellMembrane 必须存在；植物细胞须含 cellWall 与 chloroplast；动物细胞不得含 cellWall/chloroplast，一般含 centrosome；原核细胞须含 nucleoid，不含 nucleus/mitochondria/chloroplast/golgi/er，可含 capsule/plasmid/flagellum；
 - cellWall 与 cellMembrane 均放在细胞轮廓中心 (0,0)，其余细胞器按相对位置摆放；
 - connections：from/to 必须引用存在的细胞器 id；kind 从 flow（物质流向，缺省）/energy（能量）/synthesis（合成）/signal（信号）中选择；不需要时省略；
-- transport：跨膜运输题输出；kind 从 diffusion（自由扩散）/facilitated（协助扩散）/activeTransport（主动运输）/osmosis（渗透）中选择；direction 为 in（进入细胞）或 out（排出细胞）；不需要时省略；
+- transport：只要题目出现“跨膜、进入、排出、扩散、协助扩散、主动运输、渗透”等语义，就必须输出 transport 数组，不能省略；每个运输事件必须包含唯一 id、substance、kind、direction；kind 从 diffusion（自由扩散）/facilitated（协助扩散）/activeTransport（主动运输）/osmosis（渗透）中选择；direction 为 in（进入细胞）或 out（排出细胞），以题目明确的物质运动方向为准；“进入/吸收/进入细胞”统一用 in，“排出/外排/离开细胞”统一用 out；
+- transport 题至少保留 cellMembrane 与 cytoplasm 两个基础细胞器；若题目明确给出载体蛋白、通道蛋白或能量消耗，可在 label/content 中标注，但不要把载体蛋白臆造为 organelle；
 - label 只填题目明确给出的结构名称，不编造；content 可填功能说明或物质名（如 DNA、ATP）；
 - 输出必须是顶层 JSON 对象并包含 cell 键：{"cell": <Cell AST|null>, "reason": "..."}；不要直接输出 Cell AST 本身。
 何时输出模式图：

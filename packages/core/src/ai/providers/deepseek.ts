@@ -4,7 +4,7 @@ import type { AIProvider, Capability, ChatRequest, TokenUsage } from '../gateway
 const DEEPSEEK_BASE = 'https://api.deepseek.com';
 
 /** 模型选择策略：根�?capability 自动路由到合适的模型 */
-type DeepSeekModel = 'deepseek-chat' | 'deepseek-reasoner';
+export type DeepSeekModel = 'deepseek-v4-flash' | 'deepseek-v4-pro';
 
 function getApiKey(): string {
   const key = process.env.DEEPSEEK_API_KEY;
@@ -13,14 +13,11 @@ function getApiKey(): string {
 }
 
 function selectModel(req: ChatRequest): DeepSeekModel {
-  // JSON 模式只支�?deepseek-chat（reasoner 不支�?response_format�?
-  if (req.jsonMode) return 'deepseek-chat';
+  // Deterministic structured/visual AST tasks use the stronger v4-pro model.
+  if (typeof req.temperature === 'number' && req.temperature <= 0.1) return 'deepseek-v4-pro';
 
-  // 低温�?�?推理任务 �?使用 reasoner
-  if (typeof req.temperature === 'number' && req.temperature <= 0.1) return 'deepseek-reasoner';
-
-  // 高温�?�?对话/创造性任�?�?使用 chat
-  return 'deepseek-chat';
+  // General analysis/chat uses the lower-latency v4-flash model.
+  return 'deepseek-v4-flash';
 }
 
 async function callDeepSeek(model: DeepSeekModel, req: ChatRequest): Promise<{ content: string; usage?: TokenUsage }> {
@@ -31,7 +28,7 @@ async function callDeepSeek(model: DeepSeekModel, req: ChatRequest): Promise<{ c
     max_tokens: req.maxTokens ?? 4096,
   };
 
-  if (req.jsonMode && model === 'deepseek-chat') {
+  if (req.jsonMode) {
     body.response_format = { type: 'json_object' };
   }
 

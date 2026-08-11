@@ -105,10 +105,44 @@ export function formatZodError(error: z.ZodError): string {
 }
 
 export function tryParseJson(raw: string): unknown {
-  let text = raw.trim();
+  let text = raw.replace(/^\uFEFF/, '').trim();
   // Strip markdown code fences
   if (text.startsWith('```')) {
-    text = text.replace(/^```(?:json)?\s*\n/, '').replace(/\n```\s*$/, '');
+    text = text
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```\s*$/i, '')
+      .trim();
   }
-  return JSON.parse(text);
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    // Models occasionally prepend a short sentence despite JSON mode.
+    // Recover the first balanced object/array without weakening schema validation.
+    const start = [...text].findIndex((char) => char === '{' || char === '[');
+    if (start < 0) throw error;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let index = start; index < text.length; index += 1) {
+      const char = text[index];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (char === '\\') escaped = true;
+        else if (char === '"') inString = false;
+        continue;
+      }
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+      if (char === '{' || char === '[') depth += 1;
+      else if (char === '}' || char === ']') {
+        depth -= 1;
+        if (depth === 0) return JSON.parse(text.slice(start, index + 1));
+      }
+    }
+    throw error;
+  }
 }

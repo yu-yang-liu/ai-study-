@@ -50,19 +50,24 @@ export async function structuredCall<T>(opts: {
     }
 
     let parsed: unknown;
+    let parseError = false;
     try {
       parsed = route.jsonMode ? tryParseJson(raw.content) : raw.content;
     } catch {
-      throw new AIStructuredError(
-        opts.task,
-        new ZodError([{ code: 'custom', path: ['_parse'], message: 'AI output is not valid JSON' }]),
-      );
+      parseError = true;
     }
 
-    const result = opts.schema.safeParse(parsed);
+    const result = parseError
+      ? {
+          success: false as const,
+          error: new ZodError([{ code: 'custom', path: ['_parse'], message: 'AI output is not valid JSON' }]),
+        }
+      : opts.schema.safeParse(parsed);
     if (result.success) return result.data;
 
-    // Retry: feed back validation errors
+    // Retry both schema failures and malformed JSON. Models can occasionally
+    // ignore JSON mode; feeding the raw output back with a deterministic
+    // correction prompt is safer than dropping the whole structured request.
     const retryMessages = [
       ...msgs,
       { role: 'assistant' as const, content: raw.content },
@@ -108,9 +113,9 @@ export async function structuredCall<T>(opts: {
     const provider = pick(route.capability, route.fallback);
     const modelName =
       provider.id === 'deepseek'
-        ? route.capability === 'reasoning-heavy'
-          ? 'deepseek-reasoner'
-          : 'deepseek-chat'
+        ? route.temperature <= 0.1
+          ? 'deepseek-v4-pro'
+          : 'deepseek-v4-flash'
         : provider.id === 'dashscope-vl'
           ? 'qwen-vl-max'
           : provider.id === 'dashscope-embedding'
