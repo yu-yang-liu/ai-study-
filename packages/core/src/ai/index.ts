@@ -25,14 +25,14 @@ export * from './structured/schemas';
 export { blocksToPlainText } from './structured/blocks';
 export { retrieveReferences } from './rag';
 export type { RAGReference, RetrieveOptions } from './rag';
-export { composePrompt, composeMessages, getPersona, personaSystemPrompt, normalizeSubject, getTaskInstruction, schemaToFormatInstruction, GEOMETRY_SYSTEM_PROMPT, GEOMETRY_BLOCK_INSTRUCTION, buildGeometryUserPrompt, CHART_SYSTEM_PROMPT, buildChartUserPrompt } from './prompt';
+export { composePrompt, composeMessages, getPersona, personaSystemPrompt, normalizeSubject, getTaskInstruction, schemaToFormatInstruction, GEOMETRY_SYSTEM_PROMPT, GEOMETRY_BLOCK_INSTRUCTION, buildGeometryUserPrompt, CHART_SYSTEM_PROMPT, buildChartUserPrompt, CIRCUIT_SYSTEM_PROMPT, buildCircuitUserPrompt } from './prompt';
 export type { ComposeOptions } from './prompt';
 export { getLearnerContext, buildLearnerModel, sm2Update, sm2Defaults, DEFAULT_LEARNER_MODEL } from './learner';
 export type { LearnerModel, LearnerPace, LearnerPreferences, LearningEvent, KnowledgeMasteryEntry, SM2State } from './learner';
 export { runOCR } from './ocr';
 export { recordApiUsage, queryUserUsage } from './usage';
-export { runEval, evalCase, computeDimensions, allSamples, gradeMathSamples, gradeEssaySamples, geometrySamples, scoreGeometry, geometryOverallScore, geometryCasePassed, GEOMETRY_DIMENSIONS, GEOMETRY_CASE_PASS_THRESHOLD, chartSamples, scoreChart, chartOverallScore, chartCasePassed, CHART_DIMENSIONS, CHART_CASE_PASS_THRESHOLD, evalExpr } from './eval';
-export type { EvalCase, EvalResult, EvalReport, EvalDimension, GeometryEvalCase, GeometryDimension, ChartEvalCase, ChartDimension } from './eval';
+export { runEval, evalCase, computeDimensions, allSamples, gradeMathSamples, gradeEssaySamples, geometrySamples, scoreGeometry, geometryOverallScore, geometryCasePassed, GEOMETRY_DIMENSIONS, GEOMETRY_CASE_PASS_THRESHOLD, chartSamples, scoreChart, chartOverallScore, chartCasePassed, CHART_DIMENSIONS, CHART_CASE_PASS_THRESHOLD, circuitSamples, scoreCircuit, circuitOverallScore, circuitCasePassed, CIRCUIT_DIMENSIONS, CIRCUIT_CASE_PASS_THRESHOLD, evalExpr } from './eval';
+export type { EvalCase, EvalResult, EvalReport, EvalDimension, GeometryEvalCase, GeometryDimension, ChartEvalCase, ChartDimension, CircuitEvalCase, CircuitDimension } from './eval';
 export { runChatAgent } from './agent';
 export { loadMemory, appendTurn, upsertFact, composeMemoryBlock } from './memory';
 export {

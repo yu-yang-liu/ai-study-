@@ -44,6 +44,8 @@ export function blocksToPlainText(blocks?: Block[] | null): string {
           return '[示意图]';
         case 'chart':
           return `[图表] ${b.title ?? b.kind}`;
+        case 'circuit':
+          return `[电路图] ${b.title ?? '电路'}`;
         default:
           return '';
       }

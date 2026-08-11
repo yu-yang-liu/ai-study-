@@ -31,6 +31,8 @@ public enum ContentBlock: Codable, Sendable, Equatable {
     case visual(kind: String, geometry: GeometryAST?)
     /// 统计图表（Visual AST 扩展 · P1-1），由 `ChartCanvasView` 渲染。
     case chart(block: ChartBlock)
+    /// 电路图（Visual AST 扩展 · P1-2），由 `CircuitCanvasView` 渲染。
+    case circuit(block: CircuitBlock)
 
     // MARK: CodingKeys
 
@@ -54,6 +56,8 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case slices
         case xLabel
         case yLabel
+        case nodes
+        case wires
     }
 
     // MARK: Decodable
@@ -91,6 +95,12 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case "chart":
             if let block = try? ChartBlock(from: decoder) {
                 self = .chart(block: block)
+            } else {
+                self = .text(content: "")
+            }
+        case "circuit":
+            if let block = try? CircuitBlock(from: decoder) {
+                self = .circuit(block: block)
             } else {
                 self = .text(content: "")
             }
@@ -139,6 +149,11 @@ public enum ContentBlock: Codable, Sendable, Equatable {
             try container.encodeIfPresent(block.points, forKey: .points)
             try container.encodeIfPresent(block.bins, forKey: .bins)
             try container.encodeIfPresent(block.slices, forKey: .slices)
+        case .circuit(let block):
+            try container.encode("circuit", forKey: .type)
+            try container.encodeIfPresent(block.title, forKey: .title)
+            try container.encode(block.nodes, forKey: .nodes)
+            try container.encode(block.wires, forKey: .wires)
         }
     }
 }

@@ -98,6 +98,52 @@ final class ContentBlockTests: XCTestCase {
         XCTAssertEqual(block, .text(content: ""))
     }
 
+    // MARK: circuit（P1-2 电路图）
+
+    func testDecodeCircuitSeries() throws {
+        let json = #"""
+        {"type":"circuit","title":"串联电路",
+         "nodes":[{"id":"b1","type":"battery","x":0,"y":0,"value":"6V"},
+                  {"id":"l1","type":"bulb","x":10,"y":0}],
+         "wires":[{"from":"b1","to":"l1"},{"from":"l1","to":"b1"}]}
+        """#.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        guard case .circuit(let circuit) = block else {
+            return XCTFail("应为 circuit block")
+        }
+        XCTAssertEqual(circuit.title, "串联电路")
+        XCTAssertEqual(circuit.nodes.count, 2)
+        XCTAssertEqual(circuit.nodes.first?.type, "battery")
+        XCTAssertEqual(circuit.nodes.first?.value, "6V")
+        XCTAssertEqual(circuit.wires.count, 2)
+    }
+
+    func testEncodeDecodeCircuitRoundtrip() throws {
+        let circuit = CircuitBlock(
+            title: "串联电路",
+            nodes: [
+                CircuitNode(id: "b1", type: "battery", x: 0, y: 0, value: "6V"),
+                CircuitNode(id: "s1", type: "switch", x: 8, y: 0, open: true),
+                CircuitNode(id: "l1", type: "bulb", x: 16, y: 0, label: "灯泡"),
+            ],
+            wires: [
+                CircuitWire(from: "b1", to: "s1"),
+                CircuitWire(from: "s1", to: "l1"),
+                CircuitWire(from: "l1", to: "b1"),
+            ]
+        )
+        let block: ContentBlock = .circuit(block: circuit)
+        let data = try JSONEncoder().encode(block)
+        let decoded = try JSONDecoder().decode(ContentBlock.self, from: data)
+        XCTAssertEqual(decoded, block)
+    }
+
+    func testDecodeCircuitMissingNodesFallsBackToText() throws {
+        let json = #"{"type":"circuit","wires":[]}"#.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        XCTAssertEqual(block, .text(content: ""))
+    }
+
     func testDecodeUnknownTypeDegradesToEmptyText() throws {
         let json = #"{"type":"geometry","content":"whatever"}"#.data(using: .utf8)!
         let block = try JSONDecoder().decode(ContentBlock.self, from: json)

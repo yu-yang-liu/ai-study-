@@ -1,6 +1,7 @@
 import type { TaskName } from '../gateway/types';
 import { GEOMETRY_BLOCK_INSTRUCTION } from './geometry';
 import { CHART_SYSTEM_PROMPT } from './chart';
+import { CIRCUIT_SYSTEM_PROMPT } from './circuit';
 
 /**
  * Generates a JSON format instruction for a given task.
@@ -89,6 +90,12 @@ export function schemaToFormatInstruction(task: TaskName): string {
   "reason": "判断依据"
 }
 注意：chart 必须为合法 Chart AST（kind 五选一：bar/line/scatter/histogram/pie；字段见系统提示词）；不需要图表时 chart 为 null。`,
+    circuit: `请输出 JSON：
+{
+  "circuit": {"type":"circuit","nodes":[{"id":"b1","type":"battery","x":0,"y":0,"value":"6V"},{"id":"l1","type":"bulb","x":10,"y":0}],"wires":[{"from":"b1","to":"l1"},{"from":"l1","to":"b1"}]} 或 null,
+  "reason": "判断依据"
+}
+注意：circuit 必须为合法 Circuit AST（nodes/wires 见系统提示词，wire 引用必须存在）；不需要电路图时 circuit 为 null。`,
   };
 
   return FORMATS[task] ?? '\u8bf7\u8f93\u51fa\u7b26\u5408\u8981\u6c42\u7684 JSON \u683c\u5f0f';

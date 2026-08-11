@@ -12,6 +12,7 @@ import type {
   Block,
   GeometryOutput,
   ChartOutput,
+  CircuitOutput,
 } from '../ai/structured/schemas';
 import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
@@ -55,6 +56,11 @@ const CHART_SUBJECTS = new Set(['数学', '地理', '生物']);
 const CHART_KEYWORDS = [
   '统计', '频率', '直方图', '平均数', '中位数', '众数', '方差', '标准差',
   '样本', '分布', '占比', '饼图', '柱状图', '折线图', '散点图', '回归', '气温', '数据', '频数',
+];
+/** circuit task 触发关键词（物理电路题）。 */
+const CIRCUIT_KEYWORDS = [
+  '电路', '电阻', '电流表', '电压表', '滑动变阻器', '电源', '开关',
+  '串联', '并联', '灯泡', '电表', '欧姆', '伏特', '安培', '测电阻', '电动机',
 ];
 
 /**
@@ -127,6 +133,40 @@ export async function attachChartBlock(opts: {
   }
 }
 
+/**
+ * P1-2：analyze 后置电路图检测。
+ *
+ * 仅对电路关键词命中的物理文本题调用 `circuit` task；命中则把合法 Circuit AST
+ * 以 `circuit` block 追加到 analysisBlocks 末尾。失败时静默降级。
+ */
+export async function attachCircuitBlock(opts: {
+  subject: string;
+  question: string;
+  blocks: Block[] | undefined;
+}): Promise<Block[] | undefined> {
+  if (opts.subject !== '物理' || !opts.question.trim()) return opts.blocks;
+  if (!CIRCUIT_KEYWORDS.some((keyword) => opts.question.includes(keyword))) return opts.blocks;
+  try {
+    const messages = composeMessages({
+      task: 'circuit',
+      subject: opts.subject,
+      phase: 'high',
+      userInput: opts.question,
+    });
+    const output = (await structuredCall({
+      task: 'circuit',
+      schema: TASK_SCHEMA.circuit,
+      messages,
+      phase: 'high',
+    })) as CircuitOutput;
+    if (!output.circuit) return opts.blocks;
+    return [...(opts.blocks ?? []), output.circuit as Block];
+  } catch (err) {
+    console.warn('attachCircuitBlock failed:', err);
+    return opts.blocks;
+  }
+}
+
 export async function executeAnalyze(opts: {
   userId: string;
   subject: string;
@@ -184,6 +224,11 @@ export async function executeAnalyze(opts: {
       blocks: result.analysisBlocks,
     });
     result.analysisBlocks = await attachChartBlock({
+      subject,
+      question: content,
+      blocks: result.analysisBlocks,
+    });
+    result.analysisBlocks = await attachCircuitBlock({
       subject,
       question: content,
       blocks: result.analysisBlocks,
