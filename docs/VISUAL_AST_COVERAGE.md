@@ -10,7 +10,7 @@
 | 代号 | 表达方式 | 说明 | 示例 |
 |------|----------|------|------|
 | **G1** | Geometry AST 现有元素 | `scene`/`coordinateSystem` + point/line/vector/triangle/polygon/circle/arc/angle/functionCurve/label | 平面几何、函数图像、受力分析 |
-| **G2** | Geometry AST 扩展元素 | 在 v1 协议上**只增不改**：`conic`（圆锥曲线）、`solid`（立体线框）、`ray`（光路）、`field`（场线/等高线） | 椭圆、长方体、折射光路、电场线 |
+| **G2** | Geometry AST 扩展元素 | 在 v1 协议上**只增不改**：`field`（场线，✅ 已建）、`ray`（光路，✅ 已建）、`conic`（圆锥曲线，规划 B2）、`solid`（立体线框，规划 B1） | 电场线、折射光路、椭圆、长方体 |
 | **M** | 专用 block kind | 独立 schema + 独立渲染视图，与 geometry 并存 | `molecular`（分子/有机）、`circuit`（电路）、`chart`（统计图表）、`pedigree`（遗传系谱）等 |
 | **T** | 现有 text/table block | 不需要专门视觉 | 定义、公式推导、Punnett 方格（表格） |
 | **P** | 暂缓 | 依赖交互/动画/3D，排后 | 动态几何拖动、细胞分裂动画、3D 旋转 |
@@ -50,13 +50,13 @@
 | 曲线运动 | 平抛轨迹、圆周运动、向心示意 | G1（functionCurve + circle + vector） | 可建 | P1 |
 | 万有引力 | 天体轨道示意 | G1/G2（circle + ellipse→conic） | 可建 | P2 |
 | 机械能/动量 | 碰撞、能量转化示意 | G1 + M（简易 flow） | 可建 | P2 |
-| 静电场 | 电场线、等势面、带电粒子轨迹 | G2（field 曲线族）+ G1 | **未建档 → 本次补** | P1 |
+| 静电场 | 电场线、等势面、带电粒子轨迹 | G2（field：平行带/放射）+ G1 | 🆕 **P1-3 实施完成**（field 元素 + eval 样本 + iOS drawer，2026-08-10 待 CI） | P1 |
 | 恒定电流 | 电路图（电源/电阻/开关/电表） | M（circuit block + 符号图元库） | 🆕 **P1-2 实施完成**（`circuit` task eval 7/7 + e2e 2/2 + iOS CircuitCanvasView，2026-08-10 待 CI） | P1 |
-| 磁场 | 磁感线、安培力/洛伦兹力方向 | G2（field）+ G1（vector） | **未建档 → 本次补** | P1 |
+| 磁场 | 磁感线、安培力/洛伦兹力方向 | G2（field）+ G1（vector） | 🆕 P1-3 可复用（磁感线用 field 平行带/放射） | P1 |
 | 电磁感应 | 磁通量变化、感应电流示意 | G2/G1 | 可建 | P2 |
 | 交变电流 | 正弦波形、变压器示意 | G1（functionCurve）+ M（circuit 扩展） | 可建 | P2 |
 | 振动与波 | 振动图像、波形图、横波/纵波 | G1（functionCurve + point 序列） | 可建 | P1 |
-| 光学 | 反射/折射/全反射/透镜光路 | G2（ray + 界面/透镜图元） | **未建档 → 本次补** | P1 |
+| 光学 | 反射/折射/全反射/透镜光路 | G2（ray 折线+箭头，✅ 已建） | 🆕 **P1-3 实施完成**（ray 元素 + eval 样本 + iOS drawer，2026-08-10 待 CI） | P1 |
 | 热学 | p-V/p-T 图、分子运动示意 | G1 + M | 可建 | P3 |
 | 原子物理 | 能级图、核反应示意 | M（levelDiagram block） | **未建档 → 本次补** | P2 |
 
@@ -118,7 +118,7 @@
 
 - ✅ 已建：平面几何、函数图像、受力分析/向量、运动图像（G1 直接覆盖）
 - 📐 已规划（详设在手）：立体几何（B1）、圆锥曲线（B2）、分子结构（C）
-- 🆕 本次补建档：**chart（统计图表，P1-1 已实施）**、circuit（电路）、field（场线/等高线）、ray（光路）、pedigree（遗传系谱）、graph/flow（图与流程）、lab（实验装置）、biology（细胞模式图）、levelDiagram（能级图），以及地理场图/剖面、生物曲线等 G1 可直建项（其余待排期）
+- 🆕 本次补建档：**chart（P1-1 ✅）、circuit（P1-2 ✅）、field/ray（P1-3 ✅）**；待排期：pedigree（遗传系谱）、graph/flow（图与流程）、lab（实验装置）、biology（细胞模式图）、levelDiagram（能级图）、等高线 contour，以及地理场图/剖面、生物曲线等 G1 可直建项
 
 ### 3.2 推荐实施顺序（结合高考频次 × 渲染可行性 × AI 输出可靠性）
 
@@ -126,7 +126,7 @@
 |------|------|------|
 | **P1-1** | 统计图表 chart block（直方图/散点/折线/柱状） | ✅ 已实施（2026-08-10）：`chart` task + 8 样本 eval + 后置 attach + iOS ChartCanvasView；待 CI 全绿后合并 |
 | **P1-2** | 电路图 circuit block（符号图元库） | ✅ 已实施（2026-08-10）：`circuit` task + 7 样本 eval + 后置 attach + iOS CircuitCanvasView；待 CI 全绿后合并 |
-| **P1-3** | 场线 field（电场线/磁感线/等高线）+ 光路 ray | 物理高频；G2 扩展元素，几何语义清晰 |
+| **P1-3** | 场线 field + 光路 ray | ✅ 已实施（2026-08-10）：G2 元素 `field`（平行带/放射）+ `ray`（折线+箭头）入 Geometry AST，eval 样本 15 例，iOS drawer；等高线 contour 留 P3 |
 | **P1-4** | 遗传系谱 pedigree + 食物链/网 graph | 生物高频；符号规范，图布局可模板化 |
 | **P2** | 实验装置 lab、细胞模式图 biology、能级图 levelDiagram、流程图 flow | 覆盖面广但 AI 输出与渲染成本上升 |
 | **P3** | 动态几何、动画、3D、参数联动 | 交互后置，等 G1/G2/M 稳定后再做 |

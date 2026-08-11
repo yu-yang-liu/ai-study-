@@ -133,6 +133,18 @@ describe('geometry-scoring 纯函数', () => {
     expect(byName.coordinate).toBeLessThan(0.6);
   });
 
+  it('场线方向敏感（v2，不做旋转等价）', () => {
+    const sample = geometrySamples[11]!; // electric-field-band
+    const expected = sample.expected!;
+    const rotated = transformSceneElements(expected, (p) => [-p[1], p[0]]);
+    const dimensions = scoreGeometry(
+      { geometry: rotated as unknown as GeometryOutput['geometry'], reason: 'x' },
+      expected,
+    );
+    const byName = Object.fromEntries(dimensions.map((d) => [d.name, d.score]));
+    expect(byName.coordinate).toBeLessThan(0.6);
+  });
+
   it('表达式不一致被惩罚', () => {
     const sample = geometrySamples[1]!;
     const expected = sample.expected!;

@@ -31,6 +31,8 @@ export const GEOMETRY_SYSTEM_PROMPT = `你是一名数学/物理/化学示意图
 - angle: { type:"angle", vertex:[x,y], from:[x1,y1], to:[x2,y2], degrees?: 60, label? }
 - functionCurve: { type:"functionCurve", expr:"x^2", xRange?:[min,max], samples?: 160, label? }
 - label: { type:"label", x, y, text, anchor?: "start"|"middle"|"end" }
+- field: { type:"field", kind:"electric"|"magnetic"|"contour", from:[x1,y1], to:[x2,y2], width?: 4, density?: 5, style?: "solid"|"dashed", radial?: true, center?:[x,y], label? } —— 场线（电场线/磁感线）：平行线带或放射线；radial=true 时从 center 向 from→to 角度区间辐射
+- ray: { type:"ray", points:[[x1,y1],[x2,y2],...], arrow?: "end"|"start"|"both"|"none", style?: "solid"|"dashed", label? } —— 光路折线（入射/反射/折射/透镜光线），箭头默认在末端
 
 functionCurve.expr 语法（严格白名单）：
 - 只支持 + - * / ^（乘方）、括号、变量 x、常量 pi/e。
@@ -50,7 +52,8 @@ functionCurve.expr 语法（严格白名单）：
 - 顶点标注用大写字母（A、B、C…）；中文说明用 label 元素。
 - 辅助线/延长线用 style:"dashed"。
 - scene 可省略 bounds（渲染器自动适配）；坐标轴范围需给出合理区间。
-- 元素数量 ≤ 20。结果必须通过校验：数字合法、数组长度正确、angle 的 vertex/from/to 三点齐全。`;
+- 元素数量 ≤ 20。结果必须通过校验：数字合法、数组长度正确、angle 的 vertex/from/to 三点齐全。
+- 场线/光路：field 的 from/to 决定方向（不可随意旋转），ray 的 points 至少 2 点且按光路顺序排列。`;
 
 /**
  * 分块输出片段：追加到 analyze/gradeMath 的 BLOCK_INSTRUCTION，
@@ -60,7 +63,7 @@ export const GEOMETRY_BLOCK_INSTRUCTION = `
 需要图形时（几何证明/计算、函数图像、力学示意、立体图形），必须在相关 blocks 数组中输出 visual geometry 块，例如：
 { "type": "visual", "kind": "geometry", "geometry": {"type":"scene","elements":[{"type":"triangle","vertices":[[0,0],[5,0],[2,3.5]],"labels":["A","B","C"]},{"type":"angle","vertex":[0,0],"from":[5,0],"to":[2,3.5],"degrees":60}]} }
 - 用 kind:"geometry"，不要用 kind:"placeholder" 代替图形；纯代数/概念问答/无需图形时不输出 visual 块。
-- geometry 必须是合法 Geometry AST（scene/coordinateSystem；元素：point/line/vector/triangle/polygon/circle/arc/angle/functionCurve/label）。
+- geometry 必须是合法 Geometry AST（scene/coordinateSystem；元素：point/line/vector/triangle/polygon/circle/arc/angle/functionCurve/label/field/ray）。
 - 数学坐标 x 右 y 上，角度单位度；禁止图片 URL / TikZ / UI 代码。`;
 
 /** 组装 geometry task 的用户提示词。 */

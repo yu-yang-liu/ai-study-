@@ -63,7 +63,7 @@ jobs:
           set -euo pipefail
           cd packages/ios/ApiContracts
           swift build --configuration debug 2>&1 | tee /tmp/apc-build.log
-          swift test --configuration debug 2>&1 | tee /tmp/apc-test.log
+          swift test --configuration debug --disable-swift-testing 2>&1 | tee /tmp/apc-test.log
 
       # ── CoreKit Package ──
       - name: Build CoreKit
@@ -72,7 +72,7 @@ jobs:
           set -euo pipefail
           cd packages/ios/CoreKit
           swift build --configuration debug 2>&1 | tee /tmp/core-build.log
-          swift test --configuration debug 2>&1 | tee /tmp/core-test.log
+          swift test --configuration debug --disable-swift-testing 2>&1 | tee /tmp/core-test.log
 
       # ── ios-gaokao (single high-school app target; directory name retained) ──
       - name: Generate ios-gaokao.xcodeproj
@@ -96,6 +96,7 @@ jobs:
               CODE_SIGNING_ALLOWED=NO 2>&1 | tee /tmp/app-build.log
 
       - name: Upload build logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: xcode-logs
