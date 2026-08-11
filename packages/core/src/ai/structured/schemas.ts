@@ -46,7 +46,8 @@ export type Block =
   | PedigreeBlock
   | GraphBlock
   | LabBlock
-  | CellBlock;
+  | CellBlock
+  | MolecularBlock;
 
 const textBlockSchema = z.object({
   type: z.literal('text'),
@@ -449,6 +450,41 @@ export const cellBlockSchema = z
   });
 export type CellBlock = z.infer<typeof cellBlockSchema>;
 
+const molecularAtomSchema = z.object({
+  id: z.string().min(1).max(20),
+  symbol: z.string().min(1).max(3),
+  x: z.number().min(-100).max(100),
+  y: z.number().min(-100).max(100),
+  charge: z.number().int().min(-9).max(9).optional(),
+  label: z.string().max(20).optional(),
+});
+
+const molecularBondSchema = z.object({
+  from: z.string().min(1).max(20),
+  to: z.string().min(1).max(20),
+  order: z.number().int().min(1).max(3).default(1),
+});
+
+export const molecularBlockSchema = z
+  .object({
+    type: z.literal('molecular'),
+    title: z.string().max(100).optional(),
+    atoms: z.array(molecularAtomSchema).min(1).max(50),
+    bonds: z.array(molecularBondSchema).max(80),
+  })
+  .superRefine((value, ctx) => {
+    const ids = new Set(value.atoms.map((atom) => atom.id));
+    for (const bond of value.bonds) {
+      if (!ids.has(bond.from) || !ids.has(bond.to)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `bond 引用了不存在的原子: ${bond.from}-${bond.to}`,
+        });
+      }
+    }
+  });
+export type MolecularBlock = z.infer<typeof molecularBlockSchema>;
+
 export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   textBlockSchema,
   formulaBlockSchema,
@@ -462,6 +498,7 @@ export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   graphBlockSchema,
   labBlockSchema,
   cellBlockSchema,
+  molecularBlockSchema,
 ]);
 
 // ── Geometry AST（Phase 2 · Visual AST；与 visual-ast v1 对齐）──
@@ -560,6 +597,50 @@ const labelElementSchema = z.object({
   ...baseElementFields,
 });
 
+const conicElementSchema = z.object({
+  type: z.literal('conic'),
+  kind: z.enum(['ellipse', 'parabola', 'hyperbola']),
+  center: vec2Schema,
+  a: z.number().gt(0).max(100),
+  b: z.number().gt(0).max(100).optional(),
+  rotation: z.number().optional(),
+  ...baseElementFields,
+});
+
+const boxElementSchema = z.object({
+  type: z.literal('box'),
+  vertices: z.array(vec2Schema).length(8),
+  faces: z.array(z.array(z.number().int().min(0).max(7)).min(3).max(4)).min(1).max(6),
+  ...baseElementFields,
+});
+
+const cylinderElementSchema = z.object({
+  type: z.literal('cylinder'),
+  base: vec2Schema,
+  radius: z.number().gt(0).max(100),
+  height: z.number().gt(0).max(100),
+  direction: vec2Schema,
+  ...baseElementFields,
+});
+
+const coneElementSchema = z.object({
+  type: z.literal('cone'),
+  base: vec2Schema,
+  radius: z.number().gt(0).max(100),
+  height: z.number().gt(0).max(100),
+  direction: vec2Schema,
+  ...baseElementFields,
+});
+
+const relationElementSchema = z.object({
+  type: z.literal('relation'),
+  from: vec2Schema,
+  to: vec2Schema,
+  relation: z.enum(['parallel', 'perpendicular', 'equal', 'similar', 'dependsOn', 'custom']).optional(),
+  style: z.enum(['solid', 'dashed']).optional(),
+  ...baseElementFields,
+});
+
 /**
  * 场线（P1-3）：匀强场平行线带 / 点电荷放射线 / 等高线（后续）。
  * - from/to：场线方向与长度（从 from 指向 to）；
@@ -588,7 +669,7 @@ const rayElementSchema = z.object({
   ...baseElementFields,
 });
 
-/** 几何元素（10 种类型，按 type 判别、关键字段必填；渲染器按 type 分发）。 */
+/** 几何元素（含立体线框、圆锥曲线和关系节点扩展）。 */
 export const geometryElementSchema = z.discriminatedUnion('type', [
   pointElementSchema,
   lineElementSchema,
@@ -602,6 +683,11 @@ export const geometryElementSchema = z.discriminatedUnion('type', [
   labelElementSchema,
   fieldElementSchema,
   rayElementSchema,
+  conicElementSchema,
+  boxElementSchema,
+  cylinderElementSchema,
+  coneElementSchema,
+  relationElementSchema,
 ]);
 export type GeometryElement = z.infer<typeof geometryElementSchema>;
 
@@ -702,6 +788,26 @@ export function normalizeCellOutput(output: CellOutputRaw): CellOutput {
   return { cell: output as CellBlock };
 }
 
+const molecularOutputWrapperSchema = z.object({
+  molecular: molecularBlockSchema.nullable(),
+  reason: z.string().max(200).optional(),
+});
+export type MolecularOutput = z.infer<typeof molecularOutputWrapperSchema>;
+export type MolecularOutputRaw = MolecularOutput | MolecularBlock | null;
+export const molecularOutputSchema = z.union([
+  molecularOutputWrapperSchema,
+  molecularBlockSchema,
+  z.null(),
+]);
+
+export function normalizeMolecularOutput(output: MolecularOutputRaw): MolecularOutput {
+  if (output === null) return { molecular: null };
+  if (typeof output === 'object' && 'molecular' in output) {
+    return { molecular: output.molecular, reason: output.reason };
+  }
+  return { molecular: output as MolecularBlock };
+}
+
 export const ocrOutput = z.object({
   text: z.string(),
   blocks: z.array(z.object({
@@ -713,6 +819,7 @@ export const ocrOutput = z.object({
 export type OcrOutput = z.infer<typeof ocrOutput>;
 
 export const analyzeOutput = z.object({
+  questionId: z.string().optional(),
   subject: subjectSchema,
   questionType: z.enum(['选择题', '填空题', '简答题', '计算题', '证明题', '作文']),
   knowledgePoints: z.array(knowledgePointSchema),
@@ -760,12 +867,16 @@ export const planOutput = z.object({
   title: z.string(),
   description: z.string(),
   tasks: z.array(z.object({
+    taskId: z.string().optional(),
     title: z.string(),
     subject: subjectSchema,
     knowledgePoints: z.array(knowledgePointSchema),
     estimatedMinutes: z.number().int().min(1),
     priority: z.enum(['高', '中', '低']),
     reason: z.string(),
+    status: z.enum(['pending', 'completed', 'skipped']).optional(),
+    completedAt: z.string().optional(),
+    skippedAt: z.string().optional(),
   })),
   createdAt: z.string().optional(),
 });
@@ -844,4 +955,5 @@ export const TASK_SCHEMA: Record<TaskName, z.ZodType<unknown>> = {
   graph: graphOutputSchema,
   lab: labOutputSchema,
   cell: cellOutputSchema,
+  molecular: molecularOutputSchema,
 };

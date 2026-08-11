@@ -1,8 +1,8 @@
-import Foundation
+﻿import Foundation
 
 // MARK: - SceneBounds
 
-/// 场景边界（数学坐标，y 向上）。
+/// 鍦烘櫙杈圭晫锛堟暟瀛﹀潗鏍囷紝y 鍚戜笂锛夈€?
 public struct SceneBounds: Codable, Sendable, Equatable {
     public let xMin: Double
     public let yMin: Double
@@ -19,70 +19,78 @@ public struct SceneBounds: Codable, Sendable, Equatable {
 
 // MARK: - GeometryElement
 
-/// 几何元素（Phase 2 · Visual AST）。
+/// 鍑犱綍鍏冪礌锛圥hase 2 路 Visual AST锛夈€?
 ///
-/// 对应后端 `GeometryElement`（visual-ast v1）：所有字段可选以兼容解码，
-/// 渲染器按 `type` 分发到对应 drawer。`type` 取值：
+/// 瀵瑰簲鍚庣 `GeometryElement`锛坴isual-ast v1锛夛細鎵€鏈夊瓧娈靛彲閫変互鍏煎瑙ｇ爜锛?
+/// 娓叉煋鍣ㄦ寜 `type` 鍒嗗彂鍒板搴?drawer銆俙type` 鍙栧€硷細
 /// `point` / `line` / `vector` / `triangle` / `polygon` / `circle` / `arc` /
-/// `angle` / `functionCurve` / `label`。
+/// `angle` / `functionCurve` / `label`銆?
 public struct GeometryElement: Codable, Sendable, Equatable {
-    /// 元素类型。
+    /// 鍏冪礌绫诲瀷銆?
     public let type: String
-    /// 元素标注文本（顶点字母 / 中文说明）。
+    /// 鍏冪礌鏍囨敞鏂囨湰锛堥《鐐瑰瓧姣?/ 涓枃璇存槑锛夈€?
     public let label: String?
-    /// CSS 颜色（`#RRGGBB` 或基础色名）。
+    /// CSS 棰滆壊锛坄#RRGGBB` 鎴栧熀纭€鑹插悕锛夈€?
     public let color: String?
-    /// 是否渲染，缺省 true。
+    /// 鏄惁娓叉煋锛岀己鐪?true銆?
     public let visible: Bool?
-    /// point / label 坐标。
+    /// point / label 鍧愭爣銆?
     public let x: Double?
     public let y: Double?
-    /// line / vector 端点。
+    /// line / vector 绔偣銆?
     public let from: [Double]?
     public let to: [Double]?
-    /// triangle 顶点。
+    /// triangle 椤剁偣銆?
     public let vertices: [[Double]]?
-    /// polygon 顶点。
+    /// polygon 椤剁偣銆?
     public let points: [[Double]]?
-    /// triangle / polygon 顶点标注。
+    /// triangle / polygon 椤剁偣鏍囨敞銆?
     public let labels: [String]?
-    /// circle / arc 圆心。
+    /// circle / arc 鍦嗗績銆?
     public let center: [Double]?
-    /// circle / arc 半径。
+    /// circle / arc 鍗婂緞銆?
     public let radius: Double?
-    /// circle 填充（none / light）。
+    /// circle 濉厖锛坣one / light锛夈€?
     public let fill: String?
-    /// arc 起止角（度）。
+    /// arc 璧锋瑙掞紙搴︼級銆?
     public let startAngle: Double?
     public let endAngle: Double?
-    /// angle 顶点。
+    /// angle 椤剁偣銆?
     public let vertex: [Double]?
-    /// angle 度数标注。
+    /// angle 搴︽暟鏍囨敞銆?
     public let degrees: Double?
-    /// functionCurve 表达式。
+    /// functionCurve 琛ㄨ揪寮忋€?
     public let expr: String?
-    /// functionCurve x 采样范围。
+    /// functionCurve x 閲囨牱鑼冨洿銆?
     public let xRange: [Double]?
-    /// functionCurve 采样点数。
+    /// functionCurve 閲囨牱鐐规暟銆?
     public let samples: Int?
-    /// label 文本。
+    /// label 鏂囨湰銆?
     public let text: String?
-    /// label 锚点（start / middle / end）。
+    /// label 閿氱偣锛坰tart / middle / end锛夈€?
     public let anchor: String?
-    /// line 线型（solid / dashed）。
+    /// line 绾垮瀷锛坰olid / dashed锛夈€?
     public let style: String?
-    /// field 场线类型（electric / magnetic / contour）。
+    /// field 鍦虹嚎绫诲瀷锛坋lectric / magnetic / contour锛夈€?
     public let kind: String?
-    /// field 平行线带宽度。
+    /// field 骞宠绾垮甫瀹藉害銆?
     public let width: Double?
-    /// field 场线条数。
+    /// field 鍦虹嚎鏉℃暟銆?
     public let density: Int?
-    /// field 是否放射状（从 center 辐射）。
+    /// field 鏄惁鏀惧皠鐘讹紙浠?center 杈愬皠锛夈€?
     public let radial: Bool?
-    /// ray 箭头位置（start / end / both / none）。
+    /// ray 绠ご浣嶇疆锛坰tart / end / both / none锛夈€?
     public let arrow: String?
+    public let base: [Double]?
+    public let direction: [Double]?
+    public let height: Double?
+    public let a: Double?
+    public let b: Double?
+    public let rotation: Double?
+    public let faces: [[Int]]?
+    public let relation: String?
 
-    /// 显式成员初始化（字段均可选，便于预览 / 测试构造）。
+    /// 鏄惧紡鎴愬憳鍒濆鍖栵紙瀛楁鍧囧彲閫夛紝渚夸簬棰勮 / 娴嬭瘯鏋勯€狅級銆?
     public init(
         type: String,
         label: String? = nil,
@@ -112,7 +120,15 @@ public struct GeometryElement: Codable, Sendable, Equatable {
         width: Double? = nil,
         density: Int? = nil,
         radial: Bool? = nil,
-        arrow: String? = nil
+        arrow: String? = nil,
+        base: [Double]? = nil,
+        direction: [Double]? = nil,
+        height: Double? = nil,
+        a: Double? = nil,
+        b: Double? = nil,
+        rotation: Double? = nil,
+        faces: [[Int]]? = nil,
+        relation: String? = nil
     ) {
         self.type = type
         self.label = label
@@ -143,39 +159,47 @@ public struct GeometryElement: Codable, Sendable, Equatable {
         self.density = density
         self.radial = radial
         self.arrow = arrow
+        self.base = base
+        self.direction = direction
+        self.height = height
+        self.a = a
+        self.b = b
+        self.rotation = rotation
+        self.faces = faces
+        self.relation = relation
     }
 
-    /// 便捷构造：点。
+    /// 渚挎嵎鏋勯€狅細鐐广€?
     public static func point(x: Double, y: Double, label: String? = nil, color: String? = nil) -> GeometryElement {
         GeometryElement(type: "point", label: label, color: color, x: x, y: y)
     }
 
-    /// 便捷构造：线段。
+    /// 渚挎嵎鏋勯€狅細绾挎銆?
     public static func line(from: [Double], to: [Double], style: String? = nil, label: String? = nil) -> GeometryElement {
         GeometryElement(type: "line", label: label, from: from, to: to, style: style)
     }
 
-    /// 便捷构造：带箭头向量。
+    /// 渚挎嵎鏋勯€狅細甯︾澶村悜閲忋€?
     public static func vector(from: [Double], to: [Double], label: String? = nil, color: String? = nil) -> GeometryElement {
         GeometryElement(type: "vector", label: label, color: color, from: from, to: to)
     }
 
-    /// 便捷构造：三角形。
+    /// 渚挎嵎鏋勯€狅細涓夎褰€?
     public static func triangle(vertices: [[Double]], labels: [String]? = nil) -> GeometryElement {
         GeometryElement(type: "triangle", vertices: vertices, labels: labels)
     }
 
-    /// 便捷构造：圆。
+    /// 渚挎嵎鏋勯€狅細鍦嗐€?
     public static func circle(center: [Double], radius: Double, fill: String? = nil, label: String? = nil) -> GeometryElement {
         GeometryElement(type: "circle", label: label, center: center, radius: radius, fill: fill)
     }
 
-    /// 便捷构造：角标记。
+    /// 渚挎嵎鏋勯€狅細瑙掓爣璁般€?
     public static func angle(vertex: [Double], from: [Double], to: [Double], degrees: Double? = nil) -> GeometryElement {
         GeometryElement(type: "angle", from: from, to: to, vertex: vertex, degrees: degrees)
     }
 
-    /// 便捷构造：函数曲线。
+    /// 渚挎嵎鏋勯€狅細鍑芥暟鏇茬嚎銆?
     public static func functionCurve(
         expr: String,
         xRange: [Double]? = nil,
@@ -189,14 +213,14 @@ public struct GeometryElement: Codable, Sendable, Equatable {
 
 // MARK: - GeometryAST
 
-/// Geometry AST 根节点（Phase 2 · Visual AST，对应 visual-ast `GeometryAST`）。
+/// Geometry AST 鏍硅妭鐐癸紙Phase 2 路 Visual AST锛屽搴?visual-ast `GeometryAST`锛夈€?
 ///
-/// 图像不是图片：AI 只输出结构化数据，iOS 由 `GeometryCanvasView`
-/// （Swift `Canvas` / `Shape`）动态渲染，不依赖图片 URL / TikZ。
+/// 鍥惧儚涓嶆槸鍥剧墖锛欰I 鍙緭鍑虹粨鏋勫寲鏁版嵁锛宨OS 鐢?`GeometryCanvasView`
+/// 锛圫wift `Canvas` / `Shape`锛夊姩鎬佹覆鏌擄紝涓嶄緷璧栧浘鐗?URL / TikZ銆?
 public enum GeometryAST: Codable, Sendable, Equatable {
-    /// 自由场景（平面几何 / 力学示意）。
+    /// 鑷敱鍦烘櫙锛堝钩闈㈠嚑浣?/ 鍔涘绀烘剰锛夈€?
     case scene(elements: [GeometryElement], bounds: SceneBounds?)
-    /// 平面直角坐标系（函数图像 / 解析几何）。
+    /// 骞抽潰鐩磋鍧愭爣绯伙紙鍑芥暟鍥惧儚 / 瑙ｆ瀽鍑犱綍锛夈€?
     case coordinateSystem(
         xRange: [Double],
         yRange: [Double],
@@ -242,7 +266,7 @@ public enum GeometryAST: Codable, Sendable, Equatable {
                 children: children
             )
         default:
-            // 未知根类型降级为空 scene，保证整块可解码。
+            // 鏈煡鏍圭被鍨嬮檷绾т负绌?scene锛屼繚璇佹暣鍧楀彲瑙ｇ爜銆?
             self = .scene(elements: [], bounds: nil)
         }
     }

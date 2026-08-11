@@ -72,7 +72,7 @@ struct AnalyzeView: View {
 
         case .loaded(let response):
             ScrollView {
-                AnalysisResultView(result: response)
+                AnalysisResultView(result: response, apiClient: viewModel.apiClient)
                     .padding()
             }
 

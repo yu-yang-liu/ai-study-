@@ -141,6 +141,36 @@ public enum GeometryBounds {
                 ys.append(-1)
                 ys.append(1)
             }
+        case "box":
+            for vertex in element.vertices ?? [] {
+                push(vertex)
+            }
+        case "cylinder", "cone":
+            push(element.base)
+            if let base = element.base, base.count >= 2,
+               let direction = element.direction, direction.count >= 2,
+               let height = element.height {
+                xs.append(base[0] + direction[0] * height)
+                ys.append(base[1] + direction[1] * height)
+            }
+            if let radius = element.radius, let base = element.base, base.count >= 2 {
+                xs.append(base[0] - radius)
+                xs.append(base[0] + radius)
+                ys.append(base[1] - radius)
+                ys.append(base[1] + radius)
+            }
+        case "conic":
+            if let center = element.center, center.count >= 2,
+               let a = element.a {
+                let b = element.b ?? a
+                xs.append(center[0] - a)
+                xs.append(center[0] + a)
+                ys.append(center[1] - b)
+                ys.append(center[1] + b)
+            }
+        case "relation":
+            push(element.from)
+            push(element.to)
         default:
             break
         }

@@ -37,6 +37,10 @@ export type StatsResponse = {
   avgScore: number;
   subjectBreakdown: Record<string, { correct: number; wrong: number; avgScore: number }>;
   recentActivity: Array<{ date: string; count: number }>;
+  trend: Array<{ date: string; count: number; accuracy: number; avgScore: number }>;
+  mastery: Array<{ knowledgePoint: string; subject: string; level: number; trend: string; lastSeen: string }>;
+  abilities: Record<string, number>;
+  abilityTrend: Array<{ date: string; abilities: Record<string, number> }>;
 };
 
 // ── wrong-questions 路由相关类型 ──
@@ -46,19 +50,25 @@ export type AnalysisRef = { answer: string | null } | { answer: string | null }[
 export type WrongRow = {
   id: string;
   knowledge_points: string[] | null;
+  error_type?: string | null;
   review_count: number;
   ease_factor: string | number;
   interval_days: number;
   next_review_at: string;
   questions:
-    | { subject: string; content: string; question_analysis: AnalysisRef }
-    | { subject: string; content: string; question_analysis: AnalysisRef }[]
+    | { id: string; subject: string; content: string; question_analysis: DetailedAnalysisRef }
+    | { id: string; subject: string; content: string; question_analysis: DetailedAnalysisRef }[]
     | null;
   practice_records:
     | Array<{ user_answer: string | null; created_at: string }>
     | { user_answer: string | null; created_at: string }
     | null;
 };
+
+export type DetailedAnalysisRef =
+  | { answer: string | null; analysis?: string | null; exam_points?: string | null; is_favorite?: boolean }
+  | { answer: string | null; analysis?: string | null; exam_points?: string | null; is_favorite?: boolean }[]
+  | null;
 
 /** 从 practice_records（单行或数组）中取最近一次作答。 */
 export function latestAnswer(records: WrongRow['practice_records']): string {
@@ -78,11 +88,17 @@ export function correctAnswerFromQuestion(q: WrongRow['questions']): string {
 
 export type WrongQuestionItem = {
   id: string;
+  questionId: string;
   questionContent: string;
   studentAnswer: string;
   correctAnswer: string;
   subject: string;
   knowledgePoint: string;
+  knowledgePoints: string[];
+  errorType: string | null;
+  analysis: string;
+  explanation: string;
+  isFavorite: boolean;
   createdAt: string;
   nextReviewAt: string;
   sm2_interval: number;

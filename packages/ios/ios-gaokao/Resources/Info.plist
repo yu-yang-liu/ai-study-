@@ -24,6 +24,8 @@
 	<true/>
 	<key>API_BASE_URL</key>
 	<string>$(API_BASE_URL)</string>
+	<key>API_ENVIRONMENT</key>
+	<string>$(API_ENVIRONMENT)</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
@@ -44,5 +46,7 @@
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>需要访问相册以选择题目图片进行分析</string>
+	<key>NSCameraUsageDescription</key>
+	<string>需要使用相机拍摄题目图片进行分析</string>
 </dict>
 </plist>

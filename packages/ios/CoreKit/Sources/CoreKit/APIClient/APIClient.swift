@@ -17,7 +17,8 @@ public actor APIClient: Sendable {
     public init(
         baseURL: URL,
         tokenProvider: @escaping @Sendable () async -> String?,
-        onUnauthorized: @escaping @Sendable () async -> Bool
+        onUnauthorized: @escaping @Sendable () async -> Bool,
+        urlSession: URLSession? = nil
     ) {
         self.baseURL = baseURL
         self.tokenProvider = tokenProvider
@@ -27,7 +28,7 @@ public actor APIClient: Sendable {
         config.timeoutIntervalForRequest = timeout
         config.timeoutIntervalForResource = timeout
         config.waitsForConnectivity = false
-        self.session = URLSession(configuration: config)
+        self.session = urlSession ?? URLSession(configuration: config)
     }
 
     // MARK: - Auth
@@ -90,6 +91,10 @@ public actor APIClient: Sendable {
         return try decode(ChatHistoryResponse.self, from: data)
     }
 
+    public func appendChatHistory(_ request: ChatHistoryAppendRequest) async throws -> ChatHistoryAppendResponse {
+        return try await send(.appendChatHistory, body: request)
+    }
+
     public func analyze(_ request: AnalyzeRequest) async throws -> AnalyzeResponse {
         return try await send(.analyze, body: request)
     }
@@ -101,6 +106,30 @@ public actor APIClient: Sendable {
 
     public func plan(_ request: PlanRequest) async throws -> PlanResponse {
         return try await send(.plan, body: request)
+    }
+
+    public func fetchActivePlan() async throws -> ActivePlanResponse {
+        return try await sendGet(.planHistory)
+    }
+
+    public func updatePlanTask(taskId: String, status: String) async throws -> PlanTaskUpdateResponse {
+        return try await send(.updatePlanTask(taskId), body: PlanTaskUpdateRequest(status: status))
+    }
+
+    public func fetchProfile() async throws -> ProfileResponse {
+        return try await sendGet(.profile)
+    }
+
+    public func updateProfile(_ request: ProfileUpdateRequest) async throws -> ProfileResponse {
+        return try await send(.updateProfile, body: request)
+    }
+
+    public func fetchGradeHistory() async throws -> GradeHistoryResponse {
+        return try await sendGet(.gradeHistory)
+    }
+
+    public func fetchLearnerProfile() async throws -> LearnerModel {
+        return try await sendGet(.learnerProfile)
     }
 
     public func uploadImage(data: Data, mimeType: String, filename: String) async throws -> UploadResponse {
@@ -136,6 +165,17 @@ public actor APIClient: Sendable {
         return try await send(.reviewWrongQuestion, body: request)
     }
 
+    public func addWrongQuestion(_ request: AddWrongQuestionRequest) async throws -> AddWrongQuestionResponse {
+        return try await send(.addWrongQuestion, body: request)
+    }
+
+    public func updateAnalysisBookmark(questionId: String, isFavorite: Bool) async throws -> AnalysisBookmarkResponse {
+        return try await send(
+            .updateAnalysisBookmark(questionId),
+            body: AnalysisBookmarkRequest(isFavorite: isFavorite)
+        )
+    }
+
     public func fetchStats() async throws -> StatsResponse {
         return try await sendGet(.stats)
     }
@@ -144,7 +184,72 @@ public actor APIClient: Sendable {
         return try await sendGet(.bankCount, requireAuth: false)
     }
 
+    public func fetchBankQuestions(
+        subject: String? = nil,
+        year: Int? = nil,
+        questionType: String? = nil,
+        difficulty: Int? = nil,
+        limit: Int = 20,
+        offset: Int = 0
+    ) async throws -> BankQuestionListResponse {
+        var components = URLComponents(
+            url: baseURL.appendingPathComponent(APIEndpoint.bank.path),
+            resolvingAgainstBaseURL: false
+        )
+        var queryItems: [URLQueryItem] = []
+        if let subject { queryItems.append(URLQueryItem(name: "subject", value: subject)) }
+        if let year { queryItems.append(URLQueryItem(name: "year", value: String(year))) }
+        if let questionType { queryItems.append(URLQueryItem(name: "questionType", value: questionType)) }
+        if let difficulty { queryItems.append(URLQueryItem(name: "difficulty", value: String(difficulty))) }
+        queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
+        queryItems.append(URLQueryItem(name: "offset", value: String(offset)))
+        components?.queryItems = queryItems
+
+        guard let url = components?.url else {
+            throw NetworkError.invalidURL(APIEndpoint.bank.path)
+        }
+
+        var request = authenticatedGetRequest(url: url)
+        if let token = await tokenProvider() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let data = try await perform(request, allowRetry: true) { [self] in
+            try await sendBankQuestionsRetry(url: url)
+        }
+        return try decode(BankQuestionListResponse.self, from: data)
+    }
+
+    public func submitBankPractice(_ request: BankPracticeRequest) async throws -> BankPracticeResponse {
+        return try await send(.submitBankPractice, body: request)
+    }
+
     // MARK: - Core send
+
+    private func authenticatedGetRequest(url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = timeout
+        return request
+    }
+
+    private func sendBankQuestionsRetry(url: URL) async throws -> Data {
+        var retry = URLRequest(url: url)
+        retry.httpMethod = "GET"
+        retry.setValue("application/json", forHTTPHeaderField: "Accept")
+        retry.timeoutInterval = timeout
+        if let token = await tokenProvider() {
+            retry.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let (retryData, retryResponse) = try await session.data(for: retry)
+        guard let http = retryResponse as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw NetworkError.requestFailed(
+                statusCode: (retryResponse as? HTTPURLResponse)?.statusCode ?? -1,
+                message: "Retry failed"
+            )
+        }
+        return retryData
+    }
 
     private func sendGet<T: Decodable>(
         _ endpoint: APIEndpoint,

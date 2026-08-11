@@ -104,7 +104,7 @@ ai-study/
 - analyze / chat / plan 持久化；`profiles` / `user_profiles` bootstrap
 - `knowledge_mastery` 写入；错题 `correctAnswer` join；统计准确率修正
 - S3 预签名上传；upload → `analyzeImg` 接通
-- iOS 错题/统计/上传界面；题库 count 展示
+- iOS 错题/统计/上传界面；题库筛选、答题、结果与练习事件闭环已接入，待 staging/TestFlight 验证
 
 **第四轮（Chat Agent 增强，2026-07-20）：**
 
@@ -151,7 +151,7 @@ ai-study/
 | 学习统计 | ✅ | ✅ | ⚠️ 基础统计 | ~55% |
 | 拍照上传 | ✅ | ✅ | ✅ presign + analyzeImg | ~65% |
 | 管理后台 | ❌ | ✅ | 占位种子 | ~40% |
-| 真题演练 | ❌ | ❌ | — | 0% |
+| 真题演练 | ✅ | ✅ | ✅ 练习/错题/统计事件 | ~70%（待 staging 与 TestFlight 验证） |
 
 ### 3.3 验证命令
 
@@ -180,7 +180,10 @@ cd apps/web && pnpm exec tsc --noEmit
 `packages/core/src/db/migrations/0000_initial.sql`（需 **pgvector** 扩展）、  
 `0001_conversation_summaries.sql`（M2 摘要表）、  
 `0002_user_memory_facts.sql`（M3/M5 跨会话事实表）、  
-`0003_user_memories.sql`（M4/M6 用户经历向量表 + `match_user_memories` RPC）。
+`0003_user_memories.sql`（M4/M6 用户经历向量表 + `match_user_memories` RPC）、
+`0004_question_bank_year.sql`（真题演练年份筛选）、
+`0005_practice_request_id.sql`（真题练习请求幂等）、
+`0006_agent_memory_hardening.sql`（摘要消息游标、phase 隔离与事实向量排除）。
 
 ### 4.2 强烈建议
 
@@ -345,10 +348,10 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | 3 | Chat 内不支持图片 OCR（需走 upload 页） |
 | 4 | 无 DeepSeek native `tool_calls`（当前 JSON 意图方案够用但可迭代） |
 | 5 | 无后台主动推送教练 |
-| 6 | `learning_events` 中 `practice` 类型尚无写入（待真题演练功能实现后接入） |
+| 6 | 真题演练的真实题库 seed、端到端数据验证和题目质量仍待补齐 |
 | 7 | 统计/dashboard 算法与可视化仍偏基础 |
-| 8 | iOS `真题演练` 占位；`FeatureFlags.isLearnerProfileEnabled` 未接 |
-| 10 | **公式/几何渲染**：`MarkdownRenderer` 无 LaTeX 解析，公式显示为源码；几何图形无原生渲染。方案见 [RENDER_AST.md](./RENDER_AST.md)（M1 公式实施完成，iOS CI 全绿 / M2 几何核心完成，M-D 端到端通过） |
+| 8 | iOS 真题演练已从占位升级为筛选/答题/结果页；仍需 staging 冒烟和 TestFlight 真机验证 |
+| 10 | **公式/几何渲染**：M1 公式、M2 几何核心及 chart/circuit/field/ray/pedigree/graph/lab/cell/molecular 扩展已接入；原生 iOS 构建仍由 macOS CI 验证 |
 
 ### P1 — Agent Memory 六项（已实现，详见 [AGENT_MEMORY.md](./AGENT_MEMORY.md)）
 
@@ -357,7 +360,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | M1 | 独立 `AgentMemory` 抽象/模块 | ✅ 已实现：`packages/core/src/ai/memory/` 编排层（`loadMemory` / `appendTurn`），on top of L1–L3 |
 | M2 | 超长对话压缩/摘要（超 20 条） | ✅ 已实现：`memory/summary.ts` + `conversation_summaries` 表，同步懒触发（>30 条） |
 | M3 | 跨会话记忆合成 | ✅ 已实现：`user_memory_facts` 表 + `loadUserFacts` 注入 longTerm |
-| M4 | 向量 / Episodic Memory | ✅ 已实现：`user_memories` 向量表 + `storeUserMemory`/`match_user_memories` |
+| M4 | 向量 / Episodic Memory | ✅ 已实现：`user_memories` 向量表 + `storeUserMemory`/`match_user_memories`；精确事实不重复写入向量表 |
 | M5 | Agent 主动写/改 memory 条目 | ✅ 已实现：`remember_fact` / `forget_fact` Agent 工具 + `upsertFact` 真实写入 |
 | M6 | RAG 检索用户历史 | ✅ 已实现：`retrieveUserMemory` 语义召回，`loadMemory` 注入 episodic |
 
@@ -414,7 +417,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | **几何提示词与 Eval** | [docs/GEOMETRY_PROMPT_EVAL.md](./GEOMETRY_PROMPT_EVAL.md)、[docs/GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md) |
 | **Agent Memory 专项** | [docs/AGENT_MEMORY.md](./AGENT_MEMORY.md) |
 | 环境变量模板 | `apps/web/.env.example` |
-| DB 迁移 | `packages/core/src/db/migrations/0000_initial.sql`、`0001_conversation_summaries.sql`、`0002_user_memory_facts.sql`、`0003_user_memories.sql` |
+| DB 迁移 | `packages/core/src/db/migrations/0000_initial.sql`、`0001_conversation_summaries.sql`、`0002_user_memory_facts.sql`、`0003_user_memories.sql`、`0004_question_bank_year.sql`、`0005_practice_request_id.sql`、`0006_agent_memory_hardening.sql` |
 | Geometry AST（core schema） | `packages/core/src/ai/structured/schemas.ts` |
 | 几何提示词（权威版） | `packages/core/src/ai/prompt/geometry.ts` |
 | 学科 Visual block 提示词（chart/circuit/pedigree/graph/lab/cell） | `packages/core/src/ai/prompt/{chart,circuit,pedigree,graph,lab,cell}.ts` |
@@ -430,7 +433,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | **学情快照** | `packages/core/src/learning/assistant-context.ts` |
 | **可复用 Actions** | `packages/core/src/learning/actions.ts` |
 | **会话读写** | `packages/core/src/learning/conversation.ts`、`learning/persist.ts` |
-| AI 路由 | `apps/web/src/app/api/{analyze,grade,chat,chat/history,plan,upload,wrong-questions,stats}/route.ts` |
+| AI/学习路由 | `apps/web/src/app/api/{analyze,grade,chat,chat/history,plan,upload,wrong-questions,stats,bank,bank/practice}/route.ts` |
 | Chat UI | `apps/web/src/app/chat/page.tsx` |
 | 导航 | `packages/core/src/ui/shell.tsx` |
 | iOS API | `packages/ios/CoreKit/Sources/CoreKit/APIClient/` |
@@ -485,7 +488,7 @@ POST /api/chat
 - [x] `knowledge_mastery` 写入（analyze/grade/错题复习）
 - [x] `question_bank` 导入管线（`ingestQuestionBankEntries` + `POST /api/admin/bank/ingest`）
 - [x] iOS 错题/统计/上传界面
-- [x] iOS `/api/bank/count` 题库数量展示（真题演练占位页）
+- [x] iOS `/api/bank` 题库筛选、答题、结果解析与 `/api/bank/practice` 练习记录闭环（代码已接入，待 staging/TestFlight 验证）
 - [x] iOS APIClient 401 后 refresh 并重试
 - [x] 错题 `correctAnswer` join；统计准确率修正
 - [x] grade 落库错误检查强化
@@ -511,7 +514,7 @@ POST /api/chat
 
 - [ ] DB `phase_type` 去掉 `middle`（需迁移）
 - [ ] 部署指南 / 运维文档
-- [ ] 题库/RAG 大规模 seed
+- [ ] 题库/RAG 大规模 seed 与真实年份/选项数据补齐
 - [ ] Chat 内图片 OCR（v2）
 - [ ] **V3 学习智能**：Knowledge Graph Agent + 学习状态模型 + 个性化推荐 + 智能规划（长期积累型，未启动，见 [SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md) §5）
 - [x] **公式渲染 M1**：后端 `Block[]` schema + 前端 `FormulaView`(iosMath) + `MarkdownRenderer(blocks:)`（见 [RENDER_AST.md](./RENDER_AST.md)）

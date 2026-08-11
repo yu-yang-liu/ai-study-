@@ -11,9 +11,11 @@ import { z } from 'zod';
 const entrySchema = z.object({
   subject: z.string().min(1),
   content: z.string().min(10),
+  year: z.number().int().min(1900).max(2200).optional(),
   examPoint: z.string().optional(),
   analysis: z.string().optional(),
   answer: z.string().optional(),
+  options: z.array(z.string().min(1)).max(20).optional(),
   questionType: z.string().optional(),
   topic: z.string().optional(),
   source: z.string().optional(),

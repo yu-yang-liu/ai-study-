@@ -34,4 +34,10 @@ describe('composeEpisodicBlock', () => {
     const out = composeEpisodicBlock([ep('m1', 'x', 0.876, 'chat_conclusion')]);
     expect(out).toContain('相似度 0.876');
   });
+
+  it('flattens multiline content before prompt injection', () => {
+    const out = composeEpisodicBlock([ep('m1', '第一行\n第二行', 0.8, 'grade')]);
+    expect(out).toContain('第一行 第二行');
+    expect(out).not.toContain('第一行\n第二行');
+  });
 });

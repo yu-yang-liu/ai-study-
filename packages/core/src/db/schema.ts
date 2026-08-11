@@ -96,6 +96,7 @@ export const questionAnalysis = pgTable('question_analysis', {
   answer: text('answer'),
   analysis: text('analysis'),
   examPoints: text('exam_points'),
+  isFavorite: boolean('is_favorite').notNull().default(false),
   ragContext: jsonb('rag_context'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -115,8 +116,11 @@ export const practiceRecords = pgTable('practice_records', {
   aiFeedback: text('ai_feedback'),
   errorType: text('error_type'),
   durationSec: integer('duration_sec'),
+  clientRequestId: uuid('client_request_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex('practice_records_user_client_request_uidx').on(table.userId, table.clientRequestId),
+]);
 
 // ── 6. wrong_questions ──
 export const wrongQuestions = pgTable(
@@ -197,6 +201,7 @@ export const conversationMessages = pgTable('conversation_messages', {
     .references(() => conversations.id, { onDelete: 'cascade' }),
   role: text('role', { enum: ['user', 'assistant'] }).notNull(),
   content: text('content').notNull(),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -211,6 +216,9 @@ export const conversationSummaries = pgTable(
     userId: uuid('user_id').notNull(),
     summary: text('summary').notNull(),
     summaryUpTo: timestamp('summary_up_to', { withTimezone: true }).notNull(),
+    summaryUpToMessageId: uuid('summary_up_to_message_id').references(() => conversationMessages.id, {
+      onDelete: 'set null',
+    }),
     messageCount: integer('message_count').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -278,6 +286,7 @@ export const questionBank = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     phase: phaseEnum('phase').notNull(),
     subject: text('subject').notNull(),
+    year: integer('year'),
     topic: text('topic'),
     examPoint: text('exam_point'),
     questionType: text('question_type'),
@@ -290,7 +299,10 @@ export const questionBank = pgTable(
     embedding: vector1024('embedding'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [index('idx_question_bank_phase_subject').on(table.phase, table.subject)],
+  (table) => [
+    index('idx_question_bank_phase_subject').on(table.phase, table.subject),
+    index('idx_question_bank_phase_year').on(table.phase, table.year),
+  ],
 );
 
 // ── 15. user_memory_facts (M3/M5：用户跨会话事实) ──

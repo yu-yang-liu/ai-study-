@@ -63,11 +63,11 @@ public struct GeometryCanvasView: View {
 
     private static func priority(_ element: GeometryElement) -> Int {
         switch element.type {
-        case "triangle", "polygon", "field": return 0
+        case "triangle", "polygon", "field", "box", "cylinder", "cone": return 0
         case "line", "vector", "circle", "ray": return 1
-        case "functionCurve": return 2
+        case "functionCurve", "conic": return 2
         case "arc", "angle": return 3
-        case "point": return 4
+        case "relation", "point": return 4
         case "label": return 5
         default: return 6
         }
@@ -101,6 +101,14 @@ public struct GeometryCanvasView: View {
             drawAngle(context: &context, transformer: transformer, element: element)
         case "functionCurve":
             drawFunctionCurve(context: &context, transformer: transformer, element: element)
+        case "conic":
+            drawConic(context: &context, transformer: transformer, element: element)
+        case "box":
+            drawBox(context: &context, transformer: transformer, element: element)
+        case "cylinder", "cone":
+            drawSolid(context: &context, transformer: transformer, element: element)
+        case "relation":
+            drawRelation(context: &context, transformer: transformer, element: element)
         case "label":
             drawLabel(context: &context, transformer: transformer, element: element)
         default:
@@ -519,6 +527,184 @@ public struct GeometryCanvasView: View {
         }
     }
 
+    private static func drawConic(
+        context: inout GraphicsContext,
+        transformer: CoordinateTransformer,
+        element: GeometryElement
+    ) {
+        guard let center = element.center, center.count >= 2, let a = element.a else { return }
+        let b = element.b ?? a
+        let rotation = (element.rotation ?? 0) * .pi / 180
+        let kind = element.kind ?? "ellipse"
+        var path = Path()
+        var started = false
+        let count = 180
+
+        for index in 0...count {
+            let t = -Double.pi + (2 * Double.pi * Double(index) / Double(count))
+            let local: (Double, Double)
+            switch kind {
+            case "parabola":
+                local = (a * t * t / 4, b * t)
+            case "hyperbola":
+                let cosValue = cos(t)
+                guard abs(cosValue) > 0.12 else { continue }
+                local = (a / cosValue, b * tan(t))
+            default:
+                local = (a * cos(t), b * sin(t))
+            }
+            let x = center[0] + local.0 * cos(rotation) - local.1 * sin(rotation)
+            let y = center[1] + local.0 * sin(rotation) + local.1 * cos(rotation)
+            let point = CGPoint(x: transformer.x(x), y: transformer.y(y))
+            if started {
+                path.addLine(to: point)
+            } else {
+                path.move(to: point)
+                started = true
+            }
+        }
+        guard started else { return }
+        context.stroke(
+            path,
+            with: .color(color(element.color, fallback: .curveBlue)),
+            style: StrokeStyle(lineWidth: 1.8, dash: kind == "hyperbola" ? [6, 4] : [])
+        )
+        if let label = element.label {
+            drawText(
+                context: &context,
+                label,
+                at: CGPoint(x: transformer.x(center[0] + a), y: transformer.y(center[1])),
+                color: color(element.color, fallback: .curveBlue),
+                size: 13,
+                anchor: .leading
+            )
+        }
+    }
+
+    private static func drawBox(
+        context: inout GraphicsContext,
+        transformer: CoordinateTransformer,
+        element: GeometryElement
+    ) {
+        let vertices = element.vertices ?? []
+        guard vertices.count >= 8 else { return }
+        let strokeColor = color(element.color, fallback: .gray900)
+        var edges = Set<String>()
+        for face in element.faces ?? [] {
+            guard face.count >= 2 else { continue }
+            for index in face.indices {
+                let a = face[index]
+                let b = face[(index + 1) % face.count]
+                guard a >= 0, b >= 0, a < vertices.count, b < vertices.count else { continue }
+                let key = a < b ? "\(a)-\(b)" : "\(b)-\(a)"
+                if edges.insert(key).inserted {
+                    context.stroke(
+                        segmentPath(from: vertices[a], to: vertices[b], transformer: transformer),
+                        with: .color(strokeColor),
+                        style: StrokeStyle(lineWidth: 1.4, dash: index % 2 == 0 ? [] : [5, 4])
+                    )
+                }
+            }
+        }
+        if let label = element.label, let first = vertices.first, first.count >= 2 {
+            drawText(
+                context: &context,
+                label,
+                at: CGPoint(x: transformer.x(first[0]), y: transformer.y(first[1])),
+                color: strokeColor,
+                size: 13,
+                anchor: .leading
+            )
+        }
+    }
+
+    private static func drawSolid(
+        context: inout GraphicsContext,
+        transformer: CoordinateTransformer,
+        element: GeometryElement
+    ) {
+        guard let base = element.base, base.count >= 2,
+              let direction = element.direction, direction.count >= 2,
+              let radius = element.radius,
+              let height = element.height else { return }
+        let length = max(hypot(direction[0], direction[1]), 0.001)
+        let ux = direction[0] / length
+        let uy = direction[1] / length
+        let top = [base[0] + ux * height, base[1] + uy * height]
+        let color = color(element.color, fallback: .gray900)
+        let perpendicular = [-uy, ux]
+
+        func ellipsePath(center: [Double]) -> Path {
+            var path = Path()
+            for index in 0...40 {
+                let angle = 2 * Double.pi * Double(index) / 40
+                let point = [
+                    center[0] + cos(angle) * radius,
+                    center[1] + sin(angle) * radius * 0.35,
+                ]
+                let screen = CGPoint(x: transformer.x(point[0]), y: transformer.y(point[1]))
+                if index == 0 { path.move(to: screen) } else { path.addLine(to: screen) }
+            }
+            return path
+        }
+
+        context.stroke(ellipsePath(center: base), with: .color(color), lineWidth: 1.4)
+        context.stroke(ellipsePath(center: top), with: .color(color), style: StrokeStyle(lineWidth: 1.4, dash: [5, 4]))
+        let sideOffsets = [-radius, radius]
+        for offset in sideOffsets {
+            let from = [base[0] + perpendicular[0] * offset, base[1] + perpendicular[1] * offset]
+            let to = [top[0] + perpendicular[0] * offset, top[1] + perpendicular[1] * offset]
+            context.stroke(segmentPath(from: from, to: to, transformer: transformer), with: .color(color), lineWidth: 1.4)
+        }
+        if element.type == "cone" {
+            let apex = [top[0], top[1]]
+            context.stroke(
+                segmentPath(
+                    from: [base[0] - perpendicular[0] * radius, base[1] - perpendicular[1] * radius],
+                    to: apex,
+                    transformer: transformer
+                ),
+                with: .color(color),
+                lineWidth: 1.4
+            )
+            context.stroke(
+                segmentPath(
+                    from: [base[0] + perpendicular[0] * radius, base[1] + perpendicular[1] * radius],
+                    to: apex,
+                    transformer: transformer
+                ),
+                with: .color(color),
+                lineWidth: 1.4
+            )
+        }
+    }
+
+    private static func drawRelation(
+        context: inout GraphicsContext,
+        transformer: CoordinateTransformer,
+        element: GeometryElement
+    ) {
+        guard let from = element.from, let to = element.to else { return }
+        let relationColor = color(element.color, fallback: .angleAmber)
+        context.stroke(
+            segmentPath(from: from, to: to, transformer: transformer),
+            with: .color(relationColor),
+            style: StrokeStyle(lineWidth: 1.2, dash: [4, 4])
+        )
+        let mid = CGPoint(
+            x: (transformer.x(from[0]) + transformer.x(to[0])) / 2,
+            y: (transformer.y(from[1]) + transformer.y(to[1])) / 2 - 8
+        )
+        drawText(
+            context: &context,
+            element.label ?? element.relation ?? "",
+            at: mid,
+            color: relationColor,
+            size: 12,
+            anchor: .center
+        )
+    }
+
     private static func drawLabel(
         context: inout GraphicsContext,
         transformer: CoordinateTransformer,
@@ -526,9 +712,9 @@ public struct GeometryCanvasView: View {
     ) {
         let anchor: UnitPoint
         switch element.anchor {
-        case "start"?:
+        case "start":
             anchor = .leading
-        case "end"?:
+        case "end":
             anchor = .trailing
         default:
             anchor = .center

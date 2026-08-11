@@ -34,7 +34,7 @@ export async function persistAnalyzeResult(
   userId: string,
   input: { subject: string; content: string; imageUrl?: string },
   result: AnalyzeOutput,
-): Promise<void> {
+): Promise<string> {
   const supabase = getServiceClient();
 
   const { data: question, error: qErr } = await supabase
@@ -76,6 +76,7 @@ export async function persistAnalyzeResult(
   if (lErr) console.warn('persistAnalyze learning_events:', lErr.message);
 
   await updateKnowledgeMastery(userId, result.subject, result.knowledgePoints, 'exposure');
+  return question.id;
 }
 
 export async function persistChatExchange(

@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreKit
+import ApiContracts
 
 /// 用户设置页 ViewModel
 @MainActor
@@ -16,6 +17,7 @@ final class UserSettingsViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let dataRepository: DataRepository
+    private let apiClient: APIClient
     private let authManager: AuthManager
     private let notificationManager: NotificationManager
 
@@ -31,10 +33,12 @@ final class UserSettingsViewModel: ObservableObject {
 
     init(
         dataRepository: DataRepository,
+        apiClient: APIClient,
         authManager: AuthManager,
         notificationManager: NotificationManager
     ) {
         self.dataRepository = dataRepository
+        self.apiClient = apiClient
         self.authManager = authManager
         self.notificationManager = notificationManager
     }
@@ -50,20 +54,37 @@ final class UserSettingsViewModel: ObservableObject {
         track = settings.track
         themeMode = settings.themeMode
         isLoading = false
+
+        do {
+            let remote = try await apiClient.fetchProfile()
+            apply(remote)
+            await persistLocal()
+        } catch {
+            errorMessage = nil
+        }
     }
 
     func saveSettings() async {
         isLoading = true
         errorMessage = nil
-        await dataRepository.updateSettings(
-            nickname: nickname,
-            examDate: examDate,
-            targetScore: targetScore,
-            notificationsEnabled: notificationsEnabled,
-            gradeLevel: gradeLevel,
-            track: track,
-            themeMode: themeMode
-        )
+        await persistLocal()
+        do {
+            let remote = try await apiClient.updateProfile(
+                ProfileUpdateRequest(
+                    nickname: nickname,
+                    examDate: examDate.toISO8601(),
+                    targetScore: targetScore,
+                    notificationsEnabled: notificationsEnabled,
+                    gradeLevel: gradeLevel,
+                    track: track,
+                    themeMode: themeMode
+                )
+            )
+            apply(remote)
+            await persistLocal()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
         // 同步通知授权
         if notificationsEnabled {
             let granted = await notificationManager.requestAuthorization()
@@ -78,6 +99,28 @@ final class UserSettingsViewModel: ObservableObject {
         // 短暂展示成功提示后清除
         try? await Task.sleep(nanoseconds: 2_000_000_000)
         saveSuccess = false
+    }
+
+    private func apply(_ response: ProfileResponse) {
+        if let value = response.nickname, !value.isEmpty { nickname = value }
+        if let value = response.examDate, let date = Date.fromISO8601(value) { examDate = date }
+        if let value = response.targetScore { targetScore = value }
+        if let value = response.notificationsEnabled { notificationsEnabled = value }
+        if let value = response.gradeLevel, !value.isEmpty { gradeLevel = value }
+        if let value = response.track, !value.isEmpty { track = value }
+        if let value = response.themeMode, !value.isEmpty { themeMode = value }
+    }
+
+    private func persistLocal() async {
+        await dataRepository.updateSettings(
+            nickname: nickname,
+            examDate: examDate,
+            targetScore: targetScore,
+            notificationsEnabled: notificationsEnabled,
+            gradeLevel: gradeLevel,
+            track: track,
+            themeMode: themeMode
+        )
     }
 
     /// 各年级选项

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { composeUserFactsBlock } from './facts';
+import { composeUserFactsBlock, normalizeMemoryFact } from './facts';
 import type { StoredFact } from './facts';
 
 function fact(
@@ -34,5 +34,22 @@ describe('composeUserFactsBlock', () => {
     expect(out).toBe(
       '【跨会话记忆】\n- [goal]target_school：清华\n- [weak_point]weak_topic：导数',
     );
+  });
+});
+
+describe('normalizeMemoryFact', () => {
+  it('trims and collapses untrusted fact text', () => {
+    expect(
+      normalizeMemoryFact({
+        key: '  target_school ',
+        value: '  清华\n大学  ',
+        category: ' goal ',
+      }),
+    ).toEqual({ key: 'target_school', value: '清华 大学', category: 'goal' });
+  });
+
+  it('rejects empty facts after normalization', () => {
+    expect(() => normalizeMemoryFact({ key: '   ', value: 'x' })).toThrow();
+    expect(() => normalizeMemoryFact({ key: 'x', value: '\n\t' })).toThrow();
   });
 });

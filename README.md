@@ -51,4 +51,4 @@ pnpm --filter @ai-study/core eval:geometry   # 需 DEEPSEEK_API_KEY（视觉 blo
 - iOS: [packages/ios/README.md](packages/ios/README.md)
 - Android: [packages/android/README.md](packages/android/README.md)
 - Env template: [apps/web/.env.example](apps/web/.env.example)
-- DB migrations: `packages/core/src/db/migrations/`（0000–0003）
+- DB migrations: `packages/core/src/db/migrations/`（0000–0007）

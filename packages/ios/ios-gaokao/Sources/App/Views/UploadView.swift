@@ -6,6 +6,7 @@ import ApiContracts
 struct UploadView: View {
     @StateObject var viewModel: UploadViewModel
     @State private var pickerItem: PhotosPickerItem?
+    @State private var isShowingCamera = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,6 +18,12 @@ struct UploadView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: pickerItem) { _, newItem in
             Task { await loadPickerItem(newItem) }
+        }
+        .sheet(isPresented: $isShowingCamera) {
+            CameraPicker { data in
+                viewModel.setImageData(data)
+            }
+            .ignoresSafeArea()
         }
     }
 
@@ -34,12 +41,23 @@ struct UploadView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            PhotosPicker(selection: $pickerItem, matching: .images) {
-                Label("\u{9009}\u{62e9}\u{9898}\u{76ee}\u{56fe}\u{7247}", systemImage: "photo.on.rectangle.angled")
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+            HStack(spacing: 10) {
+                PhotosPicker(selection: $pickerItem, matching: .images) {
+                    Label("\u{4ece}\u{76f8}\u{518c}\u{9009}\u{62e9}", systemImage: "photo.on.rectangle.angled")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    isShowingCamera = true
+                } label: {
+                    Label("\u{62cd}\u{7167}", systemImage: "camera.fill")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.bordered)
             }
-            .buttonStyle(.bordered)
 
             if let image = viewModel.previewImage {
                 Image(uiImage: image)
@@ -49,17 +67,26 @@ struct UploadView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
+            if let error = viewModel.imagePreparationError {
+                Label(error.localizedDescription, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             HStack(spacing: 12) {
                 Button {
                     Task { await viewModel.upload() }
                 } label: {
                     if viewModel.uploadState.isLoading {
                         ProgressView().tint(.white)
+                    } else if case .error = viewModel.uploadState {
+                        Label("重试上传", systemImage: "arrow.clockwise")
                     } else {
                         Text(viewModel.imageUrl == nil ? "\u{4e0a}\u{4f20}\u{5230}\u{4e91}\u{7aef}" : "\u{5df2}\u{4e0a}\u{4f20}")
                     }
                 }
-                .buttonStyle(.borderedProminent)
+        .buttonStyle(.borderedProminent)
                 .disabled(viewModel.imageData == nil || viewModel.imageUrl != nil || viewModel.uploadState.isLoading)
 
                 if viewModel.imageData != nil {
@@ -106,7 +133,7 @@ struct UploadView: View {
 
         case .loaded(let response):
             ScrollView {
-                AnalysisResultView(result: response)
+                AnalysisResultView(result: response, apiClient: viewModel.apiClient)
                     .padding()
             }
 

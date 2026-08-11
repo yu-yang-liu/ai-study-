@@ -2,9 +2,27 @@ import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
 
 export interface ConversationMessage {
+  id?: string;
   role: 'user' | 'assistant';
   content: string;
   createdAt: string;
+  imageUrl?: string;
+  action?: unknown;
+  analyzeResult?: unknown;
+  replyBlocks?: unknown;
+}
+
+export interface ConversationMessageMetadata {
+  imageUrl?: string;
+  action?: unknown;
+  analyzeResult?: unknown;
+  replyBlocks?: unknown;
+}
+
+export interface ConversationMessageInput {
+  role: 'user' | 'assistant';
+  content: string;
+  metadata?: ConversationMessageMetadata;
 }
 
 export interface ConversationSummary {
@@ -102,10 +120,11 @@ export async function loadConversationMessages(
 
   const { data, error } = await supabase
     .from('conversation_messages')
-    .select('role, content, created_at')
+    .select('id, role, content, metadata, created_at')
     .eq('conversation_id', conversationId)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(limit);
 
   if (error) throw new Error(`loadConversationMessages: ${error.message}`);
@@ -113,10 +132,52 @@ export async function loadConversationMessages(
   return (data ?? [])
     .reverse()
     .map((row) => ({
+      id: row.id as string,
       role: row.role as 'user' | 'assistant',
       content: row.content as string,
       createdAt: row.created_at as string,
+      imageUrl: (row.metadata as ConversationMessageMetadata | null)?.imageUrl,
+      action: (row.metadata as ConversationMessageMetadata | null)?.action,
+      analyzeResult: (row.metadata as ConversationMessageMetadata | null)?.analyzeResult,
+      replyBlocks: (row.metadata as ConversationMessageMetadata | null)?.replyBlocks,
     }));
+}
+
+/**
+ * Append rich messages to a conversation without coupling the chat agent to
+ * image-analysis payloads. Existing text-only messages use an empty metadata
+ * object and remain fully compatible.
+ */
+export async function appendConversationMessages(
+  userId: string,
+  subject: string,
+  messages: ConversationMessageInput[],
+  conversationId?: string,
+): Promise<string> {
+  if (messages.length === 0) throw new Error('appendConversationMessages: no messages');
+
+  const supabase = getServiceClient();
+  const resolvedConversationId = await getOrCreateConversation(userId, subject, conversationId);
+
+  const { error: messageError } = await supabase.from('conversation_messages').insert(
+    messages.map((message) => ({
+      user_id: userId,
+      conversation_id: resolvedConversationId,
+      role: message.role,
+      content: message.content,
+      metadata: message.metadata ?? {},
+    })),
+  );
+  if (messageError) throw new Error(`appendConversationMessages: ${messageError.message}`);
+
+  const { error: conversationError } = await supabase
+    .from('conversations')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', resolvedConversationId)
+    .eq('user_id', userId);
+  if (conversationError) throw new Error(`appendConversationMessages update: ${conversationError.message}`);
+
+  return resolvedConversationId;
 }
 
 export async function listConversations(

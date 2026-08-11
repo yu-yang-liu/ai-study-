@@ -9,8 +9,10 @@ struct ChatMessage: Identifiable, Sendable {
     let content: String
     let timestamp: Date
     let action: ChatActionPayload?
-    /// 用户消息附带的本地图片（仅展示，不序列化进历史）
+    /// 用户消息附带的本地图片（同时写入本地 Chat 历史）
     let imagePreview: Data?
+    /// 云端历史恢复时使用的原图地址。
+    let imageURL: String?
     /// 助手消息附带的图片分析结果（复用 /api/analyze(imageUrl:)）
     let analyzeResult: AnalyzeResponse?
     /// 助手消息的结构化回复块（双字段过渡：缺省回退 content 文本）。
@@ -23,6 +25,7 @@ struct ChatMessage: Identifiable, Sendable {
         timestamp: Date = Date(),
         action: ChatActionPayload? = nil,
         imagePreview: Data? = nil,
+        imageURL: String? = nil,
         analyzeResult: AnalyzeResponse? = nil,
         replyBlocks: [ContentBlock]? = nil
     ) {
@@ -31,6 +34,7 @@ struct ChatMessage: Identifiable, Sendable {
         self.timestamp = timestamp
         self.action = action
         self.imagePreview = imagePreview
+        self.imageURL = imageURL
         self.analyzeResult = analyzeResult
         self.replyBlocks = replyBlocks
     }
@@ -43,15 +47,21 @@ final class ChatViewModel: ObservableObject {
     @Published var selectedSubject: String = "数学"
     @Published var isSending = false
     @Published var isOffline = false
+    @Published var followUpContext: AnalyzeResponse?
 
     /// 待发送的图片（在输入栏选择后、发送前）
     @Published var pendingImageData: Data?
     @Published var pendingImagePreview: UIImage?
+    @Published var imagePreparationError: Error?
+    @Published var imageSendError: Error?
+    @Published var historySyncError: String?
+    @Published var wrongQuestionActionMessage: String?
 
-    private let apiClient: APIClient
+    let apiClient: APIClient
     private let dataRepository: DataRepository
     private var conversationId: String?
     private var currentTitle: String?
+    private var pendingHistorySync: ChatHistoryAppendRequest?
 
     let subjects: [String] = Subject.allCases.map(\.rawValue)
     let quickChips: [String] = [
@@ -82,13 +92,82 @@ final class ChatViewModel: ObservableObject {
 
     /// 从 PhotosPicker 设置待发图片
     func setPendingImage(_ data: Data?) {
-        pendingImageData = data
-        pendingImagePreview = data.flatMap { UIImage(data: $0) }
+        guard let data else {
+            clearPendingImage()
+            return
+        }
+
+        do {
+            let prepared = try ImageUploadPreparer.prepare(data: data)
+            pendingImageData = prepared.data
+            pendingImagePreview = prepared.preview
+            imagePreparationError = nil
+            imageSendError = nil
+            followUpContext = nil
+        } catch {
+            pendingImageData = nil
+            pendingImagePreview = nil
+            imagePreparationError = error
+            imageSendError = nil
+            followUpContext = nil
+        }
     }
 
     func clearPendingImage() {
         pendingImageData = nil
         pendingImagePreview = nil
+        imagePreparationError = nil
+        imageSendError = nil
+    }
+
+    func prepareFollowUp(for result: AnalyzeResponse) {
+        followUpContext = result
+        inputText = ""
+    }
+
+    /// Start a focused practice turn based on the analyzed question.
+    /// The request is sent immediately while the original analysis remains in context.
+    func practiceSimilarQuestion(for result: AnalyzeResponse) async {
+        guard !isSending else { return }
+        followUpContext = result
+        await sendMessage(
+            "请给我出一道与这道题考点相近、难度相近的\(result.subject)练习题。先只给题目，不要直接给答案，等我作答后再批改。"
+        )
+    }
+
+    func clearFollowUpContext() {
+        followUpContext = nil
+    }
+
+    @discardableResult
+    func addToWrongQuestions(_ result: AnalyzeResponse) async -> Bool {
+        guard let content = result.questionContent?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !content.isEmpty else {
+            wrongQuestionActionMessage = "这条图片分析没有可靠题干，暂时不能自动加入错题。"
+            return false
+        }
+
+        do {
+            _ = try await apiClient.addWrongQuestion(
+                AddWrongQuestionRequest(
+                    subject: result.subject,
+                    questionContent: content,
+                    studentAnswer: "",
+                    correctAnswer: result.answer ?? "",
+                    knowledgePoints: result.knowledgePoints
+                )
+            )
+            wrongQuestionActionMessage = "已加入错题复习"
+            return true
+        } catch {
+            wrongQuestionActionMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    func retryPendingImage() async {
+        guard let data = pendingImageData else { return }
+        await sendImage(data: data, caption: inputText)
     }
 
     /// 是否可发送（文本或图片至少一项非空，且未在发送中）
@@ -110,7 +189,11 @@ final class ChatViewModel: ObservableObject {
                 let chatMsgs = (response.messages ?? []).map { msg in
                     ChatMessage(
                         role: msg.role == "user" ? .user : .assistant,
-                        content: msg.content
+                        content: msg.content,
+                        imageURL: msg.imageUrl,
+                        action: msg.action,
+                        analyzeResult: msg.analyzeResult,
+                        replyBlocks: msg.replyBlocks
                     )
                 }
                 messages = chatMsgs.isEmpty ? .loaded([]) : .loaded(chatMsgs)
@@ -123,7 +206,11 @@ final class ChatViewModel: ObservableObject {
                 let chatMsgs = (detail.messages ?? []).map { msg in
                     ChatMessage(
                         role: msg.role == "user" ? .user : .assistant,
-                        content: msg.content
+                        content: msg.content,
+                        imageURL: msg.imageUrl,
+                        action: msg.action,
+                        analyzeResult: msg.analyzeResult,
+                        replyBlocks: msg.replyBlocks
                     )
                 }
                 messages = chatMsgs.isEmpty ? .loaded([]) : .loaded(chatMsgs)
@@ -146,7 +233,12 @@ final class ChatViewModel: ObservableObject {
         let chatMsgs = cached.map { ChatMessage(
             role: $0.role == "user" ? .user : .assistant,
             content: $0.content,
-            timestamp: $0.timestamp
+            timestamp: $0.timestamp,
+            action: $0.action,
+            imagePreview: $0.imagePreviewBase64.flatMap { Data(base64Encoded: $0) },
+            imageURL: $0.imageUrl,
+            analyzeResult: $0.analyzeResult,
+            replyBlocks: $0.replyBlocks
         )}
         currentTitle = latest.title
         messages = chatMsgs.isEmpty ? .loaded([]) : .loaded(chatMsgs)
@@ -171,6 +263,7 @@ final class ChatViewModel: ObservableObject {
         // 纯文本 → 原 Chat 流程
         inputText = ""
         isSending = true
+        let context = followUpContext.map(Self.followUpContextText)
 
         let userMsg = ChatMessage(role: .user, content: text, timestamp: Date())
         appendMessage(userMsg)
@@ -181,7 +274,8 @@ final class ChatViewModel: ObservableObject {
             let request = ChatRequest(
                 subject: selectedSubject,
                 message: text,
-                conversationId: conversationId
+                conversationId: conversationId,
+                context: context
             )
             let response = try await apiClient.chat(request)
             if let convId = response.conversationId {
@@ -197,6 +291,7 @@ final class ChatViewModel: ObservableObject {
             appendMessage(assistantMsg)
 
             await persistCurrentChat()
+            followUpContext = nil
             isOffline = false
         } catch {
             isOffline = (error as? NetworkError) == .networkUnavailable
@@ -208,27 +303,30 @@ final class ChatViewModel: ObservableObject {
     /// 不调用 `apiClient.chat`，因为后端 `runChatAgent` 不接收 imageUrl（见文档 §7 P1-3）。
     private func sendImage(data: Data, caption: String) async {
         isSending = true
-        clearPendingImage()
-
-        // 用户消息：展示选中的图片 + 可选说明文字
-        let userMsg = ChatMessage(
-            role: .user,
-            content: caption.isEmpty ? "【图片分析】" : caption,
-            timestamp: Date(),
-            imagePreview: data
-        )
-        appendMessage(userMsg)
-        if currentTitle == nil { currentTitle = String((caption.isEmpty ? "图片分析" : caption).prefix(20)) }
+        imageSendError = nil
 
         do {
             // 1. 上传到云端拿 imageUrl（presign → PUT）
-            let mime = mimeType(for: data)
-            let filename = "chat-photo.\(fileExtension(for: mime))"
-            let upload = try await apiClient.uploadImage(data: data, mimeType: mime, filename: filename)
+            let upload = try await apiClient.uploadImage(
+                data: data,
+                mimeType: "image/jpeg",
+                filename: "chat-photo.jpg"
+            )
 
             // 2. 以 imageUrl 调用 analyze（复用既有 endpoint，不改 agent 协议）
             let request = AnalyzeRequest(imageUrl: upload.url, subject: selectedSubject)
             let result = try await apiClient.analyze(request)
+
+            // 只有上传和分析都成功后才写入消息，失败时保留待发送图片供重试。
+            let userMsg = ChatMessage(
+                role: .user,
+                content: caption.isEmpty ? "【图片分析】" : caption,
+                timestamp: Date(),
+                imagePreview: data,
+                imageURL: upload.url
+            )
+            appendMessage(userMsg)
+            if currentTitle == nil { currentTitle = String((caption.isEmpty ? "图片分析" : caption).prefix(20)) }
 
             let assistantMsg = ChatMessage(
                 role: .assistant,
@@ -237,14 +335,29 @@ final class ChatViewModel: ObservableObject {
                 analyzeResult: result
             )
             appendMessage(assistantMsg)
+
+            let historyRequest = ChatHistoryAppendRequest(
+                subject: selectedSubject,
+                conversationId: conversationId,
+                messages: [
+                    ChatHistoryAppendMessage(
+                        role: "user",
+                        content: userMsg.content,
+                        metadata: ChatHistoryMessageMetadata(imageUrl: upload.url)
+                    ),
+                    ChatHistoryAppendMessage(
+                        role: "assistant",
+                        content: assistantMsg.content,
+                        metadata: ChatHistoryMessageMetadata(analyzeResult: result)
+                    ),
+                ]
+            )
+            await syncHistory(historyRequest)
+            await persistCurrentChat()
+            clearPendingImage()
             isOffline = false
         } catch {
-            let assistantMsg = ChatMessage(
-                role: .assistant,
-                content: "图片分析失败：\(error.localizedDescription)。可试试重新选择图片或跳到「拍照分析」页。",
-                timestamp: Date()
-            )
-            appendMessage(assistantMsg)
+            imageSendError = error
             isOffline = (error as? NetworkError) == .networkUnavailable
         }
         isSending = false
@@ -261,26 +374,54 @@ final class ChatViewModel: ObservableObject {
         let codable = (messages.value ?? []).map { CodableChatMessage(
             role: $0.role == .user ? "user" : "assistant",
             content: $0.content,
-            timestamp: $0.timestamp
+            timestamp: $0.timestamp,
+            imagePreviewBase64: $0.imagePreview
+                .flatMap { ImageUploadPreparer.cachePreviewData(for: $0) }
+                .map { $0.base64EncodedString() },
+            imageUrl: $0.imageURL,
+            action: $0.action,
+            analyzeResult: $0.analyzeResult,
+            replyBlocks: $0.replyBlocks
         )}
         await dataRepository.saveChatHistory(title: title, subject: selectedSubject, messages: codable)
     }
 
-    // MARK: - MIME 辅助（与 UploadViewModel 一致）
-
-    private func mimeType(for data: Data) -> String {
-        if data.starts(with: [0xFF, 0xD8, 0xFF]) { return "image/jpeg" }
-        if data.starts(with: [0x89, 0x50, 0x4E, 0x47]) { return "image/png" }
-        if data.starts(with: [0x47, 0x49, 0x46]) { return "image/gif" }
-        return "image/jpeg"
+    func retryHistorySync() async {
+        guard let pendingHistorySync else { return }
+        await syncHistory(pendingHistorySync)
     }
 
-    private func fileExtension(for mime: String) -> String {
-        switch mime {
-        case "image/png": return "png"
-        case "image/gif": return "gif"
-        case "image/webp": return "webp"
-        default: return "jpg"
+    private func syncHistory(_ request: ChatHistoryAppendRequest) async {
+        pendingHistorySync = request
+        do {
+            let response = try await apiClient.appendChatHistory(request)
+            conversationId = response.conversationId
+            pendingHistorySync = nil
+            historySyncError = nil
+        } catch {
+            historySyncError = "本次图片分析已保存在本机，但在线历史同步失败。"
         }
     }
+
+    private static func followUpContextText(_ result: AnalyzeResponse) -> String {
+        var lines = [
+            "学科：\(result.subject)",
+            "题型：\(result.questionType)",
+            "难度：\(result.difficulty)/10",
+        ]
+        if !result.knowledgePoints.isEmpty {
+            lines.append("知识点：\(result.knowledgePoints.joined(separator: "、"))")
+        }
+        if let answer = result.answer, !answer.isEmpty {
+            lines.append("参考答案：\(answer)")
+        }
+        if !result.analysis.isEmpty {
+            lines.append("解析：\(result.analysis)")
+        }
+        if let examPoints = result.examPoints, !examPoints.isEmpty {
+            lines.append("考点说明：\(examPoints)")
+        }
+        return lines.joined(separator: "\n").prefix(6000).description
+    }
+
 }

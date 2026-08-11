@@ -7,6 +7,8 @@ import UIKit
 struct ChatView: View {
     @StateObject var viewModel: ChatViewModel
     @State private var pickerItem: PhotosPickerItem?
+    @State private var isShowingCamera = false
+    @State private var detailResult: AnalyzeResponse?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,6 +22,23 @@ struct ChatView: View {
                 .padding(.vertical, 6)
                 .background(Color.semanticWarning)
             }
+            if let notice = viewModel.wrongQuestionActionMessage {
+                HStack(spacing: 6) {
+                    Image(systemName: notice == "已加入错题复习" ? "checkmark.circle.fill" : "info.circle.fill")
+                    Text(notice).font(.caption)
+                    Spacer()
+                    Button {
+                        viewModel.wrongQuestionActionMessage = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .buttonStyle(.borderless)
+                }
+                .foregroundStyle(notice == "已加入错题复习" ? .green : .secondary)
+                .padding(.horizontal)
+                .padding(.vertical, 6)
+                .background(Color(.systemGray6))
+            }
             subjectPicker
             messageList
             inputBar
@@ -31,6 +50,40 @@ struct ChatView: View {
         }
         .onChange(of: pickerItem) { _, newItem in
             Task { await loadPickerItem(newItem) }
+        }
+        .sheet(isPresented: $isShowingCamera) {
+            CameraPicker { data in
+                viewModel.setPendingImage(data)
+            }
+            .ignoresSafeArea()
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { detailResult != nil },
+                set: { if !$0 { detailResult = nil } }
+            )
+        ) {
+            if let result = detailResult {
+                NavigationStack {
+                    ScrollView {
+                        AnalysisResultView(
+                            result: result,
+                            apiClient: viewModel.apiClient,
+                            onFollowUp: {
+                                viewModel.prepareFollowUp(for: result)
+                                detailResult = nil
+                            },
+                            onAddToWrongQuestions: {
+                                Task { _ = await viewModel.addToWrongQuestions(result) }
+                            }
+                        )
+                        .padding()
+                    }
+                    .background(Color(.systemGroupedBackground))
+                    .navigationTitle("题目分析详情")
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+            }
         }
     }
 
@@ -73,7 +126,17 @@ struct ChatView: View {
                             }
                             // 助手消息附带的图片分析结果，复用既有 AnalysisResultView
                             if let result = message.analyzeResult, message.role == .assistant {
-                                AnalysisResultView(result: result)
+                                ChatAnalysisCard(
+                                    result: result,
+                                    onViewDetails: { detailResult = result },
+                                    onFollowUp: { viewModel.prepareFollowUp(for: result) },
+                                    onPracticeAgain: {
+                                        Task { await viewModel.practiceSimilarQuestion(for: result) }
+                                    },
+                                    onAddToWrongQuestions: {
+                                        Task { _ = await viewModel.addToWrongQuestions(result) }
+                                    }
+                                )
                                     .padding(8)
                                     .background(Color(.systemGray6))
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -112,13 +175,35 @@ struct ChatView: View {
     private var inputBar: some View {
         let pendingImageTint: Color = viewModel.pendingImageData == nil ? Color.brandPrimary : .secondary
         return VStack(spacing: 0) {
+            if viewModel.followUpContext != nil {
+                followUpContextBar
+            }
             // 待发送图片预览
             if let image = viewModel.pendingImagePreview {
                 pendingImagePreviewBar(image: image)
             }
+            if let error = viewModel.imagePreparationError {
+                imageErrorRow(message: error.localizedDescription, retry: nil)
+            } else if let error = viewModel.imageSendError {
+                imageErrorRow(message: error.localizedDescription, retry: {
+                    Task { await viewModel.retryPendingImage() }
+                })
+            }
+            if let historySyncError = viewModel.historySyncError {
+                historySyncErrorRow(message: historySyncError)
+            }
             HStack(spacing: 10) {
-                PhotosPicker(selection: $pickerItem, matching: .images) {
-                    Image(systemName: "photo.fill")
+                Menu {
+                    PhotosPicker(selection: $pickerItem, matching: .images) {
+                        Label("\u{4ece}\u{76f8}\u{518c}\u{9009}\u{62e9}", systemImage: "photo.fill")
+                    }
+                    Button {
+                        isShowingCamera = true
+                    } label: {
+                        Label("\u{62cd}\u{7167}", systemImage: "camera.fill")
+                    }
+                } label: {
+                    Image(systemName: "paperclip")
                         .font(.title3)
                         .foregroundStyle(pendingImageTint)
                 }
@@ -144,6 +229,27 @@ struct ChatView: View {
             .padding(.vertical, 8)
         }
         .background(.thinMaterial)
+    }
+
+    private var followUpContextBar: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "text.bubble.fill")
+            Text("将基于这道题继续回答")
+                .lineLimit(1)
+            Spacer()
+            Button {
+                viewModel.clearFollowUpContext()
+            } label: {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("取消关联题目")
+        }
+        .font(.caption)
+        .foregroundStyle(Color.brandPrimary)
+        .padding(.horizontal)
+        .padding(.vertical, 6)
+        .background(Color.brandPrimary.opacity(0.08))
     }
 
     /// 待发送图片的预览条：缩略图 + 说明输入框（可选）+ 移除按钮
@@ -173,6 +279,40 @@ struct ChatView: View {
         .padding(.horizontal)
         .padding(.vertical, 6)
         .background(Color(.systemGray6).opacity(0.5))
+    }
+
+    private func imageErrorRow(message: String, retry: (() -> Void)?) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+            Text(message)
+                .lineLimit(2)
+            Spacer()
+            if let retry {
+                Button("重试", action: retry)
+                    .buttonStyle(.borderless)
+            }
+        }
+        .font(.caption2)
+        .foregroundStyle(.red)
+        .padding(.horizontal)
+        .padding(.vertical, 4)
+    }
+
+    private func historySyncErrorRow(message: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+            Text(message)
+                .lineLimit(2)
+            Spacer()
+            Button("重试") {
+                Task { await viewModel.retryHistorySync() }
+            }
+            .buttonStyle(.borderless)
+        }
+        .font(.caption2)
+        .foregroundStyle(.orange)
+        .padding(.horizontal)
+        .padding(.vertical, 4)
     }
 
     private func loadPickerItem(_ item: PhotosPickerItem?) async {
@@ -255,6 +395,24 @@ struct MessageBubble: View {
                         .scaledToFit()
                         .frame(maxWidth: 220, maxHeight: 220)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else if let imageURL = message.imageURL, let url = URL(string: imageURL) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxWidth: 220, maxHeight: 220)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        case .failure:
+                            Label("图片加载失败", systemImage: "photo.badge.exclamationmark")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        default:
+                            ProgressView()
+                                .frame(width: 48, height: 48)
+                        }
+                    }
                 }
                 if !message.content.isEmpty {
                     if isUser {
@@ -271,6 +429,85 @@ struct MessageBubble: View {
             }
             if !isUser { Spacer(minLength: 60) }
         }.padding(.horizontal, 4)
+    }
+}
+
+/// Compact result card used inside Chat. Full analysis stays behind a detail
+/// sheet so the conversation remains easy to scan.
+struct ChatAnalysisCard: View {
+    let result: AnalyzeResponse
+    let onViewDetails: () -> Void
+    let onFollowUp: () -> Void
+    let onPracticeAgain: () -> Void
+    let onAddToWrongQuestions: () -> Void
+
+    private var summary: String {
+        let text = result.analysis.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? "已识别题型、知识点和参考思路。" : text
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(Color.brandPrimary)
+                Text("题目分析完成")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text("\(result.difficulty)/10")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if result.questionContent?.isEmpty == false {
+                Button(action: onAddToWrongQuestions) {
+                    Label("加入错题", systemImage: "plus.circle")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+
+            HStack(spacing: 6) {
+                Text(result.subject)
+                Text("·")
+                Text(result.questionType)
+                if let point = result.knowledgePoints.first, !point.isEmpty {
+                    Text("·")
+                    Text(point)
+                        .lineLimit(1)
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+            Text(summary)
+                .font(.caption)
+                .foregroundStyle(.primary)
+                .lineLimit(3)
+
+            HStack(spacing: 8) {
+                Button(action: onViewDetails) {
+                    Label("查看详情", systemImage: "doc.text.magnifyingglass")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                Button(action: onPracticeAgain) {
+                    Label("再练一次", systemImage: "arrow.triangle.2.circlepath")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+
+            Button(action: onFollowUp) {
+                Label("继续追问这道题", systemImage: "text.bubble")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderless)
+            .font(.caption)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

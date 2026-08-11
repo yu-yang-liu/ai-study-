@@ -7,6 +7,10 @@ public final class PlanCache: @unchecked Sendable {
     /// 唯一标识
     @Attribute(.unique) public var id: UUID
 
+    /// Remote account identifier that owns this record.
+    /// Optional to allow lightweight migration of pre-isolation records.
+    public var userID: String?
+
     /// 学段
     public var phase: String
 
@@ -24,6 +28,7 @@ public final class PlanCache: @unchecked Sendable {
 
     public init(
         id: UUID = UUID(),
+        userID: String? = nil,
         phase: String,
         subject: String,
         focus: String? = nil,
@@ -31,6 +36,7 @@ public final class PlanCache: @unchecked Sendable {
         createdAt: Date = Date()
     ) {
         self.id = id
+        self.userID = userID
         self.phase = phase
         self.subject = subject
         self.focus = focus

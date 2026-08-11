@@ -2,11 +2,19 @@ import { getServiceClient } from '../../db';
 import { APP_PHASE } from '../../constants';
 import { safeFetch } from '../../security';
 import type { EpisodicMemory } from './types';
+import {
+  EMBEDDING_DIMENSIONS,
+  EPISODIC_MEMORY_CONTENT_MAX_CHARS,
+  EPISODIC_MEMORY_MAX_RETRIEVAL,
+  clampMemoryLimit,
+  clampMemoryScore,
+  compactMemoryText,
+} from './limits';
 
 const DASHSCOPE_BASE = 'https://dashscope.aliyuncs.com';
 
 /** user_memories 事件来源枚举。 */
-export type UserMemorySource = 'grade' | 'plan' | 'fact' | 'chat_conclusion';
+export type UserMemorySource = 'grade' | 'plan' | 'chat_conclusion';
 
 /** 写入参数。 */
 export interface StoreUserMemoryInput {
@@ -25,10 +33,13 @@ function getEmbeddingApiKey(): string {
 
 /** 调 DashScope text-embedding-v3 生成 1024 维向量。失败抛错，由调用方决定容错。 */
 export async function embedUserMemory(text: string): Promise<number[]> {
+  const normalizedText = compactMemoryText(text, EPISODIC_MEMORY_CONTENT_MAX_CHARS);
+  if (!normalizedText) throw new Error('embedUserMemory requires non-empty text');
+
   const res = await safeFetch(`${DASHSCOPE_BASE}/compatible-mode/v1/embeddings`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getEmbeddingApiKey()}` },
-    body: JSON.stringify({ model: 'text-embedding-v3', input: { texts: [text] } }),
+    body: JSON.stringify({ model: 'text-embedding-v3', input: { texts: [normalizedText] } }),
   });
 
   if (!res.ok) {
@@ -36,27 +47,47 @@ export async function embedUserMemory(text: string): Promise<number[]> {
     throw new Error(`embedUserMemory ${res.status}: ${err}`);
   }
 
-  const json: { output: { embeddings: Array<{ embedding: number[] }> } } = await res.json();
-  const vec = json.output.embeddings[0]?.embedding;
-  if (!vec) throw new Error('embedUserMemory returned no vector');
+  const json: unknown = await res.json();
+  const vec = (
+    json as { output?: { embeddings?: Array<{ embedding?: unknown }> } }
+  ).output?.embeddings?.[0]?.embedding;
+  if (
+    !Array.isArray(vec) ||
+    vec.length !== EMBEDDING_DIMENSIONS ||
+    !vec.every((value) => typeof value === 'number' && Number.isFinite(value))
+  ) {
+    throw new Error(`embedUserMemory returned an invalid ${EMBEDDING_DIMENSIONS}-dimensional vector`);
+  }
   return vec;
 }
 
 /**
  * 写入一条用户经历向量（M4 写入口）。
- * embedding 失败时仍写入行（embedding 为 null），保证事件不丢；
- * 后续可由补偿任务回填。返回插入行 id。
+ * embedding 失败时直接放弃向量写入；调用方已经持久化的业务事件不受影响。
+ * 返回插入行 id。
  */
 export async function storeUserMemory(opts: StoreUserMemoryInput): Promise<string> {
   const supabase = getServiceClient();
+  const content = compactMemoryText(opts.content, EPISODIC_MEMORY_CONTENT_MAX_CHARS);
+  if (!content) throw new Error('storeUserMemory requires non-empty content');
 
-  let embedding: number[] | null = null;
-  try {
-    embedding = await embedUserMemory(opts.content);
-  } catch (err) {
-    // embedding 故障不丢事件：写入空 embedding 行，便于后续回填
-    console.warn('storeUserMemory embedding failed (row saved without vector):', err);
+  const { data: existing, error: existingError } = await supabase
+    .from('user_memories')
+    .select('id')
+    .eq('user_id', opts.userId)
+    .eq('phase', APP_PHASE)
+    .eq('source', opts.source)
+    .eq('content', content)
+    .not('embedding', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (existingError) {
+    throw new Error(`storeUserMemory duplicate check: ${existingError.message}`);
   }
+  if (existing?.id) return existing.id as string;
+
+  const embedding = await embedUserMemory(content);
 
   const { data, error } = await supabase
     .from('user_memories')
@@ -65,9 +96,9 @@ export async function storeUserMemory(opts: StoreUserMemoryInput): Promise<strin
       phase: APP_PHASE,
       source: opts.source,
       subject: opts.subject ?? null,
-      content: opts.content,
+      content,
       metadata: opts.metadata ?? {},
-      embedding: embedding ? `[${embedding.join(',')}]` : null,
+      embedding: `[${embedding.join(',')}]`,
     })
     .select('id')
     .single();
@@ -91,7 +122,12 @@ export async function retrieveUserMemory(opts: {
   limit?: number;
   minScore?: number;
 }): Promise<EpisodicMemory[]> {
-  const { query, userId, limit = 5, minScore = 0.6 } = opts;
+  const query = compactMemoryText(opts.query, EPISODIC_MEMORY_CONTENT_MAX_CHARS);
+  if (!query) return [];
+
+  const userId = opts.userId;
+  const limit = clampMemoryLimit(opts.limit ?? 3, 3);
+  const minScore = clampMemoryScore(opts.minScore ?? 0.6);
 
   let embedding: number[];
   try {
@@ -105,6 +141,7 @@ export async function retrieveUserMemory(opts: {
   const { data, error } = await supabase.rpc('match_user_memories', {
     query_embedding: `[${embedding.join(',')}]`,
     match_user_id: userId,
+    match_phase: APP_PHASE,
     match_limit: limit,
     min_score: minScore,
   });
@@ -123,10 +160,13 @@ export async function retrieveUserMemory(opts: {
     similarity: number;
   }>;
 
-  return rows.map((r) => ({
-    id: r.id,
-    content: r.content,
-    score: Number(r.similarity.toFixed(3)),
-    source: r.subject ? `${r.source}:${r.subject}` : r.source,
-  }));
+  return rows
+    .filter((r) => r.source !== 'fact' && Number.isFinite(r.similarity))
+    .slice(0, EPISODIC_MEMORY_MAX_RETRIEVAL)
+    .map((r) => ({
+      id: r.id,
+      content: r.content,
+      score: Number(r.similarity.toFixed(3)),
+      source: r.subject ? `${r.source}:${r.subject}` : r.source,
+    }));
 }

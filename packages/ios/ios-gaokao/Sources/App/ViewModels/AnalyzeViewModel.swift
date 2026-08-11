@@ -8,7 +8,7 @@ final class AnalyzeViewModel: ObservableObject {
     @Published var selectedSubject: String = "数学"
     @Published var result: LoadingState<AnalyzeResponse> = .idle
 
-    private let apiClient: APIClient
+    let apiClient: APIClient
     let subjects: [String] = Subject.allCases.map(\.rawValue)
 
     init(apiClient: APIClient) {

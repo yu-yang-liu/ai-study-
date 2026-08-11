@@ -17,7 +17,8 @@
     "eval:pedigree": "vitest run src/ai/eval/pedigree-eval.test.ts src/ai/eval/analyze-pedigree-e2e.test.ts",
     "eval:graph": "vitest run src/ai/eval/graph-eval.test.ts src/ai/eval/analyze-graph-e2e.test.ts",
     "eval:lab": "vitest run src/ai/eval/lab-eval.test.ts src/ai/eval/analyze-lab-e2e.test.ts",
-    "eval:cell": "vitest run src/ai/eval/cell-eval.test.ts src/ai/eval/analyze-cell-e2e.test.ts"
+    "eval:cell": "vitest run src/ai/eval/cell-eval.test.ts src/ai/eval/analyze-cell-e2e.test.ts",
+    "eval:molecular": "vitest run src/ai/eval/molecular-eval.test.ts"
   },
   "devDependencies": {
     "@types/pg": "^8.20.0",

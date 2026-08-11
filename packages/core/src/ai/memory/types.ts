@@ -31,8 +31,8 @@ export interface EpisodicMemory {
  *
  * - shortTerm: L1，最近 20 条对话（chronological，与 loadConversationMessages 现状一致）
  * - longTerm:  L2，getAssistantContext 返回的 assistantText（已格式化的 ≤800 字块）
- * - episodic:  L4 钩子，M1 恒为 undefined；M4 起填充向量召回片段
- * - isColdStart: 派生自 longTerm === ''，表示新用户无学情快照
+ * - episodic:  L4 语义召回的用户经历片段
+ * - isColdStart: 无学情快照且无跨会话事实时为 true
  */
 export interface AgentMemory {
   conversationId: string;
@@ -51,8 +51,7 @@ export interface TurnInput {
 }
 
 /**
- * M5 预留的事实条目类型 —— 仅声明，M1 不实现存储。
- * upsertFact 在 M1 中是 no-op 桩，返回 { stored: false, reason: 'not_implemented' }。
+ * 跨会话事实条目类型，由 M3/M5 的结构化表存储。
  */
 export interface MemoryFact {
   key: string;

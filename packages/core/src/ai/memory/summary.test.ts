@@ -3,6 +3,7 @@ import {
   shouldSummarize,
   composeSummaryBlock,
   splitWindow,
+  boundSummaryInput,
   RAW_WINDOW,
   SUMMARY_TRIGGER,
 } from './summary';
@@ -65,5 +66,15 @@ describe('splitWindow', () => {
     const { recent, older } = splitWindow([], RAW_WINDOW);
     expect(recent).toEqual([]);
     expect(older).toEqual([]);
+  });
+});
+
+describe('boundSummaryInput', () => {
+  it('keeps both the oldest and newest lines within the budget', () => {
+    const out = boundSummaryInput(['old '.repeat(20), 'middle '.repeat(20), 'new '.repeat(20)], 80, '...');
+    expect(out[0]).toContain('old');
+    expect(out.at(-1)).toContain('new');
+    expect(out).toContain('...');
+    expect(out.join('\n').length).toBeLessThanOrEqual(80);
   });
 });

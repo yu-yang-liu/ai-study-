@@ -13,6 +13,7 @@ const chatSchema = z.object({
   subject: z.string().min(1),
   message: z.string().min(1).max(2000),
   conversationId: z.string().uuid().optional(),
+  context: z.string().max(6000).optional(),
 });
 
 export async function POST(request: Request) {
@@ -33,22 +34,25 @@ export async function POST(request: Request) {
   const parsed = chatSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { subject, message, conversationId: inputConversationId } = parsed.data;
+  const { subject, message, conversationId: inputConversationId, context } = parsed.data;
 
   try {
     const mem = await loadMemory({
       userId: user.id,
       subject,
       conversationId: inputConversationId,
-      query: message,
+      query: context ? `${message}\n${context}` : message,
     });
 
     const agentResult = await runChatAgent({
       userId: user.id,
       subject,
-      message,
+      message: context
+        ? `参考上下文：\n${context}\n\n用户追问：${message}`
+        : message,
       history: mem.shortTerm,
       assistantContext: mem.longTerm,
+      conversationId: mem.conversationId,
     });
 
     let savedConversationId = mem.conversationId;

@@ -301,6 +301,8 @@ public struct MarkdownRenderer: View {
             LabCanvasView(block: block)
         case .cell(let block):
             CellCanvasView(block: block)
+        case .molecular(let block):
+            MolecularCanvasView(block: block)
         }
     }
 

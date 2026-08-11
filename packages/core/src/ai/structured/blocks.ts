@@ -54,6 +54,8 @@ export function blocksToPlainText(blocks?: Block[] | null): string {
           return `[实验装置图] ${b.title ?? '装置图'}`;
         case 'cell':
           return `[细胞模式图] ${b.title ?? '细胞结构'}`;
+        case 'molecular':
+          return `[分子结构图] ${b.title ?? '分子结构'}`;
         default:
           return '';
       }

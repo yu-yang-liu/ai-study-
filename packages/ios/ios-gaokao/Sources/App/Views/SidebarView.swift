@@ -47,7 +47,7 @@ enum SidebarItem: String, Identifiable, CaseIterable {
     /// 是否受 FeatureFlags 控制（不被控制则始终可见）
     var isFeatureFlagged: Bool {
         switch self {
-        case .chat, .analyze, .grade, .upload, .wrongQuestions, .stats:
+        case .chat, .analyze, .grade, .upload, .wrongQuestions, .stats, .plan:
             return true
         default:
             return false
@@ -64,6 +64,7 @@ enum SidebarItem: String, Identifiable, CaseIterable {
         case .upload:         return FeatureFlags.isImageUploadEnabled
         case .wrongQuestions: return FeatureFlags.isWrongQuestionsEnabled
         case .stats:          return FeatureFlags.isStatsEnabled
+        case .plan:           return FeatureFlags.isPlanEnabled
         default:              return true
         }
     }
@@ -74,6 +75,7 @@ enum SidebarItem: String, Identifiable, CaseIterable {
 struct SidebarView: View {
     @Binding var selection: SidebarItem?
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.apiClient) var apiClient
     @Environment(\.dataRepository) var dataRepository
     @Environment(\.notificationManager) var notificationManager
 
@@ -107,10 +109,11 @@ struct SidebarView: View {
         }
         .sheet(isPresented: $showingProfile) {
             NavigationStack {
-                if let repo = dataRepository, let nm = notificationManager {
+                if let repo = dataRepository, let client = apiClient, let nm = notificationManager {
                     ProfileView(
                         viewModel: UserSettingsViewModel(
                             dataRepository: repo,
+                            apiClient: client,
                             authManager: authManager,
                             notificationManager: nm
                         )

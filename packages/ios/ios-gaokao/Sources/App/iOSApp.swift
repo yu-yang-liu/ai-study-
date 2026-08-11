@@ -14,6 +14,10 @@ struct NotificationManagerKey: EnvironmentKey {
     static let defaultValue: NotificationManager? = nil
 }
 
+struct NetworkMonitorKey: EnvironmentKey {
+    static let defaultValue: NetworkMonitor? = nil
+}
+
 extension EnvironmentValues {
     var apiClient: APIClient? {
         get { self[APIClientKey.self] }
@@ -26,6 +30,10 @@ extension EnvironmentValues {
     var notificationManager: NotificationManager? {
         get { self[NotificationManagerKey.self] }
         set { self[NotificationManagerKey.self] = newValue }
+    }
+    var networkMonitor: NetworkMonitor? {
+        get { self[NetworkMonitorKey.self] }
+        set { self[NetworkMonitorKey.self] = newValue }
     }
 }
 
@@ -41,6 +49,7 @@ struct AILearningApp: App {
                         .environment(\.apiClient, appCoordinator.apiClient)
                         .environment(\.dataRepository, appCoordinator.dataRepository)
                         .environment(\.notificationManager, appCoordinator.notificationManager)
+                        .environment(\.networkMonitor, appCoordinator.networkMonitor)
                 } else {
                     LoginView()
                         .environmentObject(appCoordinator.authManager)
@@ -48,10 +57,7 @@ struct AILearningApp: App {
             }
             .onAppear {
                 Task {
-                    await appCoordinator.authManager.restoreSession()
-                    await appCoordinator.notificationManager.checkAuthorizationStatus()
-                    // 智能检测考试年份是否需要更新
-                    await checkAndPromptExamYearUpdate(repo: appCoordinator.dataRepository, auth: appCoordinator.authManager)
+                    await appCoordinator.bootstrap()
                 }
             }
         }
@@ -69,6 +75,7 @@ final class AppCoordinator: ObservableObject {
     let notificationManager: NotificationManager
     let modelContainer: ModelContainer
     private let tokenStorage: TokenStorage
+    private var didBootstrap = false
 
     init() {
         let unauthorizedHandler = UnauthorizedHandler()
@@ -93,8 +100,33 @@ final class AppCoordinator: ObservableObject {
         unauthorizedHandler.coordinator = self
         Task { @MainActor in
             for await authenticated in authManager.$isAuthenticated.values {
+                if authenticated, let userID = authManager.currentUser?.id {
+                    await self.dataRepository.setCurrentUserID(userID)
+                } else {
+                    await self.dataRepository.clearCurrentUser()
+                }
                 self.isAuthenticated = authenticated
             }
+        }
+    }
+
+    func bootstrap() async {
+        guard !didBootstrap else { return }
+        didBootstrap = true
+
+        await authManager.restoreSession()
+        await syncRepositoryScope()
+        await notificationManager.checkAuthorizationStatus()
+
+        guard authManager.isAuthenticated else { return }
+        await checkAndPromptExamYearUpdate(repo: dataRepository, auth: authManager)
+    }
+
+    private func syncRepositoryScope() async {
+        if authManager.isAuthenticated, let userID = authManager.currentUser?.id {
+            await dataRepository.setCurrentUserID(userID)
+        } else {
+            await dataRepository.clearCurrentUser()
         }
     }
 

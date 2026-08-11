@@ -10,6 +10,7 @@ final class GradeViewModel: ObservableObject {
     @Published var studentAnswer = ""
     @Published var result: LoadingState<GradeResult> = .idle
     @Published var historyRecords: [GradeRecord] = []
+    @Published var historyItems: [GradeHistoryItem] = []
     @Published var isOffline = false
 
     private let apiClient: APIClient
@@ -23,7 +24,16 @@ final class GradeViewModel: ObservableObject {
     }
 
     func loadHistory() async {
-        historyRecords = await dataRepository.fetchGradeRecords()
+        do {
+            let response = try await apiClient.fetchGradeHistory()
+            historyItems = response.records
+            historyRecords = await dataRepository.fetchGradeRecords()
+            isOffline = false
+        } catch {
+            historyRecords = await dataRepository.fetchGradeRecords()
+            historyItems = historyRecords.map(makeHistoryItem)
+            isOffline = (error as? NetworkError) == .networkUnavailable
+        }
     }
 
     func submitForGrading() async {
@@ -73,6 +83,21 @@ final class GradeViewModel: ObservableObject {
 
     private func loadHistoryFromCache() async {
         historyRecords = await dataRepository.fetchGradeRecords()
+        historyItems = historyRecords.map(makeHistoryItem)
+    }
+
+    private func makeHistoryItem(_ record: GradeRecord) -> GradeHistoryItem {
+        GradeHistoryItem(
+            id: record.id.uuidString,
+            subject: record.subject,
+            questionType: record.questionType,
+            questionContent: record.questionContent,
+            studentAnswer: record.studentAnswer,
+            score: record.score,
+            maxScore: record.maxScore,
+            resultJSON: record.resultJSON,
+            createdAt: record.createdAt.toISO8601()
+        )
     }
 }
 

@@ -1,11 +1,16 @@
 import Foundation
 import SwiftData
+import ApiContracts
 
 /// 对话历史 SwiftData 模型
 @Model
 public final class ChatHistoryRecord: @unchecked Sendable {
     /// 唯一标识
     @Attribute(.unique) public var id: UUID
+
+    /// Remote account identifier that owns this record.
+    /// Optional to allow lightweight migration of pre-isolation records.
+    public var userID: String?
 
     /// 学段：high
     public var phase: String
@@ -27,6 +32,7 @@ public final class ChatHistoryRecord: @unchecked Sendable {
 
     public init(
         id: UUID = UUID(),
+        userID: String? = nil,
         phase: String,
         title: String,
         subject: String,
@@ -35,6 +41,7 @@ public final class ChatHistoryRecord: @unchecked Sendable {
         updatedAt: Date = Date()
     ) {
         self.id = id
+        self.userID = userID
         self.phase = phase
         self.title = title
         self.subject = subject
@@ -49,10 +56,29 @@ public struct CodableChatMessage: Codable, Sendable {
     public let role: String          // "user" | "assistant"
     public let content: String
     public let timestamp: Date
+    public let imagePreviewBase64: String?
+    public let imageUrl: String?
+    public let action: ChatActionPayload?
+    public let analyzeResult: AnalyzeResponse?
+    public let replyBlocks: [ContentBlock]?
 
-    public init(role: String, content: String, timestamp: Date) {
+    public init(
+        role: String,
+        content: String,
+        timestamp: Date,
+        imagePreviewBase64: String? = nil,
+        imageUrl: String? = nil,
+        action: ChatActionPayload? = nil,
+        analyzeResult: AnalyzeResponse? = nil,
+        replyBlocks: [ContentBlock]? = nil
+    ) {
         self.role = role
         self.content = content
         self.timestamp = timestamp
+        self.imagePreviewBase64 = imagePreviewBase64
+        self.imageUrl = imageUrl
+        self.action = action
+        self.analyzeResult = analyzeResult
+        self.replyBlocks = replyBlocks
     }
 }

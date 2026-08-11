@@ -53,6 +53,10 @@ public struct AnalyzeResponse: Codable, Sendable {
 
     /// 考点说明的公式块（可选）。
     public let examPointsBlocks: [ContentBlock]?
+    /// 原始文字题干。图片分析没有可靠 OCR 题干时为空，客户端不会误加入错题。
+    public let questionContent: String?
+    public let questionId: String?
+    public let isFavorite: Bool?
 
     enum CodingKeys: String, CodingKey {
         case subject
@@ -65,6 +69,9 @@ public struct AnalyzeResponse: Codable, Sendable {
         case answerBlocks
         case analysisBlocks
         case examPointsBlocks
+        case questionContent
+        case questionId
+        case isFavorite
     }
 }
 

@@ -7,11 +7,18 @@ public struct ChatRequest: Codable, Sendable {
     public let subject: String
     public let message: String
     public let conversationId: String?
+    public let context: String?
 
-    public init(subject: String, message: String, conversationId: String? = nil) {
+    public init(
+        subject: String,
+        message: String,
+        conversationId: String? = nil,
+        context: String? = nil
+    ) {
         self.subject = subject
         self.message = message
         self.conversationId = conversationId
+        self.context = context
     }
 }
 
@@ -40,6 +47,65 @@ public struct ChatHistoryMessage: Codable, Sendable {
     public let role: String
     public let content: String
     public let createdAt: String?
+    public let imageUrl: String?
+    public let action: ChatActionPayload?
+    public let analyzeResult: AnalyzeResponse?
+    public let replyBlocks: [ContentBlock]?
+}
+
+public struct ChatHistoryAppendMessage: Codable, Sendable {
+    public let role: String
+    public let content: String
+    public let metadata: ChatHistoryMessageMetadata?
+
+    public init(
+        role: String,
+        content: String,
+        metadata: ChatHistoryMessageMetadata? = nil
+    ) {
+        self.role = role
+        self.content = content
+        self.metadata = metadata
+    }
+}
+
+public struct ChatHistoryMessageMetadata: Codable, Sendable {
+    public let imageUrl: String?
+    public let action: ChatActionPayload?
+    public let analyzeResult: AnalyzeResponse?
+    public let replyBlocks: [ContentBlock]?
+
+    public init(
+        imageUrl: String? = nil,
+        action: ChatActionPayload? = nil,
+        analyzeResult: AnalyzeResponse? = nil,
+        replyBlocks: [ContentBlock]? = nil
+    ) {
+        self.imageUrl = imageUrl
+        self.action = action
+        self.analyzeResult = analyzeResult
+        self.replyBlocks = replyBlocks
+    }
+}
+
+public struct ChatHistoryAppendRequest: Codable, Sendable {
+    public let subject: String
+    public let conversationId: String?
+    public let messages: [ChatHistoryAppendMessage]
+
+    public init(
+        subject: String,
+        conversationId: String? = nil,
+        messages: [ChatHistoryAppendMessage]
+    ) {
+        self.subject = subject
+        self.conversationId = conversationId
+        self.messages = messages
+    }
+}
+
+public struct ChatHistoryAppendResponse: Codable, Sendable {
+    public let conversationId: String
 }
 
 public struct ChatConversationSummary: Codable, Sendable {

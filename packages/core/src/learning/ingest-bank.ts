@@ -5,9 +5,11 @@ import { embedTexts } from '../ai';
 export type BankEntryInput = {
   subject: string;
   content: string;
+  year?: number;
   examPoint?: string;
   analysis?: string;
   answer?: string;
+  options?: string[];
   questionType?: string;
   topic?: string;
   source?: string;
@@ -16,6 +18,11 @@ export type BankEntryInput = {
 
 function embeddingText(entry: BankEntryInput): string {
   return [entry.subject, entry.examPoint, entry.topic, entry.content].filter(Boolean).join(' ');
+}
+
+function inferYear(source?: string): number | null {
+  const match = source?.match(/(?:19|20)\d{2}/);
+  return match ? Number(match[0]) : null;
 }
 
 /** Insert question_bank rows with DashScope embeddings (batch). */
@@ -31,10 +38,12 @@ export async function ingestQuestionBankEntries(
   const rows = entries.map((entry, i) => ({
     phase: APP_PHASE,
     subject: entry.subject,
+    year: entry.year ?? inferYear(entry.source),
     topic: entry.topic ?? null,
     exam_point: entry.examPoint ?? null,
     question_type: entry.questionType ?? null,
     content: entry.content,
+    options: entry.options ?? null,
     answer: entry.answer ?? null,
     analysis: entry.analysis ?? null,
     source: entry.source ?? 'ingest',
@@ -52,6 +61,7 @@ export async function ingestQuestionBankEntries(
 export const DEMO_BANK_ENTRIES: BankEntryInput[] = [
   {
     subject: '数学',
+    year: 2024,
     topic: '函数',
     examPoint: '二次函数最值',
     questionType: '计算题',
@@ -63,6 +73,7 @@ export const DEMO_BANK_ENTRIES: BankEntryInput[] = [
   },
   {
     subject: '数学',
+    year: 2023,
     topic: '导数',
     examPoint: '导数几何意义',
     questionType: '简答题',
@@ -74,10 +85,12 @@ export const DEMO_BANK_ENTRIES: BankEntryInput[] = [
   },
   {
     subject: '英语',
+    year: 2022,
     topic: '语法',
     examPoint: '定语从句',
     questionType: '选择题',
     content: 'The book ___ I borrowed from the library is very interesting.',
+    options: ['which', 'that', 'who', 'where'],
     answer: 'which/that',
     analysis: '先行词 book 在从句中作 borrowed 的宾语，用 which 或 that。',
     difficulty: 3,

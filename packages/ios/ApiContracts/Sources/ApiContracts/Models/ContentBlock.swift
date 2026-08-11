@@ -1,46 +1,46 @@
-import Foundation
+﻿import Foundation
 
 // MARK: - ContentBlock
 
-/// 结构化内容块（Phase 1 Science AST）。
+/// 缁撴瀯鍖栧唴瀹瑰潡锛圥hase 1 Science AST锛夈€?
 ///
-/// 四类子 AST 映射（对齐 docs/SCIENCE_AST_IOS_ROADMAP.md）：
-/// - Text AST       → `text` / `formula` / `image` / `table`
-/// - Visual AST     → `visual`（Phase 1 占位；Phase 2 由 GeometryCanvasView 渲染）
-/// - Solution AST   → `steps`（可展示的解题轨迹）
-/// - Interaction AST→ `steps.interaction`（折叠 / 可选择等交互元数据）
+/// 鍥涚被瀛?AST 鏄犲皠锛堝榻?docs/SCIENCE_AST_IOS_ROADMAP.md锛夛細
+/// - Text AST       鈫?`text` / `formula` / `image` / `table`
+/// - Visual AST     鈫?`visual`锛圥hase 1 鍗犱綅锛汸hase 2 鐢?GeometryCanvasView 娓叉煋锛?
+/// - Solution AST   鈫?`steps`锛堝彲灞曠ず鐨勮В棰樿建杩癸級
+/// - Interaction AST鈫?`steps.interaction`锛堟姌鍙?/ 鍙€夋嫨绛変氦浜掑厓鏁版嵁锛?
 ///
-/// 解码容错：
-/// - `formula` 缺 `latex` 时回退 `content`（兼容 OCR 旧格式 formula-as-content）。
-/// - `text` 缺 `content` 时降级为空串。
-/// - 未知 `type` 降级为 `.text(content: "")`，单个坏块不会导致整响解码失败。
-/// - `table` / `steps` 缺失核心数组时降级为空，保证客户端解析稳定。
+/// 瑙ｇ爜瀹归敊锛?
+/// - `formula` 缂?`latex` 鏃跺洖閫€ `content`锛堝吋瀹?OCR 鏃ф牸寮?formula-as-content锛夈€?
+/// - `text` 缂?`content` 鏃堕檷绾т负绌轰覆銆?
+/// - 鏈煡 `type` 闄嶇骇涓?`.text(content: "")`锛屽崟涓潖鍧椾笉浼氬鑷存暣鍝嶈В鐮佸け璐ャ€?
+/// - `table` / `steps` 缂哄け鏍稿績鏁扮粍鏃堕檷绾т负绌猴紝淇濊瘉瀹㈡埛绔В鏋愮ǔ瀹氥€?
 public enum ContentBlock: Codable, Sendable, Equatable {
-    /// 普通文本（Markdown 内联渲染）。
+    /// 鏅€氭枃鏈紙Markdown 鍐呰仈娓叉煋锛夈€?
     case text(content: String)
-    /// 数学公式（纯 LaTeX，无 `$` 包裹），交 `FormulaView` 渲染。
+    /// 鏁板鍏紡锛堢函 LaTeX锛屾棤 `$` 鍖呰９锛夛紝浜?`FormulaView` 娓叉煋銆?
     case formula(latex: String)
-    /// 图片（Phase 1 极少出现；示意图应以 Visual AST 表达，不依赖图片 URL）。
+    /// 鍥剧墖锛圥hase 1 鏋佸皯鍑虹幇锛涚ず鎰忓浘搴斾互 Visual AST 琛ㄨ揪锛屼笉渚濊禆鍥剧墖 URL锛夈€?
     case image(url: String, alt: String?)
-    /// 表格（Text AST）。
+    /// 琛ㄦ牸锛圱ext AST锛夈€?
     case table(headers: [String]?, rows: [[String]])
-    /// 解题步骤（Solution AST），可递归包含公式 / 表格等块。
+    /// 瑙ｉ姝ラ锛圫olution AST锛夛紝鍙€掑綊鍖呭惈鍏紡 / 琛ㄦ牸绛夊潡銆?
     case steps(title: String?, steps: [StepContent], interaction: InteractionHint?)
-    /// 视觉内容（Visual AST）。Phase 2：`kind == "geometry"` 且携带 `GeometryAST` 时，
-    /// 由 `GeometryCanvasView`（Swift Canvas/Shape）动态渲染；否则显示占位。
+    /// 瑙嗚鍐呭锛圴isual AST锛夈€侾hase 2锛歚kind == "geometry"` 涓旀惡甯?`GeometryAST` 鏃讹紝
+    /// 鐢?`GeometryCanvasView`锛圫wift Canvas/Shape锛夊姩鎬佹覆鏌擄紱鍚﹀垯鏄剧ず鍗犱綅銆?
     case visual(kind: String, geometry: GeometryAST?)
-    /// 统计图表（Visual AST 扩展 · P1-1），由 `ChartCanvasView` 渲染。
+    /// 缁熻鍥捐〃锛圴isual AST 鎵╁睍 路 P1-1锛夛紝鐢?`ChartCanvasView` 娓叉煋銆?
     case chart(block: ChartBlock)
-    /// 电路图（Visual AST 扩展 · P1-2），由 `CircuitCanvasView` 渲染。
+    /// 鐢佃矾鍥撅紙Visual AST 鎵╁睍 路 P1-2锛夛紝鐢?`CircuitCanvasView` 娓叉煋銆?
     case circuit(block: CircuitBlock)
-    /// 遗传系谱图（Visual AST 扩展 · P1-4），由 `PedigreeCanvasView` 渲染。
+    /// 閬椾紶绯昏氨鍥撅紙Visual AST 鎵╁睍 路 P1-4锛夛紝鐢?`PedigreeCanvasView` 娓叉煋銆?
     case pedigree(block: PedigreeBlock)
-    /// 关系图（Visual AST 扩展 · P1-4，食物链/网），由 `GraphCanvasView` 渲染。
+    /// 鍏崇郴鍥撅紙Visual AST 鎵╁睍 路 P1-4锛岄鐗╅摼/缃戯級锛岀敱 `GraphCanvasView` 娓叉煋銆?
     case graph(block: GraphBlock)
-    /// 实验装置图（Visual AST 扩展 · P2-1 化学实验），由 `LabCanvasView` 渲染。
+    /// 瀹為獙瑁呯疆鍥撅紙Visual AST 鎵╁睍 路 P2-1 鍖栧瀹為獙锛夛紝鐢?`LabCanvasView` 娓叉煋銆?
     case lab(block: LabBlock)
-    /// 细胞模式图（Visual AST 扩展 · P2-2 生物细胞），由 `CellCanvasView` 渲染。
     case cell(block: CellBlock)
+    case molecular(block: MolecularBlock)
 
     // MARK: CodingKeys
 
@@ -74,6 +74,8 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case cellType
         case organelles
         case transport
+        case atoms
+        case bonds
     }
 
     // MARK: Decodable
@@ -86,7 +88,7 @@ public enum ContentBlock: Codable, Sendable, Equatable {
             let content = try container.decodeIfPresent(String.self, forKey: .content) ?? ""
             self = .text(content: content)
         case "formula":
-            // 优先 latex，缺省回退 content（OCR 旧格式把公式放在 content 字段）。
+            // 浼樺厛 latex锛岀己鐪佸洖閫€ content锛圤CR 鏃ф牸寮忔妸鍏紡鏀惧湪 content 瀛楁锛夈€?
             let latex = try container.decodeIfPresent(String.self, forKey: .latex)
                 ?? (try container.decodeIfPresent(String.self, forKey: .content))
                 ?? ""
@@ -144,8 +146,14 @@ public enum ContentBlock: Codable, Sendable, Equatable {
             } else {
                 self = .text(content: "")
             }
+        case "molecular":
+            if let block = try? MolecularBlock(from: decoder) {
+                self = .molecular(block: block)
+            } else {
+                self = .text(content: "")
+            }
         default:
-            // 未知 type 降级为空文本，保证整响可解码。
+            // 鏈煡 type 闄嶇骇涓虹┖鏂囨湰锛屼繚璇佹暣鍝嶅彲瑙ｇ爜銆?
             self = .text(content: "")
         }
     }
@@ -216,21 +224,26 @@ public enum ContentBlock: Codable, Sendable, Equatable {
             try container.encode(block.organelles, forKey: .organelles)
             try container.encodeIfPresent(block.connections, forKey: .connections)
             try container.encodeIfPresent(block.transport, forKey: .transport)
+        case .molecular(let block):
+            try container.encode("molecular", forKey: .type)
+            try container.encodeIfPresent(block.title, forKey: .title)
+            try container.encode(block.atoms, forKey: .atoms)
+            try container.encode(block.bonds, forKey: .bonds)
         }
     }
 }
 
 // MARK: - StepContent
 
-/// 解题步骤内容（Solution AST 叶子，对应后端 `stepContentSchema`）。
+/// 瑙ｉ姝ラ鍐呭锛圫olution AST 鍙跺瓙锛屽搴斿悗绔?`stepContentSchema`锛夈€?
 public struct StepContent: Codable, Sendable, Equatable {
-    /// 步骤标题，如「第一步：化简」。
+    /// 姝ラ鏍囬锛屽銆岀涓€姝ワ細鍖栫畝銆嶃€?
     public let title: String?
-    /// 步骤内容块（可递归包含公式 / 表格等）。
+    /// 姝ラ鍐呭鍧楋紙鍙€掑綊鍖呭惈鍏紡 / 琛ㄦ牸绛夛級銆?
     public let blocks: [ContentBlock]
-    /// 该步骤对错（批改场景）。
+    /// 璇ユ楠ゅ閿欙紙鎵规敼鍦烘櫙锛夈€?
     public let isCorrect: Bool?
-    /// 能力点 / 方法标签，如「配方法」。
+    /// 鑳藉姏鐐?/ 鏂规硶鏍囩锛屽銆岄厤鏂规硶銆嶃€?
     public let tag: String?
 
     private enum CodingKeys: String, CodingKey {
@@ -258,11 +271,11 @@ public struct StepContent: Codable, Sendable, Equatable {
 
 // MARK: - InteractionHint
 
-/// Interaction AST（Phase 1 最小子集）：折叠 / 可选择。
+/// Interaction AST锛圥hase 1 鏈€灏忓瓙闆嗭級锛氭姌鍙?/ 鍙€夋嫨銆?
 public struct InteractionHint: Codable, Sendable, Equatable {
-    /// 是否可折叠。
+    /// 鏄惁鍙姌鍙犮€?
     public let collapsible: Bool?
-    /// 是否可选中步骤。
+    /// 鏄惁鍙€変腑姝ラ銆?
     public let selectable: Bool?
 
     public init(collapsible: Bool? = nil, selectable: Bool? = nil) {

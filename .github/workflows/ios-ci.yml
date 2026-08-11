@@ -83,6 +83,34 @@ jobs:
           cd packages/ios/ios-gaokao
           xcodegen generate --spec project.yml 2>&1 | tee /tmp/xcodegen.log
 
+      - name: Validate Staging build settings
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          AISTUDY_API_BASE_URL_STAGING: ${{ secrets.AISTUDY_API_BASE_URL_STAGING }}
+          AISTUDY_DEVELOPMENT_TEAM: ${{ secrets.AISTUDY_DEVELOPMENT_TEAM }}
+        run: |
+          set -euo pipefail
+          bash packages/ios/ios-gaokao/Config/validate-build-settings.sh staging --require-team
+
+      - name: Build ios-gaokao (Staging)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          AISTUDY_API_BASE_URL_STAGING: ${{ secrets.AISTUDY_API_BASE_URL_STAGING }}
+          AISTUDY_DEVELOPMENT_TEAM: ${{ secrets.AISTUDY_DEVELOPMENT_TEAM }}
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+              -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
+              -scheme ios-gaokao \
+              -configuration Staging \
+              -destination "generic/platform=iOS Simulator" \
+              -derivedDataPath DerivedData \
+              AISTUDY_API_BASE_URL_STAGING="$AISTUDY_API_BASE_URL_STAGING" \
+              AISTUDY_DEVELOPMENT_TEAM="$AISTUDY_DEVELOPMENT_TEAM" \
+              CODE_SIGNING_ALLOWED=NO 2>&1 | tee /tmp/app-staging-build.log
+
       - name: Build ios-gaokao (Debug)
         shell: bash
         run: |
@@ -94,6 +122,66 @@ jobs:
               -destination "generic/platform=iOS Simulator" \
               -derivedDataPath DerivedData \
               CODE_SIGNING_ALLOWED=NO 2>&1 | tee /tmp/app-build.log
+
+      - name: Test ios-gaokao (Debug)
+        shell: bash
+        run: |
+          set -euo pipefail
+          destination_id="$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/{print $2; exit}')"
+          test -n "${destination_id}" || {
+            echo "No available iPhone Simulator found"
+            xcrun simctl list devices available
+            exit 1
+          }
+          xcodebuild test \
+              -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
+              -scheme ios-gaokao \
+              -configuration Debug \
+              -destination "id=${destination_id}" \
+              -derivedDataPath DerivedData \
+              CODE_SIGNING_ALLOWED=NO 2>&1 | tee /tmp/app-test.log
+
+      - name: Archive ios-gaokao (unsigned Release)
+        shell: bash
+        env:
+          AISTUDY_API_BASE_URL_PRODUCTION: ${{ secrets.AISTUDY_API_BASE_URL_PRODUCTION }}
+          AISTUDY_DEVELOPMENT_TEAM: ${{ secrets.AISTUDY_DEVELOPMENT_TEAM }}
+        run: |
+          set -euo pipefail
+          bash packages/ios/ios-gaokao/Config/validate-build-settings.sh production --require-team
+          xcodebuild archive \
+              -project packages/ios/ios-gaokao/ios-gaokao.xcodeproj \
+              -scheme ios-gaokao \
+              -configuration Release \
+              -destination "generic/platform=iOS" \
+              -archivePath "$RUNNER_TEMP/ios-gaokao.xcarchive" \
+              -derivedDataPath DerivedData \
+              AISTUDY_API_BASE_URL_PRODUCTION="$AISTUDY_API_BASE_URL_PRODUCTION" \
+              AISTUDY_DEVELOPMENT_TEAM="$AISTUDY_DEVELOPMENT_TEAM" \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO 2>&1 | tee /tmp/app-archive.log
+
+      - name: Verify archived environment metadata
+        shell: bash
+        env:
+          AISTUDY_API_BASE_URL_PRODUCTION: ${{ secrets.AISTUDY_API_BASE_URL_PRODUCTION }}
+        run: |
+          set -euo pipefail
+          app_plist="$(find "$RUNNER_TEMP/ios-gaokao.xcarchive/Products/Applications" -name Info.plist -print -quit)"
+          test -n "$app_plist"
+          environment="$(/usr/libexec/PlistBuddy -c 'Print :API_ENVIRONMENT' "$app_plist")"
+          api_url="$(/usr/libexec/PlistBuddy -c 'Print :API_BASE_URL' "$app_plist")"
+          test "$environment" = "production"
+          test "$api_url" = "$AISTUDY_API_BASE_URL_PRODUCTION"
+          ! printf '%s' "$api_url" | grep -Eiq 'example\.com|xxx\.vercel\.app|\$\('
+
+      - name: Upload unsigned archive
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-gaokao-unsigned-archive
+          path: ${{ runner.temp }}/ios-gaokao.xcarchive
+          retention-days: 3
 
       - name: Upload build logs
         if: always()
@@ -110,6 +198,9 @@ jobs:
             /tmp/xcodegen-brew.log
             /tmp/xcodegen.log
             /tmp/app-build.log
+            /tmp/app-staging-build.log
+            /tmp/app-test.log
+            /tmp/app-archive.log
           retention-days: 3
 
   lint:
@@ -122,5 +213,6 @@ jobs:
 
       - name: Check YAML syntax
         run: |
-          python3 -c "import yaml; yaml.safe_load(open('packages/ios/ios-gaokao/project.yml'))"
+          ruby -e "require 'yaml'; YAML.load_file('.github/workflows/ios-ci.yml')"
+          ruby -e "require 'yaml'; YAML.load_file('packages/ios/ios-gaokao/project.yml')"
           echo "YAML syntax OK"

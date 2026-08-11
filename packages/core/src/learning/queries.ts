@@ -26,28 +26,47 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
     { count: totalWrong },
     { data: practices },
     { data: events },
+    { data: masteryRows },
+    { data: profileRow },
   ] = await Promise.all([
     supabase
       .from('practice_records')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId),
+      .eq('user_id', userId)
+      .eq('phase', APP_PHASE),
     supabase
       .from('wrong_questions')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
+      .eq('phase', APP_PHASE)
       .eq('mastered', false),
     supabase
       .from('practice_records')
       .select('is_correct, score, max_score, created_at, questions ( subject )')
       .eq('user_id', userId)
+      .eq('phase', APP_PHASE)
       .order('created_at', { ascending: false })
       .limit(200),
     supabase
       .from('learning_events')
-      .select('created_at')
+      .select('created_at, ability_assessment')
       .eq('user_id', userId)
+      .eq('phase', APP_PHASE)
       .order('created_at', { ascending: false })
       .limit(200),
+    supabase
+      .from('knowledge_mastery')
+      .select('knowledge_point, subject, level, trend, last_seen')
+      .eq('user_id', userId)
+      .eq('phase', APP_PHASE)
+      .order('level', { ascending: true })
+      .limit(50),
+    supabase
+      .from('user_profiles')
+      .select('abilities')
+      .eq('user_id', userId)
+      .eq('phase', APP_PHASE)
+      .maybeSingle(),
   ]);
 
   const subjectBreakdown: Record<string, SubjectStats> = {};
@@ -80,16 +99,48 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
     }
   }
 
-  const recentMap: Record<string, number> = {};
+  const recentMap: Record<string, { count: number; correct: number; scoreSum: number; scoreCount: number }> = {};
+  const abilityTrend = (events ?? [])
+    .filter((event) => event.ability_assessment && typeof event.ability_assessment === 'object')
+    .slice(0, 14)
+    .reverse()
+    .map((event) => ({
+      date: new Date(event.created_at).toISOString().slice(0, 10),
+      abilities: Object.fromEntries(
+        Object.entries(event.ability_assessment as Record<string, unknown>)
+          .map(([key, value]) => [key, Number(value) || 0]),
+      ),
+    }));
   for (const ev of events ?? []) {
     const dateKey = new Date(ev.created_at).toISOString().slice(0, 10);
-    recentMap[dateKey] = (recentMap[dateKey] ?? 0) + 1;
+    recentMap[dateKey] ??= { count: 0, correct: 0, scoreSum: 0, scoreCount: 0 };
+    recentMap[dateKey].count++;
   }
 
-  const recentActivity = Object.entries(recentMap)
+  for (const row of (practices ?? []) as PracticeRow[]) {
+    const dateKey = new Date(row.created_at).toISOString().slice(0, 10);
+    recentMap[dateKey] ??= { count: 0, correct: 0, scoreSum: 0, scoreCount: 0 };
+    if (row.is_correct) recentMap[dateKey].correct++;
+    if (row.score != null) {
+      const score = Number(row.score);
+      const maxScore = Number(row.max_score ?? 100);
+      recentMap[dateKey].scoreSum += maxScore > 0 ? (score / maxScore) * 100 : score;
+      recentMap[dateKey].scoreCount++;
+    }
+  }
+
+  const trend = Object.entries(recentMap)
     .sort(([a], [b]) => b.localeCompare(a))
-    .slice(0, 7)
-    .map(([date, count]) => ({ date, count }));
+    .slice(0, 14)
+    .reverse()
+    .map(([date, value]) => ({
+      date,
+      count: value.count,
+      accuracy: value.count > 0 ? Math.round((value.correct / value.count) * 100) : 0,
+      avgScore: value.scoreCount > 0 ? Math.round(value.scoreSum / value.scoreCount) : 0,
+    }));
+
+  const recentActivity = trend.slice(-7).reverse().map(({ date, count }) => ({ date, count }));
 
   const accuracy = totalPractice > 0 ? Math.round((correctCount / totalPractice) * 100) : 0;
 
@@ -100,6 +151,13 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
     ]),
   );
 
+  const profileAbilities = profileRow?.abilities && typeof profileRow.abilities === 'object'
+    ? (profileRow.abilities as Record<string, unknown>)
+    : {};
+  const abilities = Object.fromEntries(
+    Object.entries(profileAbilities).map(([key, value]) => [key, Number(value) || 0]),
+  );
+
   return {
     totalQuestions: totalQuestions ?? 0,
     totalWrong: totalWrong ?? 0,
@@ -107,6 +165,16 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
     avgScore: scoreCount > 0 ? Math.round(scoreSum / scoreCount) : 0,
     subjectBreakdown: breakdown,
     recentActivity,
+    trend,
+    mastery: (masteryRows ?? []).map((row) => ({
+      knowledgePoint: row.knowledge_point,
+      subject: row.subject,
+      level: Number(row.level) || 0,
+      trend: row.trend ?? 'flat',
+      lastSeen: row.last_seen,
+    })),
+    abilities,
+    abilityTrend,
   };
 }
 
@@ -120,11 +188,12 @@ export async function fetchWrongQuestionList(userId: string): Promise<WrongQuest
   const { data, error } = await supabase
     .from('wrong_questions')
     .select(
-      `id, knowledge_points, review_count, ease_factor, interval_days, next_review_at,
-       questions ( subject, content, question_analysis ( answer ) ),
+      `id, knowledge_points, error_type, review_count, ease_factor, interval_days, next_review_at,
+       questions ( id, subject, content, question_analysis ( answer, analysis, exam_points, is_favorite ) ),
        practice_records ( user_answer, created_at )`,
     )
     .eq('user_id', userId)
+    .eq('phase', APP_PHASE)
     .eq('mastered', false)
     .order('next_review_at', { ascending: true });
 
@@ -135,11 +204,17 @@ export async function fetchWrongQuestionList(userId: string): Promise<WrongQuest
     const kps = row.knowledge_points ?? [];
     return {
       id: row.id,
+      questionId: q?.id ?? row.id,
       questionContent: q?.content ?? '',
       studentAnswer: latestAnswer(row.practice_records),
       correctAnswer: correctAnswerFromQuestion(row.questions),
       subject: q?.subject ?? '未知',
       knowledgePoint: kps[0] ?? '',
+      knowledgePoints: kps,
+      errorType: row.error_type ?? null,
+      analysis: unwrap(q?.question_analysis)?.analysis ?? '',
+      explanation: unwrap(q?.question_analysis)?.exam_points ?? '',
+      isFavorite: unwrap(q?.question_analysis)?.is_favorite ?? false,
       createdAt: row.next_review_at,
       nextReviewAt: row.next_review_at,
       sm2_interval: row.review_count,
@@ -171,6 +246,7 @@ export async function submitWrongQuestionReview(
     .select('id, review_count, ease_factor, interval_days, knowledge_points, questions ( subject )')
     .eq('id', id)
     .eq('user_id', userId)
+    .eq('phase', APP_PHASE)
     .maybeSingle();
 
   if (fetchErr || !row) {

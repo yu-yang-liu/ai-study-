@@ -21,21 +21,30 @@ import {
 import { loadUserFacts, composeUserFactsBlock, upsertUserFact } from './facts';
 import type { StoredFact } from './facts';
 import { retrieveUserMemory } from './episodic';
+import {
+  EPISODIC_MEMORY_CONTEXT_MAX_CHARS,
+  EPISODIC_MEMORY_ITEM_MAX_CHARS,
+  compactMemoryText,
+} from './limits';
 
 /** 读取会话的现有滚动摘要行（若存在）。 */
 async function getConversationSummary(
+  userId: string,
   conversationId: string,
-): Promise<{ summary: string; summaryUpTo: string } | null> {
+): Promise<{ summary: string; summaryUpTo: string; summaryUpToMessageId?: string } | null> {
   const supabase = getServiceClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('conversation_summaries')
-    .select('summary, summary_up_to')
+    .select('summary, summary_up_to, summary_up_to_message_id')
     .eq('conversation_id', conversationId)
+    .eq('user_id', userId)
     .maybeSingle();
+  if (error) throw new Error(`getConversationSummary: ${error.message}`);
   if (!data) return null;
   return {
     summary: data.summary as string,
     summaryUpTo: data.summary_up_to as string,
+    summaryUpToMessageId: (data.summary_up_to_message_id as string | null) ?? undefined,
   };
 }
 
@@ -45,29 +54,34 @@ async function upsertConversationSummary(
   userId: string,
   summary: string,
   summaryUpTo: string,
+  summaryUpToMessageId: string | undefined,
   messageCount: number,
 ): Promise<void> {
   const supabase = getServiceClient();
-  await supabase.from('conversation_summaries').upsert(
+  const { error } = await supabase.from('conversation_summaries').upsert(
     {
       conversation_id: conversationId,
       user_id: userId,
       summary,
       summary_up_to: summaryUpTo,
+      summary_up_to_message_id: summaryUpToMessageId ?? null,
       message_count: messageCount,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'conversation_id' },
   );
+  if (error) throw new Error(`upsertConversationSummary: ${error.message}`);
 }
 
 /** 取会话消息总数。 */
-async function countConversationMessages(conversationId: string): Promise<number> {
+async function countConversationMessages(userId: string, conversationId: string): Promise<number> {
   const supabase = getServiceClient();
-  const { count } = await supabase
+  const { count, error } = await supabase
     .from('conversation_messages')
     .select('id', { count: 'exact', head: true })
-    .eq('conversation_id', conversationId);
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId);
+  if (error) throw new Error(`countConversationMessages: ${error.message}`);
   return count ?? 0;
 }
 
@@ -76,20 +90,26 @@ async function loadUnsummarizedOlderMessages(
   conversationId: string,
   userId: string,
   summaryUpTo: string | null,
+  summaryUpToMessageId: string | null,
   rawWindow: number,
-): Promise<ConversationMessage[]> {
+): Promise<Array<ConversationMessage & { id: string }>> {
   const supabase = getServiceClient();
   // 取除最近 rawWindow 条之外的全部消息（即更早的），按时间倒序取再 reverse
   let query = supabase
     .from('conversation_messages')
-    .select('role, content, created_at')
+    .select('id, role, content, created_at')
     .eq('conversation_id', conversationId)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     // 偏移最近 rawWindow 条，取其前的全部（上限给一个合理值防止超大查询）
     .range(rawWindow, rawWindow + 199);
 
-  if (summaryUpTo) {
+  if (summaryUpTo && summaryUpToMessageId) {
+    query = query.or(
+      `created_at.gt.${summaryUpTo},and(created_at.eq.${summaryUpTo},id.gt.${summaryUpToMessageId})`,
+    );
+  } else if (summaryUpTo) {
     query = query.gt('created_at', summaryUpTo);
   }
 
@@ -99,6 +119,7 @@ async function loadUnsummarizedOlderMessages(
   return (data ?? [])
     .reverse()
     .map((row) => ({
+      id: row.id as string,
       role: row.role as 'user' | 'assistant',
       content: row.content as string,
       createdAt: row.created_at as string,
@@ -128,7 +149,7 @@ export async function loadMemory(ctx: MemoryContext): Promise<AgentMemory> {
 
   // count + assistantContext + 跨会话事实（M3）可并行；history 在判定后取（摘要分支需先知道 count）
   const [messageCount, { assistantText }, userFacts] = await Promise.all([
-    countConversationMessages(conversationId),
+    countConversationMessages(ctx.userId, conversationId),
     getAssistantContext(ctx.userId),
     loadUserFacts(ctx.userId),
   ]);
@@ -164,7 +185,7 @@ export async function loadMemory(ctx: MemoryContext): Promise<AgentMemory> {
   // 长会话：取窗口内 raw + 窗口外未摘要消息
   const [shortTerm, existingSummary] = await Promise.all([
     loadConversationMessages(ctx.userId, conversationId, RAW_WINDOW),
-    getConversationSummary(conversationId),
+    getConversationSummary(ctx.userId, conversationId),
   ]);
 
   let summary: string | undefined = existingSummary?.summary;
@@ -173,6 +194,7 @@ export async function loadMemory(ctx: MemoryContext): Promise<AgentMemory> {
     conversationId,
     ctx.userId,
     existingSummary?.summaryUpTo ?? null,
+    existingSummary?.summaryUpToMessageId ?? null,
     RAW_WINDOW,
   );
 
@@ -185,11 +207,13 @@ export async function loadMemory(ctx: MemoryContext): Promise<AgentMemory> {
         messages: olderUnsummarized,
       });
       const upTo = olderUnsummarized[olderUnsummarized.length - 1]!.createdAt;
+      const upToMessageId = olderUnsummarized[olderUnsummarized.length - 1]!.id;
       await upsertConversationSummary(
         conversationId,
         ctx.userId,
         newSummary,
         upTo,
+        upToMessageId,
         messageCount,
       );
       summary = newSummary;
@@ -235,8 +259,20 @@ function composeLongTerm(
 /** 纯函数：把 episodic 经历格式化为注入块。空/无传入返回空串。 */
 export function composeEpisodicBlock(episodic?: EpisodicMemory[]): string {
   if (!episodic || episodic.length === 0) return '';
-  const lines = episodic.map((e) => `- [${e.source}] ${e.content}（相似度 ${e.score}）`);
-  return `【相关历史经历】\n${lines.join('\n')}`;
+  const lines: string[] = [];
+  let size = '【相关历史经历】\n'.length;
+
+  for (const item of episodic) {
+    const source = compactMemoryText(item.source, 80);
+    const content = compactMemoryText(item.content, EPISODIC_MEMORY_ITEM_MAX_CHARS);
+    if (!content) continue;
+    const line = `- [${source}] ${content}（相似度 ${item.score}）`;
+    if (size + line.length + 1 > EPISODIC_MEMORY_CONTEXT_MAX_CHARS) break;
+    lines.push(line);
+    size += line.length + 1;
+  }
+
+  return lines.length > 0 ? `【相关历史经历】\n${lines.join('\n')}` : '';
 }
 
 /**

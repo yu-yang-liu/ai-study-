@@ -15,6 +15,15 @@ struct StatsView: View {
                 VStack(spacing: 20) {
                     summaryCards(data)
                     subjectSection(data)
+                    if let trend = data.trend, !trend.isEmpty {
+                        trendSection(trend)
+                    }
+                    if let mastery = data.mastery, !mastery.isEmpty {
+                        masterySection(mastery)
+                    }
+                    if let abilities = data.abilities, !abilities.isEmpty {
+                        abilitySection(abilities)
+                    }
                     if !data.recentActivity.isEmpty {
                         recentSection(data)
                     }
@@ -74,6 +83,113 @@ struct StatsView: View {
             .background(.regularMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
+    }
+
+    private func trendSection(_ trend: [StatsTrendItem]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("最近趋势")
+                .font(.headline)
+            VStack(alignment: .leading, spacing: 10) {
+                Text("练习量与正确率")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                StatsTrendChart(items: trend)
+                    .frame(height: 150)
+                HStack {
+                    Text("最近 \(trend.last?.count ?? 0) 次")
+                    Spacer()
+                    Text("正确率 \(trend.last?.accuracy ?? 0)%")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    private func masterySection(_ mastery: [MasteryStatsItem]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("知识点掌握度")
+                .font(.headline)
+            ForEach(mastery.prefix(8)) { item in
+                HStack(spacing: 10) {
+                    Text(item.knowledgePoint)
+                        .font(.subheadline)
+                        .lineLimit(1)
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color(.systemGray5))
+                            Capsule()
+                                .fill(item.level >= 0.7 ? .green : .orange)
+                                .frame(width: geo.size.width * item.level)
+                        }
+                    }
+                    .frame(height: 8)
+                    Text("\(Int(item.level * 100))%")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 40, alignment: .trailing)
+                }
+            }
+        }
+    }
+
+    private func abilitySection(_ abilities: [String: Double]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("能力变化")
+                .font(.headline)
+            ForEach(abilities.keys.sorted(), id: \.self) { key in
+                HStack {
+                    Text(key)
+                        .font(.subheadline)
+                        .frame(width: 48, alignment: .leading)
+                    ProgressView(value: abilities[key] ?? 0, total: 1)
+                        .tint(Color.brandAccent)
+                    Text("\(Int((abilities[key] ?? 0) * 100))%")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 40, alignment: .trailing)
+                }
+            }
+        }
+    }
+}
+
+private struct StatsTrendChart: View {
+    let items: [StatsTrendItem]
+
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            let height = geometry.size.height
+            let maxCount = max(items.map(\.count).max() ?? 1, 1)
+            Path { path in
+                for (index, item) in items.enumerated() {
+                    let x = items.count <= 1
+                        ? width / 2
+                        : width * CGFloat(index) / CGFloat(items.count - 1)
+                    let y = height - (CGFloat(item.count) / CGFloat(maxCount)) * height
+                    if index == 0 { path.move(to: CGPoint(x: x, y: y)) }
+                    else { path.addLine(to: CGPoint(x: x, y: y)) }
+                }
+            }
+            .stroke(Color.brandPrimary, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+            .overlay {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    let x = items.count <= 1
+                        ? width / 2
+                        : width * CGFloat(index) / CGFloat(items.count - 1)
+                    let y = height - (CGFloat(item.count) / CGFloat(maxCount)) * height
+                    Circle()
+                        .fill(Color.brandPrimary)
+                        .frame(width: 7, height: 7)
+                        .position(x: x, y: y)
+                }
+            }
+        }
+        .padding(.vertical, 8)
     }
 }
 

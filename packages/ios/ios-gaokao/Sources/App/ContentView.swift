@@ -8,33 +8,50 @@ struct ContentView: View {
     @Environment(\.apiClient) var apiClient
     @Environment(\.dataRepository) var dataRepository
     @Environment(\.notificationManager) var notificationManager
+    @Environment(\.networkMonitor) var networkMonitor
 
     @State private var selectedItem: SidebarItem? = .dashboard
     @State private var examDaysRemaining: Int = 0
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView(
-                selection: $selectedItem,
-                examDaysRemaining: examDaysRemaining
-            )
-            .environmentObject(authManager)
-            .environment(\.dataRepository, dataRepository)
-            .environment(\.notificationManager, notificationManager)
-            .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
-        } detail: {
-            detailView
-                .id(selectedItem)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        SidebarToggleButton(columnVisibility: $columnVisibility)
-                    }
+        VStack(spacing: 0) {
+            if let networkMonitor, !networkMonitor.isConnected {
+                HStack(spacing: 8) {
+                    Image(systemName: "wifi.slash")
+                    Text("当前无网络连接，已显示本地可用内容")
+                        .font(.caption)
+                    Spacer()
                 }
+                .foregroundStyle(.white)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color.semanticWarning)
+            }
+
+            NavigationSplitView(columnVisibility: $columnVisibility) {
+                SidebarView(
+                    selection: $selectedItem,
+                    examDaysRemaining: examDaysRemaining
+                )
+                .environmentObject(authManager)
+                .environment(\.dataRepository, dataRepository)
+                .environment(\.notificationManager, notificationManager)
+                .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
+            } detail: {
+                detailView
+                    .id(selectedItem)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            SidebarToggleButton(columnVisibility: $columnVisibility)
+                        }
+                    }
+            }
         }
         .task {
             await loadCountdown()
         }
+        .id(authManager.currentUser?.id ?? "signed-out")
     }
 
     // MARK: - 详情路由
@@ -76,7 +93,10 @@ struct ContentView: View {
                 PlanView(viewModel: PlanViewModel(apiClient: client, dataRepository: repo))
 
             case .realExam:
-                RealExamPlaceholderView(apiClient: client)
+                RealExamView(
+                    viewModel: RealExamViewModel(apiClient: client),
+                    onOpenWrongQuestions: { selectedItem = .wrongQuestions }
+                )
 
             case nil:
                 DashboardView(

@@ -33,7 +33,7 @@ POST /api/chat
        │    └ summarizeConversation（LLM 摘要，失败回退）→ upsert conversation_summaries
        ├ getAssistantContext(userId)          // 计划/错题/近7天练习快照，≤800 字
        → AgentMemory { conversationId, shortTerm, longTerm(含摘要前缀), summary?, episodic?, isColdStart }
-  → runChatAgent({ history: shortTerm, assistantContext: longTerm, message })
+  → runChatAgent({ history: shortTerm, assistantContext: longTerm, message, conversationId })
        system = persona + 工具说明 + 学情快照
        messages = system + history + user
        → JSON 意图 → 工具执行 → 可选 synthesizeReply
@@ -79,7 +79,7 @@ POST /api/chat
 | **落点** | `packages/core/src/ai/memory/`（`types.ts` / `memory.ts` / `compose.ts` / `index.ts`） |
 | **接口** | `loadMemory(ctx)` → `AgentMemory { conversationId, shortTerm, longTerm, episodic?, isColdStart }`；`appendTurn(ctx, turn, conversationId)`；`upsertFact`（M1 落地时空桩，M5 已升级为真实写入） |
 | **行为** | 编排层 on top，不改 `conversation.ts` / `assistant-context.ts` / `persist.ts` 内部实现；`/api/chat` 已切换为 `loadMemory` / `appendTurn` |
-| **前向兼容** | `episodic?` 恒 `undefined`（M4 钩子）；`upsertFact` 已由 M5 升级为真实写入（见 M5） |
+| **前向兼容** | `episodic?` 由 M6 按当前消息语义填充；`upsertFact` 已由 M5 升级为真实写入（见 M5） |
 | **验收** | `/api/chat` 仅通过 Memory 模块取上下文；单测覆盖 cold start / 有历史 / 有学情（`memory.test.ts`，4 用例） |
 
 ### M2 超长对话压缩/摘要（超过 20 条）✅ 已实现
@@ -89,7 +89,7 @@ POST /api/chat
 | **现状** | ~~`loadConversationMessages` 硬编码 `limit=20`~~ 已在 `loadMemory` 内升级为滑动窗口 + 滚动摘要 |
 | **目标** | 超出窗口的旧消息压缩为摘要块，再与最近 N 条 raw 消息一并注入 |
 | **落点** | `packages/core/src/ai/memory/summary.ts`（`summarizeConversation` + 纯函数 `shouldSummarize`/`composeSummaryBlock`/`splitWindow`）；`memory.ts` `loadMemory` 接摘要分支 |
-| **存储** | 独立 `conversation_summaries` 表（迁移 `0001_conversation_summaries.sql`），一个会话一个滚动摘要行 |
+| **存储** | 独立 `conversation_summaries` 表（迁移 `0001_conversation_summaries.sql`），一个会话一个滚动摘要行；`0006_agent_memory_hardening.sql` 增加消息 ID 游标，避免同一时间戳漏消息 |
 | **触发** | 同步懒触发：`loadMemory` 时 `count > SUMMARY_TRIGGER(30)` 才进入摘要分支，取窗口外未摘要消息调 LLM 生成/更新摘要 |
 | **容错** | 摘要 LLM 故障 `console.warn` 后回退无摘要路径，不阻断主对话 |
 | **行为保持** | `count <= 30` 走原路径（20 条 raw，无摘要），与 M1 完全等价；`runChatAgent` 签名不动，summary 拼入 `longTerm` 前缀 |
@@ -111,10 +111,10 @@ POST /api/chat
 | 项 | 说明 |
 |----|------|
 | **现状** | ~~仅 `question_bank` 有 pgvector；用户对话/批改/计划无向量索引~~ 已落地 `user_memories` 向量表 + ivfflat 索引 + `match_user_memories` RPC |
-| **目标** | 对高价值事件（批改结论、计划、用户声明）做 embedding，按语义检索 Top-K |
-| **落点** | `packages/core/src/ai/memory/episodic.ts`（`storeUserMemory` 写入 + `embedUserMemory` 复用 `text-embedding-v3`）；`runChatAgent` 在 plan/grade/remember_fact 工具成功后异步写入 |
+| **目标** | 对高价值事件（批改结论、计划）做 embedding，按语义检索 Top-K；用户明确声明使用 M3 结构化事实，不重复写入向量记忆 |
+| **落点** | `packages/core/src/ai/memory/episodic.ts`（`storeUserMemory` 写入 + `embedUserMemory` 复用 `text-embedding-v3`）；`runChatAgent` 在 plan/grade 工具成功后写入 |
 | **依赖** | `DASHSCOPE_API_KEY`（与题库 RAG 同模型）；迁移 `0003_user_memories.sql` |
-| **容错** | embedding 失败时仍写入行（embedding 为 null），事件不丢；检索失败静默返回空，不阻断主对话 |
+| **容错** | embedding 失败时不写入不可检索的空向量行，已落库的计划/批改结果仍可用；检索失败静默返回空，不阻断主对话 |
 | **验收** | 批改/计划后 `user_memories` 有对应行；后续问「我哪类题错最多」可经语义召回相关历史片段 |
 
 ### M5 Agent 主动写/改 Memory 条目 ✅ 已实现
@@ -131,7 +131,7 @@ POST /api/chat
 
 | 项 | 说明 |
 |----|------|
-| **现状** | ~~`retrieveReferences` 仅查 `question_bank`~~ 新增 `retrieveUserMemory({ query, userId, limit })`，检索 M4 用户 episodic 向量 |
+| **现状** | ~~`retrieveReferences` 仅查 `question_bank`~~ 新增 `retrieveUserMemory({ query, userId, limit })`，检索 M4 用户 episodic 向量；按 phase 隔离且排除 `fact` 来源 |
 | **目标** | Agent 读路径语义召回用户历史，注入 prompt（与题库 RAG 分离） |
 | **落点** | `packages/core/src/ai/memory/episodic.ts` `retrieveUserMemory`（调 `match_user_memories` RPC）；`loadMemory` 非冷启动时召回 Top-3 拼入 `longTerm` 的 `【相关历史经历】` 块；`MemoryContext.query` 接收用户当前消息 |
 | **与 #4 关系** | M4 负责写入与索引；M6 负责 Agent 读路径（已完成闭环） |

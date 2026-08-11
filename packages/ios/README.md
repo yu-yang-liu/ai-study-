@@ -45,7 +45,33 @@ xcodegen generate --spec project.yml
 ## 环境配置
 
 - `CoreKit/AppEnvironment.swift`：`phase = "high"`，`keychainServiceName = "com.aistudy.app"`
-- App `Info.plist` 通过 `API_BASE_URL` 注入服务端地址（Debug/Release 在 `project.yml` 配置）
+- App `Info.plist` 通过 `API_ENVIRONMENT` 和 `API_BASE_URL` 注入运行环境
+- `Debug` 使用 development 配置
+- `Staging` 使用 `AISTUDY_API_BASE_URL_STAGING` 构建设置注入真实地址
+- `Release` 使用 `AISTUDY_API_BASE_URL_PRODUCTION` 构建设置注入真实地址，并使用 `AISTUDY_DEVELOPMENT_TEAM` 注入 Apple Team ID
+- 非 development 环境如果仍使用 `example.com` 或未解析的 `$(...)` 占位地址，Release 会直接阻止启动
+- `ios-gaokao/Config/validate-build-settings.sh` 会在 Staging / Release 构建前拒绝缺失、非 HTTPS 或占位地址
+- App Store Connect 导出模板见 `ios-gaokao/Config/ExportOptions-AppStoreConnect.plist.example`
+- iOS CI 会执行 unsigned Release archive，验证工程可以生成可归档产物；正式签名和 TestFlight 上传仍需要 Apple Team、证书和 profile
+
+示例：
+
+```bash
+export AISTUDY_API_BASE_URL_STAGING
+export AISTUDY_DEVELOPMENT_TEAM
+
+xcodebuild \
+  -project ios-gaokao.xcodeproj \
+  -scheme ios-gaokao \
+  -configuration Staging \
+  AISTUDY_API_BASE_URL_STAGING="$AISTUDY_API_BASE_URL_STAGING" \
+  AISTUDY_DEVELOPMENT_TEAM="$AISTUDY_DEVELOPMENT_TEAM" \
+  build
+```
+
+正式部署地址不写入仓库，建议通过 Xcode User-Defined Settings、CI
+Variables 或 CI Secrets 注入。归档、导出和 TestFlight 上传命令见
+`ios-gaokao/Config/README.md`。
 
 ## 公式与几何渲染（Science AST V1 公式 M1 已完成，iOS CI 全绿）
 

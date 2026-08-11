@@ -5,6 +5,11 @@ import CoreKit
 /// 分析结果展示（AnalyzeView / UploadView 共用）
 struct AnalysisResultView: View {
     let result: AnalyzeResponse
+    let apiClient: APIClient?
+    var onFollowUp: (() -> Void)? = nil
+    var onAddToWrongQuestions: (() -> Void)? = nil
+    @State private var isFavorite = false
+    @State private var isUpdatingFavorite = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -12,6 +17,33 @@ struct AnalysisResultView: View {
                 InfoBadge(label: "\u{5b66}\u{79d1}", value: result.subject, color: .blue)
                 InfoBadge(label: "\u{9898}\u{578b}", value: result.questionType, color: .purple)
                 InfoBadge(label: "\u{96be}\u{5ea6}", value: "\(result.difficulty)/10", color: .orange)
+            }
+
+            if let apiClient, let questionId = result.questionId {
+                Button {
+                    Task {
+                        let nextValue = !isFavorite
+                        isUpdatingFavorite = true
+                        do {
+                            _ = try await apiClient.updateAnalysisBookmark(
+                                questionId: questionId,
+                                isFavorite: nextValue
+                            )
+                            isFavorite = nextValue
+                        } catch {
+                            // Keep the current marker when a bookmark request fails.
+                        }
+                        isUpdatingFavorite = false
+                    }
+                } label: {
+                    Label(
+                        isFavorite ? "已标记重点" : "标记为重点",
+                        systemImage: isFavorite ? "star.fill" : "star"
+                    )
+                }
+                .buttonStyle(.bordered)
+                .disabled(isUpdatingFavorite)
+                .task { isFavorite = result.isFavorite ?? false }
             }
 
             if !result.knowledgePoints.isEmpty {
@@ -55,6 +87,22 @@ struct AnalysisResultView: View {
                         .font(.headline)
                     MarkdownRenderer(blocks: result.examPointsBlocks ?? [.text(content: result.examPoints ?? "")])
                 }
+            }
+
+            if let onFollowUp {
+                Button(action: onFollowUp) {
+                    Label("继续追问", systemImage: "text.bubble")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+
+            if let onAddToWrongQuestions, result.questionContent?.isEmpty == false {
+                Button(action: onAddToWrongQuestions) {
+                    Label("加入错题", systemImage: "plus.circle")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
             }
         }
     }

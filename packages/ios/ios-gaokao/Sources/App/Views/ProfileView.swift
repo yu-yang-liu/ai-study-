@@ -6,6 +6,7 @@ import CoreKit
 struct ProfileView: View {
     @StateObject var viewModel: UserSettingsViewModel
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.apiClient) var apiClient
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -110,6 +111,16 @@ struct ProfileView: View {
                      : "该功能正在开发中，敬请期待")
             }
 
+            // MARK: - 连接环境
+            Section {
+                LabeledContent("当前环境", value: AppEnvironment.apiEnvironmentName)
+                LabeledContent("API 主机", value: AppEnvironment.baseURL.host ?? "未配置")
+            } header: {
+                Text("连接环境")
+            } footer: {
+                Text("用于确认当前安装包连接的是开发、测试还是生产服务")
+            }
+
             // MARK: - 账户信息
             Section {
                 LabeledContent("用户 ID", value: authManager.currentUser?.id ?? "未登录")
@@ -162,9 +173,12 @@ struct ProfileView: View {
     @ViewBuilder
     private var learnerProfileEntry: some View {
         if FeatureFlags.isLearnerProfileEnabled {
-            // 预留：后续接入学情快照端点后，此处导航到 LearnerProfileView
             NavigationLink {
-                learnerProfilePlaceholder(label: "学习画像")
+                if let apiClient {
+                    LearnerProfileView(apiClient: apiClient)
+                } else {
+                    learnerProfilePlaceholder(label: "学习画像")
+                }
             } label: {
                 Label("查看学习画像", systemImage: "chart.bar.doc.horizontal")
             }
@@ -293,6 +307,7 @@ struct ProfileView: View {
         ProfileView(
             viewModel: UserSettingsViewModel(
                 dataRepository: DataRepository(modelContainer: try! ModelContainer(for: UserSettings.self)),
+                apiClient: APIClient(baseURL: URL(string: "https://example.com")!, tokenProvider: { nil }, onUnauthorized: { false }),
                 authManager: AuthManager(apiClient: APIClient(baseURL: URL(string: "https://example.com")!, tokenProvider: { nil }, onUnauthorized: { false }), tokenStorage: TokenStorage(serviceName: "preview")),
                 notificationManager: NotificationManager()
             )

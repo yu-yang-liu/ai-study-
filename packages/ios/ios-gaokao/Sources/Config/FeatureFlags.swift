@@ -37,7 +37,7 @@ public enum FeatureFlags: Sendable {
     public static let isPushEnabled: Bool = { check("PUSH_ENABLED", default: true) }()
 
     /// 学习画像功能（后续版本）
-    public static let isLearnerProfileEnabled: Bool = { check("LEARNER_PROFILE_ENABLED", default: false) }()
+    public static let isLearnerProfileEnabled: Bool = { check("LEARNER_PROFILE_ENABLED", default: true) }()
 
     // MARK: - 检查逻辑
 

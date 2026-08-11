@@ -73,20 +73,22 @@ struct GradeView: View {
 
     private var historySection: some View {
         Group {
-            if viewModel.historyRecords.isEmpty {
+            if viewModel.historyItems.isEmpty {
                 EmptyPlaceholderView(message: "暂无批改历史")
             } else {
-                List(viewModel.historyRecords) { record in
+                List(viewModel.historyItems) { record in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Text(record.subject).font(.headline)
                             Spacer()
                             Text("\(record.score, specifier: "%.1f") / \(record.maxScore, specifier: "%.0f")")
                                 .font(.subheadline).monospacedDigit()
-                                .foregroundStyle(record.score / record.maxScore >= 0.6 ? .green : .red)
+                                .foregroundStyle(record.maxScore > 0 && record.score / record.maxScore >= 0.6 ? .green : .red)
                         }
                         Text(record.questionContent).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                        Text(record.createdAt, style: .date).font(.caption2).foregroundStyle(.tertiary)
+                        if let date = Date.fromISO8601(record.createdAt) {
+                            Text(date, style: .date).font(.caption2).foregroundStyle(.tertiary)
+                        }
                     }.padding(.vertical, 4)
                 }.listStyle(.plain)
             }

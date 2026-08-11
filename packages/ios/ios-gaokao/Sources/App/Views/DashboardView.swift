@@ -16,7 +16,7 @@ struct DashboardView: View {
             VStack(spacing: 20) {
                 countdownCard
                 assistantCTA
-                if let client = apiClient, let repo = dataRepository {
+                if FeatureFlags.isPlanEnabled, let client = apiClient, let repo = dataRepository {
                     aiPlanCard(client: client, repo: repo)
                 }
                 quickToolsGrid

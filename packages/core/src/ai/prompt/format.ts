@@ -122,6 +122,12 @@ export function schemaToFormatInstruction(task: TaskName): string {
   "reason": "判断依据"
 }
 注意：cell 必须为合法 Cell AST（cellType/organelles/connections/transport 见系统提示词，connection 引用必须存在）；不需要模式图时 cell 为 null。`,
+    molecular: `请输出 JSON：
+{
+  "molecular": {"type":"molecular","title":"乙醇结构式","atoms":[{"id":"c1","symbol":"C","x":0,"y":0},{"id":"o1","symbol":"O","x":2,"y":0}],"bonds":[{"from":"c1","to":"o1","order":1}]} 或 null,
+  "reason": "判断依据"
+}
+注意：molecular 必须为合法 Molecular AST，bonds 只能引用 atoms 中存在的 id；不需要分子结构图时 molecular 为 null。`,
   };
 
   return FORMATS[task] ?? '\u8bf7\u8f93\u51fa\u7b26\u5408\u8981\u6c42\u7684 JSON \u683c\u5f0f';

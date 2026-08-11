@@ -36,14 +36,23 @@ const gradeArgsSchema = z.object({
 });
 
 const rememberFactArgsSchema = z.object({
-  key: z.string().min(1).max(64),
-  value: z.string().min(1).max(300),
-  category: z.string().max(32).optional(),
+  key: z.string().trim().min(1).max(64),
+  value: z.string().trim().min(1).max(300),
+  category: z.string().trim().max(32).optional(),
 });
 
 const forgetFactArgsSchema = z.object({
-  key: z.string().min(1).max(64),
+  key: z.string().trim().min(1).max(64),
 });
+
+async function persistEpisodicMemory(input: Parameters<typeof storeUserMemory>[0]): Promise<void> {
+  try {
+    await storeUserMemory(input);
+  } catch (error) {
+    // Episodic memory is secondary; the already-persisted learning action remains usable.
+    console.warn(`storeUserMemory(${input.source}) failed:`, error);
+  }
+}
 
 function historyToMessages(history: ConversationMessage[]): ChatMessage[] {
   return history.map((m) => ({
@@ -84,6 +93,7 @@ async function executeTool(
   subject: string,
   name: string,
   args: Record<string, unknown>,
+  conversationId?: string,
 ): Promise<{ summary: string; action?: ChatAction; directReply?: string }> {
   switch (name) {
     case 'generate_plan': {
@@ -95,13 +105,13 @@ async function executeTool(
         .map((t) => `- ${t.title} (${t.subject}, ${t.estimatedMinutes}\u5206)`)
         .join('\n');
       // M4\uff1a\u8ba1\u5212\u751f\u6210\u662f\u9ad8\u4ef7\u503c\u4e8b\u4ef6\uff0c\u5199\u5165\u7528\u6237\u7ecf\u5386\u5411\u91cf
-      void storeUserMemory({
+      await persistEpisodicMemory({
         userId,
         source: 'plan',
         subject,
         content: `${plan.title}\uff1a${plan.description}`,
         metadata: { taskCount: plan.tasks.length },
-      }).catch((e) => console.warn('storeUserMemory(plan) failed:', e));
+      });
       return {
         summary: `\u8ba1\u5212\u300a${plan.title}\u300b\uff1a${plan.description}\n${taskLines}`,
         action: { type: 'plan', payload: plan },
@@ -143,13 +153,13 @@ async function executeTool(
         studentAnswer: parsed.data.studentAnswer,
       });
       // M4\uff1a\u6279\u6539\u7ed3\u8bba\u662f\u9ad8\u4ef7\u503c\u4e8b\u4ef6\uff0c\u5199\u5165\u7528\u6237\u7ecf\u5386\u5411\u91cf
-      void storeUserMemory({
+      await persistEpisodicMemory({
         userId,
         source: 'grade',
         subject,
         content: `\u6279\u6539 ${result.score}/${result.maxScore}\uff1a${result.summary}`,
         metadata: { score: result.score, maxScore: result.maxScore },
-      }).catch((e) => console.warn('storeUserMemory(grade) failed:', e));
+      });
       return {
         summary: `\u5f97\u5206 ${result.score}/${result.maxScore}\uff1a${result.summary}`,
         action: { type: 'grade', payload: result },
@@ -178,14 +188,7 @@ async function executeTool(
         key: parsed.data.key,
         value: parsed.data.value,
         category: parsed.data.category,
-      });
-      // M4：用户明确声明的事实也是高价值事件，写入经历向量
-      void storeUserMemory({
-        userId,
-        source: 'fact',
-        content: `${parsed.data.key}：${parsed.data.value}`,
-        metadata: { category: parsed.data.category ?? null },
-      }).catch((e) => console.warn('storeUserMemory(fact) failed:', e));
+      }, conversationId);
       return {
         summary: `\u5df2\u8bb0\u4f4f\uff1a${parsed.data.key} = ${parsed.data.value}`,
         directReply: `\u597d\u7684\uff0c\u6211\u8bb0\u4e0b\u4e86\u300c${parsed.data.value}\u300d\uff0c\u4e4b\u540e\u4f1a\u8de8\u4f1a\u8bdd\u8bb0\u4f4f\u8fd9\u70b9\u3002`,
@@ -215,8 +218,9 @@ export async function runChatAgent(opts: {
   message: string;
   history: ConversationMessage[];
   assistantContext: string;
+  conversationId?: string;
 }): Promise<ChatAgentResult> {
-  const { userId, subject, message, history, assistantContext } = opts;
+  const { userId, subject, message, history, assistantContext, conversationId } = opts;
 
   const systemPrompt = buildChatAgentSystemPrompt(subject, assistantContext);
   const messages: ChatMessage[] = [
@@ -244,7 +248,13 @@ export async function runChatAgent(opts: {
     };
   }
 
-  const toolResult = await executeTool(userId, subject, parsed.tool.name, parsed.tool.args ?? {});
+  const toolResult = await executeTool(
+    userId,
+    subject,
+    parsed.tool.name,
+    parsed.tool.args ?? {},
+    conversationId,
+  );
 
   if (toolResult.directReply) {
     return { reply: toolResult.directReply };

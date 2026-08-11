@@ -23,16 +23,26 @@ settings:
     SWIFT_ACTIVE_COMPILATION_CONDITIONS: GAOKAO
     TARGETED_DEVICE_FAMILY: "1"
     DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: false
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: true
   configs:
     Debug:
+      API_ENVIRONMENT: development
       API_BASE_URL: https://api-dev.example.com
       SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+    Staging:
+      API_ENVIRONMENT: staging
+      API_BASE_URL: "$(AISTUDY_API_BASE_URL_STAGING)"
+      DEVELOPMENT_TEAM: "$(AISTUDY_DEVELOPMENT_TEAM)"
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+      SWIFT_COMPILATION_MODE: wholemodule
     Release:
-      API_BASE_URL: https://api.example.com
+      API_ENVIRONMENT: production
+      API_BASE_URL: "$(AISTUDY_API_BASE_URL_PRODUCTION)"
+      DEVELOPMENT_TEAM: "$(AISTUDY_DEVELOPMENT_TEAM)"
       SWIFT_OPTIMIZATION_LEVEL: "-O"
       SWIFT_COMPILATION_MODE: wholemodule
 
@@ -54,6 +64,7 @@ targets:
           - "**/.DS_Store"
     dependencies:
       - package: CoreKit
+      - package: ApiContracts
     preBuildScripts:
       - name: "SwiftLint"
         script: |
@@ -84,15 +95,42 @@ targets:
         Debug:
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG"
           ENABLE_STRICT_OBJC_MSGSEND: true
+        Staging:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) STAGING"
+          VALIDATE_PRODUCT: true
         Release:
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited)"
           VALIDATE_PRODUCT: true
+
+  ios-gaokaoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: ios-gaokao
+
+  ios-gaokaoUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: ios-gaokao
 
 schemes:
   ios-gaokao:
     build:
       targets:
         ios-gaokao: all
+    test:
+      targets:
+        - name: ios-gaokaoTests
+          parallelizable: true
+          randomExecutionOrder: true
+        - name: ios-gaokaoUITests
+          parallelizable: false
+          randomExecutionOrder: false
     run:
       config: Debug
       disableMainThreadChecker: false

@@ -8,6 +8,10 @@ public final class UserSettings: @unchecked Sendable {
     /// 固定标识（单例）
     @Attribute(.unique) public var id: UUID
 
+    /// Remote account identifier that owns this record.
+    /// Optional to allow lightweight migration of pre-isolation records.
+    public var userID: String?
+
     /// 用户昵称
     public var nickname: String
 
@@ -35,11 +39,12 @@ public final class UserSettings: @unchecked Sendable {
     /// 最后修改时间
     public var updatedAt: Date
 
-    /// 单例唯一 ID
+    /// Legacy singleton ID retained for migration compatibility.
     public static let singletonID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
 
     public init(
-        id: UUID = singletonID,
+        id: UUID = UUID(),
+        userID: String? = nil,
         nickname: String = "同学",
         examDate: Date = UserSettings.defaultExamDate,
         targetScore: Double = 0,
@@ -51,6 +56,7 @@ public final class UserSettings: @unchecked Sendable {
         updatedAt: Date = Date()
     ) {
         self.id = id
+        self.userID = userID
         self.nickname = nickname
         self.examDate = examDate
         self.targetScore = targetScore

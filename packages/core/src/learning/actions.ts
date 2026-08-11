@@ -1,6 +1,6 @@
 import { composeMessages } from '../ai/prompt/compose';
 import { structuredCall } from '../ai/structured/call';
-import { TASK_SCHEMA, normalizeLabOutput, normalizeCellOutput } from '../ai/structured/schemas';
+import { TASK_SCHEMA, normalizeLabOutput, normalizeCellOutput, normalizeMolecularOutput } from '../ai/structured/schemas';
 import { blocksToPlainText, sanitizeBlocks } from '../ai/structured/blocks';
 import { retrieveReferences } from '../ai/rag';
 import { getLearnerContext } from '../ai/learner/context';
@@ -17,6 +17,7 @@ import type {
   GraphOutput,
   LabOutputRaw,
   CellOutputRaw,
+  MolecularOutputRaw,
 } from '../ai/structured/schemas';
 import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
@@ -96,6 +97,21 @@ const CELL_KEYWORDS = [
  * 合法 Geometry AST 以 `visual(kind:"geometry")` block 前置进 analysisBlocks。
  * 不直接依赖 analyze 主提示词输出图形（实测不可靠）；失败时静默降级，不影响 analyze 结果。
  */
+const MOLECULAR_SUBJECTS = new Set(['\u5316\u5b66']);
+const MOLECULAR_KEYWORDS = [
+  '\u5206\u5b50\u7ed3\u6784',
+  '\u7ed3\u6784\u5f0f',
+  '\u7403\u68cd\u6a21\u578b',
+  '\u5316\u5b66\u952e',
+  '\u6709\u673a\u7269\u7ed3\u6784',
+  '\u5b98\u80fd\u56e2',
+  '\u540c\u5206\u5f02\u6784',
+  '\u952e\u7ebf\u5f0f',
+  '\u7535\u5b50\u5f0f',
+  '\u7a7a\u95f4\u6784\u578b',
+  '\u5206\u5b50\u6a21\u578b',
+];
+
 export async function attachGeometryVisualBlock(opts: {
   subject: string;
   question: string;
@@ -321,12 +337,40 @@ export async function attachCellBlock(opts: {
   }
 }
 
+export async function attachMolecularBlock(opts: {
+  subject: string;
+  question: string;
+  blocks: Block[] | undefined;
+}): Promise<Block[] | undefined> {
+  if (!MOLECULAR_SUBJECTS.has(opts.subject) || !opts.question.trim()) return opts.blocks;
+  if (!MOLECULAR_KEYWORDS.some((keyword) => opts.question.includes(keyword))) return opts.blocks;
+  try {
+    const messages = composeMessages({
+      task: 'molecular',
+      subject: opts.subject,
+      phase: 'high',
+      userInput: opts.question,
+    });
+    const output = normalizeMolecularOutput((await structuredCall({
+      task: 'molecular',
+      schema: TASK_SCHEMA.molecular,
+      messages,
+      phase: 'high',
+    })) as MolecularOutputRaw);
+    if (!output.molecular) return opts.blocks;
+    return [...(opts.blocks ?? []), output.molecular as Block];
+  } catch (err) {
+    console.warn('attachMolecularBlock failed:', err);
+    return opts.blocks;
+  }
+}
+
 export async function executeAnalyze(opts: {
   userId: string;
   subject: string;
   content?: string;
   imageUrl?: string;
-}): Promise<AnalyzeOutput> {
+}): Promise<AnalyzeOutput & { questionContent?: string }> {
   const { userId, subject, content, imageUrl } = opts;
   const { context: learnerContext } = await getLearnerContext(userId);
 
@@ -407,15 +451,25 @@ export async function executeAnalyze(opts: {
       question: content,
       blocks: result.analysisBlocks,
     });
+    result.analysisBlocks = await attachMolecularBlock({
+      subject,
+      question: content,
+      blocks: result.analysisBlocks,
+    });
   }
 
+  let questionId: string | undefined;
   try {
-    await persistAnalyzeResult(userId, { subject, content: content ?? '', imageUrl }, result);
+    questionId = await persistAnalyzeResult(userId, { subject, content: content ?? '', imageUrl }, result);
   } catch (persistErr) {
     console.warn('analyze persist failed:', persistErr);
   }
 
-  return result;
+  return {
+    ...result,
+    questionId,
+    questionContent: content?.trim() || undefined,
+  };
 }
 
 export async function executeGrade(opts: {
@@ -424,8 +478,9 @@ export async function executeGrade(opts: {
   questionType: GradeQuestionType;
   questionContent: string;
   studentAnswer: string;
+  persist?: boolean;
 }): Promise<GradeResult> {
-  const { userId, subject, questionType, questionContent, studentAnswer } = opts;
+  const { userId, subject, questionType, questionContent, studentAnswer, persist = true } = opts;
   const task = questionType === 'math' ? ('gradeMath' as const) : ('gradeEssay' as const);
 
   const [references, { context: learnerContext }] = await Promise.all([
@@ -484,10 +539,12 @@ export async function executeGrade(opts: {
 
   const isCorrect = gradeResult.isCorrect ?? gradeResult.score >= gradeResult.maxScore * GRADE_PASS_RATIO;
 
-  try {
-    await persistGradeResult(userId, subject, questionType, questionContent, studentAnswer, gradeResult, isCorrect);
-  } catch (err) {
-    console.warn('grade persist failed:', err);
+  if (persist) {
+    try {
+      await persistGradeResult(userId, subject, questionType, questionContent, studentAnswer, gradeResult, isCorrect);
+    } catch (err) {
+      console.warn('grade persist failed:', err);
+    }
   }
 
   return gradeResult;
@@ -521,13 +578,22 @@ export async function executePlan(opts: {
     phase: 'high',
   })) as PlanOutput;
 
+  const normalized: PlanOutput = {
+    ...result,
+    tasks: result.tasks.map((task, index) => ({
+      ...task,
+      taskId: task.taskId ?? `task-${index + 1}`,
+      status: task.status ?? 'pending',
+    })),
+  };
+
   try {
-    await persistPlanResult(userId, subject, result);
+    await persistPlanResult(userId, subject, normalized);
   } catch (persistErr) {
     console.warn('plan persist failed:', persistErr);
   }
 
-  return result;
+  return normalized;
 }
 
 export async function fetchWrongQuestionSummary(userId: string, limit = 5): Promise<WrongQuestionSummary> {

@@ -71,5 +71,15 @@ export {
   CELL_CASE_PASS_THRESHOLD,
 } from './cell-scoring';
 export type { CellDimension } from './cell-scoring';
+export { molecularSamples } from './molecular-samples';
+export type { MolecularEvalCase } from './molecular-samples';
+export {
+  scoreMolecular,
+  molecularOverallScore,
+  molecularCasePassed,
+  MOLECULAR_DIMENSIONS,
+  MOLECULAR_CASE_PASS_THRESHOLD,
+} from './molecular-scoring';
+export type { MolecularDimension } from './molecular-scoring';
 export type { GeometryDimension } from './geometry-scoring';
 export { evalExpr } from './geometry-math';
