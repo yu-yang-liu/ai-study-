@@ -205,6 +205,50 @@ final class ContentBlockTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(ContentBlock.self, from: data), block)
     }
 
+    // MARK: lab（P2-1 化学实验装置图）
+
+    func testDecodeLab() throws {
+        let json = #"""
+        {"type":"lab","title":"排水集气法制氧气",
+         "apparatus":[{"id":"flask","type":"flask","x":0,"y":2,"label":"圆底烧瓶","content":"MnO2"},
+                      {"id":"bottle","type":"gasBottle","x":11,"y":0,"label":"集气瓶"}],
+         "connections":[{"from":"flask","to":"bottle","kind":"gasFlow"}]}
+        """#.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        guard case .lab(let lab) = block else {
+            return XCTFail("应为 lab block")
+        }
+        XCTAssertEqual(lab.title, "排水集气法制氧气")
+        XCTAssertEqual(lab.apparatus.count, 2)
+        XCTAssertEqual(lab.apparatus.first?.type, "flask")
+        XCTAssertEqual(lab.apparatus.first?.content, "MnO2")
+        XCTAssertEqual(lab.apparatus[1].x, 11)
+        XCTAssertEqual(lab.connections.first?.kind, "gasFlow")
+    }
+
+    func testEncodeDecodeLabRoundtrip() throws {
+        let lab = LabBlock(
+            title: "蒸馏",
+            apparatus: [
+                LabApparatus(id: "flask", type: "flask", x: -8, y: 0, label: "蒸馏烧瓶", content: "液体"),
+                LabApparatus(id: "condenser", type: "condenser", x: 3, y: 0, orientation: "horizontal", scale: 1.2, label: "冷凝管", content: nil),
+            ],
+            connections: [
+                LabConnection(from: "flask", to: "condenser"),
+                LabConnection(from: "condenser", to: "flask", kind: "liquidFlow", label: "馏出液"),
+            ]
+        )
+        let block: ContentBlock = .lab(block: lab)
+        let data = try JSONEncoder().encode(block)
+        XCTAssertEqual(try JSONDecoder().decode(ContentBlock.self, from: data), block)
+    }
+
+    func testDecodeLabMissingApparatusFallsBackToText() throws {
+        let json = #"{"type":"lab","title":"蒸馏","connections":[]}"#.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        XCTAssertEqual(block, .text(content: ""))
+    }
+
     func testDecodeUnknownTypeDegradesToEmptyText() throws {
         let json = #"{"type":"geometry","content":"whatever"}"#.data(using: .utf8)!
         let block = try JSONDecoder().decode(ContentBlock.self, from: json)

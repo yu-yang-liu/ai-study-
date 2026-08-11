@@ -44,7 +44,8 @@ export type Block =
   | ChartBlock
   | CircuitBlock
   | PedigreeBlock
-  | GraphBlock;
+  | GraphBlock
+  | LabBlock;
 
 const textBlockSchema = z.object({
   type: z.literal('text'),
@@ -295,6 +296,75 @@ export const graphBlockSchema = z
   });
 export type GraphBlock = z.infer<typeof graphBlockSchema>;
 
+// ── Lab block（P2-1 化学实验装置图；专用器材图元库：制气/蒸馏/过滤/萃取分液）──
+
+export const labApparatusTypeSchema = z.enum([
+  'flask',             // 圆底烧瓶
+  'erlenmeyerFlask',   // 锥形瓶
+  'beaker',            // 烧杯
+  'testTube',          // 试管
+  'funnel',            // 普通漏斗（过滤）
+  'separatoryFunnel',  // 分液漏斗（萃取分液）
+  'droppingFunnel',    // 滴液漏斗（制气加液）
+  'condenser',         // 冷凝管（蒸馏）
+  'thermometer',       // 温度计（蒸馏）
+  'alcoholLamp',       // 酒精灯（加热）
+  'stand',             // 铁架台
+  'clamp',             // 铁夹
+  'gasBottle',         // 集气瓶
+  'waterTrough',       // 水槽（排水集气）
+  'glassRod',          // 玻璃棒
+  'filterPaper',       // 滤纸
+  'deliveryTube',      // 导管
+  'evaporatingDish',   // 蒸发皿
+  'crucible',          // 坩埚
+  'spoon',             // 药匙/镊子
+  'other',
+]);
+export type LabApparatusType = z.infer<typeof labApparatusTypeSchema>;
+
+export const labApparatusSchema = z.object({
+  id: z.string().min(1).max(30),
+  type: labApparatusTypeSchema,
+  x: z.number().min(-100).max(100),
+  y: z.number().min(-100).max(100),
+  /** 器材朝向；缺省 vertical（数学坐标 y 向上）。 */
+  orientation: z.enum(['horizontal', 'vertical', 'left', 'right']).optional(),
+  /** 器材尺寸倍数，缺省 1（0.6–2.5）。 */
+  scale: z.number().min(0.6).max(2.5).optional(),
+  label: z.string().max(40).optional(),
+  /** 内容物/介质，如 "水"、"滤液"、"MnO2" 等。 */
+  content: z.string().max(20).optional(),
+});
+
+export const labConnectionSchema = z.object({
+  from: z.string().min(1).max(30),
+  to: z.string().min(1).max(30),
+  /** 连接/流向类型；缺省 tube（导管/管路）。 */
+  kind: z.enum(['tube', 'gasFlow', 'liquidFlow', 'heat']).optional(),
+  label: z.string().max(40).optional(),
+});
+
+export const labBlockSchema = z
+  .object({
+    type: z.literal('lab'),
+    title: z.string().max(100).optional(),
+    apparatus: z.array(labApparatusSchema).min(1).max(30),
+    connections: z.array(labConnectionSchema).max(30),
+  })
+  .superRefine((value, ctx) => {
+    const ids = new Set(value.apparatus.map((a) => a.id));
+    for (const connection of value.connections) {
+      if (!ids.has(connection.from) || !ids.has(connection.to)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `connection 引用了不存在的器材: ${connection.from}-${connection.to}`,
+        });
+      }
+    }
+  });
+export type LabBlock = z.infer<typeof labBlockSchema>;
+
 export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   textBlockSchema,
   formulaBlockSchema,
@@ -306,6 +376,7 @@ export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   circuitBlockSchema,
   pedigreeBlockSchema,
   graphBlockSchema,
+  labBlockSchema,
 ]);
 
 // ── Geometry AST（Phase 2 · Visual AST；与 visual-ast v1 对齐）──
@@ -510,6 +581,24 @@ export const graphOutputSchema = z.object({
 });
 export type GraphOutput = z.infer<typeof graphOutputSchema>;
 
+const labOutputWrapperSchema = z.object({
+  lab: labBlockSchema.nullable(),
+  reason: z.string().max(200).optional(),
+});
+export type LabOutput = z.infer<typeof labOutputWrapperSchema>;
+/** 模型原始输出：允许包装对象 / 裸 Lab AST / null（容错归一，见 normalizeLabOutput）。 */
+export type LabOutputRaw = LabOutput | LabBlock | null;
+export const labOutputSchema = z.union([labOutputWrapperSchema, labBlockSchema, z.null()]);
+
+/** 把模型原始输出归一化为统一包装形态 `{ lab, reason }`。 */
+export function normalizeLabOutput(output: LabOutputRaw): LabOutput {
+  if (output === null) return { lab: null };
+  if (typeof output === 'object' && 'lab' in output) {
+    return { lab: output.lab, reason: output.reason };
+  }
+  return { lab: output as LabBlock };
+}
+
 export const ocrOutput = z.object({
   text: z.string(),
   blocks: z.array(z.object({
@@ -650,4 +739,5 @@ export const TASK_SCHEMA: Record<TaskName, z.ZodType<unknown>> = {
   circuit: circuitOutputSchema,
   pedigree: pedigreeOutputSchema,
   graph: graphOutputSchema,
+  lab: labOutputSchema,
 };

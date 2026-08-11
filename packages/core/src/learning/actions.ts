@@ -1,6 +1,6 @@
 import { composeMessages } from '../ai/prompt/compose';
 import { structuredCall } from '../ai/structured/call';
-import { TASK_SCHEMA } from '../ai/structured/schemas';
+import { TASK_SCHEMA, normalizeLabOutput } from '../ai/structured/schemas';
 import { blocksToPlainText, sanitizeBlocks } from '../ai/structured/blocks';
 import { retrieveReferences } from '../ai/rag';
 import { getLearnerContext } from '../ai/learner/context';
@@ -15,6 +15,7 @@ import type {
   CircuitOutput,
   PedigreeOutput,
   GraphOutput,
+  LabOutputRaw,
 } from '../ai/structured/schemas';
 import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
@@ -71,6 +72,13 @@ const PEDIGREE_KEYWORDS = [
 /** graph task 触发关键词（生物生态系统/食物链网题）。 */
 const GRAPH_KEYWORDS = [
   '食物链', '食物网', '生态系统', '能量流动', '捕食', '营养级', '分解者', '生产者', '消费者',
+];
+/** lab task 触发关键词（化学实验装置题）。 */
+const LAB_SUBJECTS = new Set(['化学']);
+const LAB_KEYWORDS = [
+  '制取', '制气', '装置图', '实验装置', '蒸馏', '冷凝管', '过滤', '滤纸',
+  '萃取', '分液', '蒸发', '加热分解', '排水集气', '排空气法', '收集气体',
+  '酒精灯', '试管加热', '烧瓶', '锥形瓶', '分液漏斗', '长颈漏斗', '水浴加热', '坩埚',
 ];
 
 /**
@@ -241,6 +249,38 @@ export async function attachGraphBlock(opts: {
   }
 }
 
+/**
+ * P2-1：analyze 后置化学实验装置图检测（化学）。
+ * 命中则把合法 Lab AST 以 `lab` block 追加到 analysisBlocks。失败静默降级。
+ */
+export async function attachLabBlock(opts: {
+  subject: string;
+  question: string;
+  blocks: Block[] | undefined;
+}): Promise<Block[] | undefined> {
+  if (!LAB_SUBJECTS.has(opts.subject) || !opts.question.trim()) return opts.blocks;
+  if (!LAB_KEYWORDS.some((keyword) => opts.question.includes(keyword))) return opts.blocks;
+  try {
+    const messages = composeMessages({
+      task: 'lab',
+      subject: opts.subject,
+      phase: 'high',
+      userInput: opts.question,
+    });
+    const output = normalizeLabOutput((await structuredCall({
+      task: 'lab',
+      schema: TASK_SCHEMA.lab,
+      messages,
+      phase: 'high',
+    })) as LabOutputRaw);
+    if (!output.lab) return opts.blocks;
+    return [...(opts.blocks ?? []), output.lab as Block];
+  } catch (err) {
+    console.warn('attachLabBlock failed:', err);
+    return opts.blocks;
+  }
+}
+
 export async function executeAnalyze(opts: {
   userId: string;
   subject: string;
@@ -313,6 +353,11 @@ export async function executeAnalyze(opts: {
       blocks: result.analysisBlocks,
     });
     result.analysisBlocks = await attachGraphBlock({
+      subject,
+      question: content,
+      blocks: result.analysisBlocks,
+    });
+    result.analysisBlocks = await attachLabBlock({
       subject,
       question: content,
       blocks: result.analysisBlocks,

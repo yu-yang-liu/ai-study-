@@ -71,7 +71,7 @@
 | 水溶液离子平衡 | 滴定曲线、pH 变化 | G1（functionCurve） | 可建 | P2 |
 | 电化学 | 原电池/电解池示意 | M（circuit 扩展：电极 + 离子迁移箭头） | **未建档 → 本次补** | P2 |
 | 有机化学 | 同分异构/官能团结构 | M（molecular） | 规划（C） | P1 |
-| 化学实验 | 制气/蒸馏/过滤/萃取装置图 | M（lab block + 器材图元库） | **未建档 → 本次补** | P2 |
+| 化学实验 | 制气/蒸馏/过滤/萃取装置图 | M（lab block + 器材图元库） | 🆕 **P2-1 实施完成**（`lab` task eval 5/5 + e2e + iOS LabCanvasView，2026-08-11） | P2 |
 | 工艺流程 | 流程图 | M（flow block） | **未建档 → 本次补** | P3 |
 
 ### 2.4 生物
@@ -118,7 +118,7 @@
 
 - ✅ 已建：平面几何、函数图像、受力分析/向量、运动图像（G1 直接覆盖）
 - 📐 已规划（详设在手）：立体几何（B1）、圆锥曲线（B2）、分子结构（C）
-- 🆕 本次补建档：**chart（P1-1 ✅）、circuit（P1-2 ✅）、field/ray（P1-3 ✅）**；待排期：pedigree（遗传系谱）、graph/flow（图与流程）、lab（实验装置）、biology（细胞模式图）、levelDiagram（能级图）、等高线 contour，以及地理场图/剖面、生物曲线等 G1 可直建项
+- 🆕 本次补建档：**chart（P1-1 ✅）、circuit（P1-2 ✅）、field/ray（P1-3 ✅）、pedigree/graph（P1-4 ✅）、lab（P2-1 ✅）**；待排期：biology（细胞模式图）、levelDiagram（能级图）、flow（流程图）、等高线 contour，以及地理场图/剖面、生物曲线等 G1 可直建项
 
 ### 3.2 推荐实施顺序（结合高考频次 × 渲染可行性 × AI 输出可靠性）
 
@@ -128,7 +128,8 @@
 | **P1-2** | 电路图 circuit block（符号图元库） | ✅ 已实施（2026-08-10）：`circuit` task + 7 样本 eval + 后置 attach + iOS CircuitCanvasView；待 CI 全绿后合并 |
 | **P1-3** | 场线 field + 光路 ray | ✅ 已实施（2026-08-10）：G2 元素 `field`（平行带/放射）+ `ray`（折线+箭头）入 Geometry AST，eval 样本 15 例，iOS drawer；等高线 contour 留 P3 |
 | **P1-4** | 遗传系谱 pedigree + 食物链/网 graph | ✅ 已实施（2026-08-10）：两个专用 block（世代行符号系谱 + 有向图），各 5 样本 eval + 后置 attach + iOS 渲染；待 CI 全绿后合并 |
-| **P2** | 实验装置 lab、细胞模式图 biology、能级图 levelDiagram、流程图 flow | 覆盖面广但 AI 输出与渲染成本上升 |
+| **P2-1** | 实验装置 lab（制气/蒸馏/过滤/萃取） | ✅ 已实施（2026-08-11）：`lab` task + 5 样本 eval + 后置 attach（化学门控）+ iOS LabCanvasView；待 CI 全绿后合并 |
+| **P2** | 细胞模式图 biology、能级图 levelDiagram、流程图 flow | 覆盖面广但 AI 输出与渲染成本上升 |
 | **P3** | 动态几何、动画、3D、参数联动 | 交互后置，等 G1/G2/M 稳定后再做 |
 
 ### 3.3 每批次交付门槛

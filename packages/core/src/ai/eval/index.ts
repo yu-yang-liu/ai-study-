@@ -51,5 +51,15 @@ export {
   GRAPH_CASE_PASS_THRESHOLD,
 } from './graph-scoring';
 export type { GraphDimension } from './graph-scoring';
+export { labSamples } from './lab-samples';
+export type { LabEvalCase } from './lab-samples';
+export {
+  scoreLab,
+  labOverallScore,
+  labCasePassed,
+  LAB_DIMENSIONS,
+  LAB_CASE_PASS_THRESHOLD,
+} from './lab-scoring';
+export type { LabDimension } from './lab-scoring';
 export type { GeometryDimension } from './geometry-scoring';
 export { evalExpr } from './geometry-math';
