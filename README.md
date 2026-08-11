@@ -28,7 +28,7 @@ pnpm --filter @ai-study/web dev     # http://localhost:3000
 cd packages/core && pnpm exec tsc --noEmit && pnpm exec vitest run
 cd apps/web && pnpm exec tsc --noEmit
 cd packages/visual-ast && node --test src/*.test.ts
-pnpm --filter @ai-study/core eval:geometry   # 需 DEEPSEEK_API_KEY（真跑 geometry eval + analyze e2e）
+pnpm --filter @ai-study/core eval:geometry   # 需 DEEPSEEK_API_KEY（视觉 block 真跑 eval：geometry/chart/circuit/pedigree/graph/lab/cell + analyze e2e）
 ```
 
 ## Baseline
@@ -45,6 +45,7 @@ pnpm --filter @ai-study/core eval:geometry   # 需 DEEPSEEK_API_KEY（真跑 geo
 - **Science AST 三版本（V1/V2/V3）**: [docs/SCIENCE_AST_IOS_ROADMAP.md](docs/SCIENCE_AST_IOS_ROADMAP.md)
 - **公式与几何渲染**: [docs/RENDER_AST.md](docs/RENDER_AST.md)
 - **Visual AST 子项目**: [docs/VISUAL_AST.md](docs/VISUAL_AST.md)
+- **Visual AST 覆盖总表**: [docs/VISUAL_AST_COVERAGE.md](docs/VISUAL_AST_COVERAGE.md)
 - **几何提示词与 Eval**: [docs/GEOMETRY_PROMPT_EVAL.md](docs/GEOMETRY_PROMPT_EVAL.md) / [docs/GEOMETRY_V2_EXTENSIONS.md](docs/GEOMETRY_V2_EXTENSIONS.md)
 - **Agent Memory（M1–M6 六项已实现）**: [docs/AGENT_MEMORY.md](docs/AGENT_MEMORY.md)
 - iOS: [packages/ios/README.md](packages/ios/README.md)

@@ -1,6 +1,6 @@
 # Visual AST 高中学段覆盖总表（补建档）
 
-> 状态：**补建档完成（2026-08-10）**——按新课标盘点高中各学科可视化内容，标注表达方式、状态与优先级；实施以本表为准
+> 状态：**覆盖总表持续更新（2026-08-11）**——按新课标盘点高中各学科可视化内容，标注表达方式、状态与优先级；实施以本表为准
 > 关联：[VISUAL_AST.md](./VISUAL_AST.md)（协议 v1）、[GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md)（几何扩展详设）、[SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md)（版本路线）
 
 ---
@@ -35,7 +35,7 @@
 | 圆锥曲线 | 椭圆/双曲线/抛物线 | G2（conic：center/a/b/rotation） | 规划（B2） | P1 |
 | 数列 | 等差/等比点列图 | G1（coordinateSystem + point） | 可建 | P2 |
 | 不等式 | 线性规划可行域 | G1（polygon + line + label） | 可建 | P2 |
-| 统计 | 频率分布直方图、茎叶图、散点图、回归直线 | M（chart block：bar/line/scatter/histogram/pie） | 🆕 **P1-1 实施完成**（core task/eval + iOS 渲染，2026-08-10 待 CI） | P1 |
+| 统计 | 频率分布直方图、茎叶图、散点图、回归直线 | M（chart block：bar/line/scatter/histogram/pie） | 🆕 **P1-1 实施完成**（core task/eval + iOS 渲染，2026-08-10 已合并） | P1 |
 | 概率 | 正态分布曲线、几何概型区域、树状图 | G1（functionCurve/polygon）+ M（tree 简易） | 部分可建 | P2 |
 | 导数 | 切线、单调区间、极值图像 | G1（coordinateSystem + line/point） | 可建 | P2 |
 | 极坐标/参数方程 | 极坐标曲线、参数曲线 | G1/G2（functionCurve 参数化） | 可建 | P3 |
@@ -50,13 +50,13 @@
 | 曲线运动 | 平抛轨迹、圆周运动、向心示意 | G1（functionCurve + circle + vector） | 可建 | P1 |
 | 万有引力 | 天体轨道示意 | G1/G2（circle + ellipse→conic） | 可建 | P2 |
 | 机械能/动量 | 碰撞、能量转化示意 | G1 + M（简易 flow） | 可建 | P2 |
-| 静电场 | 电场线、等势面、带电粒子轨迹 | G2（field：平行带/放射）+ G1 | 🆕 **P1-3 实施完成**（field 元素 + eval 样本 + iOS drawer，2026-08-10 待 CI） | P1 |
-| 恒定电流 | 电路图（电源/电阻/开关/电表） | M（circuit block + 符号图元库） | 🆕 **P1-2 实施完成**（`circuit` task eval 7/7 + e2e 2/2 + iOS CircuitCanvasView，2026-08-10 待 CI） | P1 |
+| 静电场 | 电场线、等势面、带电粒子轨迹 | G2（field：平行带/放射）+ G1 | 🆕 **P1-3 实施完成**（field 元素 + eval 样本 + iOS drawer，2026-08-10 已合并） | P1 |
+| 恒定电流 | 电路图（电源/电阻/开关/电表） | M（circuit block + 符号图元库） | 🆕 **P1-2 实施完成**（`circuit` task eval 7/7 + e2e 2/2 + iOS CircuitCanvasView，2026-08-10 已合并） | P1 |
 | 磁场 | 磁感线、安培力/洛伦兹力方向 | G2（field）+ G1（vector） | 🆕 P1-3 可复用（磁感线用 field 平行带/放射） | P1 |
 | 电磁感应 | 磁通量变化、感应电流示意 | G2/G1 | 可建 | P2 |
 | 交变电流 | 正弦波形、变压器示意 | G1（functionCurve）+ M（circuit 扩展） | 可建 | P2 |
 | 振动与波 | 振动图像、波形图、横波/纵波 | G1（functionCurve + point 序列） | 可建 | P1 |
-| 光学 | 反射/折射/全反射/透镜光路 | G2（ray 折线+箭头，✅ 已建） | 🆕 **P1-3 实施完成**（ray 元素 + eval 样本 + iOS drawer，2026-08-10 待 CI） | P1 |
+| 光学 | 反射/折射/全反射/透镜光路 | G2（ray 折线+箭头，✅ 已建） | 🆕 **P1-3 实施完成**（ray 元素 + eval 样本 + iOS drawer，2026-08-10 已合并） | P1 |
 | 热学 | p-V/p-T 图、分子运动示意 | G1 + M | 可建 | P3 |
 | 原子物理 | 能级图、核反应示意 | M（levelDiagram block） | **未建档 → 本次补** | P2 |
 
@@ -82,11 +82,11 @@
 | 物质运输 | 跨膜运输示意 | M（cell block 的 transport 字段 + 进出箭头） | 🆕 P2-2 已覆盖（协助扩散/自由扩散/主动运输/渗透） | P3 |
 | 代谢 | 光合/呼吸作用过程图 | M（flow/多帧） | **未建档 → 本次补** | P2 |
 | 细胞增殖 | 有丝/减数分裂示意 | P（多帧/动画）或 M（sequence） | 暂缓 | P3 |
-| 遗传 | 遗传系谱图、DNA 结构、中心法则 | M（pedigree block ✅；DNA 示意；flow） | 🆕 **P1-4 实施完成**（`pedigree` task eval 5/5 + e2e + iOS PedigreeCanvasView，2026-08-10 待 CI） | P1 |
+| 遗传 | 遗传系谱图、DNA 结构、中心法则 | M（pedigree block ✅；DNA 示意；flow） | 🆕 **P1-4 实施完成**（`pedigree` task eval 5/5 + e2e + iOS PedigreeCanvasView，2026-08-10 已合并） | P1 |
 | 变异/育种 | 育种流程 | M（flow） | 可建 | P3 |
 | 进化 | 种群基因频率变化 | G1（functionCurve/bar） | 可建 | P3 |
 | 稳态 | 血糖/体温调节回路 | M（graph/flow） | 可建 | P3 |
-| 生态 | 种群增长曲线（J/S 型）、食物链/网、能量流动 | G1（functionCurve）+ M（graph block ✅ + flow） | 🆕 **P1-4 实施完成**（`graph` task eval 5/5 + e2e + iOS GraphCanvasView，2026-08-10 待 CI） | P1 |
+| 生态 | 种群增长曲线（J/S 型）、食物链/网、能量流动 | G1（functionCurve）+ M（graph block ✅ + flow） | 🆕 **P1-4 实施完成**（`graph` task eval 5/5 + e2e + iOS GraphCanvasView，2026-08-10 已合并） | P1 |
 | 生物技术 | PCR/基因工程流程 | M（flow） | 可建 | P3 |
 
 ### 2.5 地理
@@ -124,12 +124,12 @@
 
 | 批次 | 内容 | 理由 |
 |------|------|------|
-| **P1-1** | 统计图表 chart block（直方图/散点/折线/柱状） | ✅ 已实施（2026-08-10）：`chart` task + 8 样本 eval + 后置 attach + iOS ChartCanvasView；待 CI 全绿后合并 |
-| **P1-2** | 电路图 circuit block（符号图元库） | ✅ 已实施（2026-08-10）：`circuit` task + 7 样本 eval + 后置 attach + iOS CircuitCanvasView；待 CI 全绿后合并 |
+| **P1-1** | 统计图表 chart block（直方图/散点/折线/柱状） | ✅ 已实施（2026-08-10）：`chart` task + 8 样本 eval + 后置 attach + iOS ChartCanvasView；已合并（PR #6） |
+| **P1-2** | 电路图 circuit block（符号图元库） | ✅ 已实施（2026-08-10）：`circuit` task + 7 样本 eval + 后置 attach + iOS CircuitCanvasView；已合并（PR #7） |
 | **P1-3** | 场线 field + 光路 ray | ✅ 已实施（2026-08-10）：G2 元素 `field`（平行带/放射）+ `ray`（折线+箭头）入 Geometry AST，eval 样本 15 例，iOS drawer；等高线 contour 留 P3 |
-| **P1-4** | 遗传系谱 pedigree + 食物链/网 graph | ✅ 已实施（2026-08-10）：两个专用 block（世代行符号系谱 + 有向图），各 5 样本 eval + 后置 attach + iOS 渲染；待 CI 全绿后合并 |
-| **P2-1** | 实验装置 lab（制气/蒸馏/过滤/萃取） | ✅ 已实施（2026-08-11）：`lab` task + 5 样本 eval + 后置 attach（化学门控）+ iOS LabCanvasView；待 CI 全绿后合并 |
-| **P2-2** | 细胞模式图 cell（动植物/原核 + 跨膜运输） | 🆕 实施中（2026-08-11）：`cell` task + 5 样本 eval + 后置 attach（生物门控）+ iOS CellCanvasView |
+| **P1-4** | 遗传系谱 pedigree + 食物链/网 graph | ✅ 已实施（2026-08-10）：两个专用 block（世代行符号系谱 + 有向图），各 5 样本 eval + 后置 attach + iOS 渲染；已合并（PR #9） |
+| **P2-1** | 实验装置 lab（制气/蒸馏/过滤/萃取） | ✅ 已实施（2026-08-11）：`lab` task + 5 样本 eval + 后置 attach（化学门控）+ iOS LabCanvasView；CI 全绿（PR #10） |
+| **P2-2** | 细胞模式图 cell（动植物/原核 + 跨膜运输） | ✅ 已实施（2026-08-11）：`cell` task + 5 样本 eval + 后置 attach（生物门控）+ iOS CellCanvasView；CI 全绿（PR #11） |
 | **P2** | 能级图 levelDiagram、流程图 flow | 覆盖面广但 AI 输出与渲染成本上升 |
 | **P3** | 动态几何、动画、3D、参数联动 | 交互后置，等 G1/G2/M 稳定后再做 |
 
@@ -142,4 +142,4 @@
 
 ---
 
-*文档版本：2026-08-10 · 补建档完成；实施排期以本表 + GEOMETRY_V2_EXTENSIONS.md 为准*
+*文档版本：2026-08-11 · 覆盖总表持续更新；实施排期以本表 + GEOMETRY_V2_EXTENSIONS.md 为准*
