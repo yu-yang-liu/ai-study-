@@ -33,6 +33,10 @@ public enum ContentBlock: Codable, Sendable, Equatable {
     case chart(block: ChartBlock)
     /// 电路图（Visual AST 扩展 · P1-2），由 `CircuitCanvasView` 渲染。
     case circuit(block: CircuitBlock)
+    /// 遗传系谱图（Visual AST 扩展 · P1-4），由 `PedigreeCanvasView` 渲染。
+    case pedigree(block: PedigreeBlock)
+    /// 关系图（Visual AST 扩展 · P1-4，食物链/网），由 `GraphCanvasView` 渲染。
+    case graph(block: GraphBlock)
 
     // MARK: CodingKeys
 
@@ -58,6 +62,9 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case yLabel
         case nodes
         case wires
+        case generations
+        case marriages
+        case edges
     }
 
     // MARK: Decodable
@@ -101,6 +108,18 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case "circuit":
             if let block = try? CircuitBlock(from: decoder) {
                 self = .circuit(block: block)
+            } else {
+                self = .text(content: "")
+            }
+        case "pedigree":
+            if let block = try? PedigreeBlock(from: decoder) {
+                self = .pedigree(block: block)
+            } else {
+                self = .text(content: "")
+            }
+        case "graph":
+            if let block = try? GraphBlock(from: decoder) {
+                self = .graph(block: block)
             } else {
                 self = .text(content: "")
             }
@@ -154,6 +173,16 @@ public enum ContentBlock: Codable, Sendable, Equatable {
             try container.encodeIfPresent(block.title, forKey: .title)
             try container.encode(block.nodes, forKey: .nodes)
             try container.encode(block.wires, forKey: .wires)
+        case .pedigree(let block):
+            try container.encode("pedigree", forKey: .type)
+            try container.encodeIfPresent(block.title, forKey: .title)
+            try container.encode(block.generations, forKey: .generations)
+            try container.encode(block.marriages, forKey: .marriages)
+        case .graph(let block):
+            try container.encode("graph", forKey: .type)
+            try container.encodeIfPresent(block.title, forKey: .title)
+            try container.encode(block.nodes, forKey: .nodes)
+            try container.encode(block.edges, forKey: .edges)
         }
     }
 }

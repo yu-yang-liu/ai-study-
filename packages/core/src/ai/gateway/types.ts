@@ -21,7 +21,9 @@ export type TaskName =
   | 'chatAgent'
   | 'geometry'
   | 'chart'
-  | 'circuit';
+  | 'circuit'
+  | 'pedigree'
+  | 'graph';
 
 export interface TaskRoute {
   capability: Capability;
@@ -42,6 +44,8 @@ export const TASK_ROUTING: Record<TaskName, TaskRoute> = {
   geometry: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
   chart: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
   circuit: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
+  pedigree: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
+  graph: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
 };
 
 // ── Provider interface ──

@@ -3,6 +3,8 @@ import { CHAT_AGENT_TASK_INSTRUCTION } from './chatAgent';
 import { GEOMETRY_SYSTEM_PROMPT } from './geometry';
 import { CHART_SYSTEM_PROMPT } from './chart';
 import { CIRCUIT_SYSTEM_PROMPT } from './circuit';
+import { PEDIGREE_SYSTEM_PROMPT } from './pedigree';
+import { GRAPH_SYSTEM_PROMPT } from './graph';
 
 const BLOCK_INSTRUCTION = `
 【分块输出】对于含数学公式的字段，请输出 blocks 数组而非纯字符串：
@@ -42,6 +44,8 @@ const TASK_INSTRUCTIONS: Record<TaskName, string> = {
   geometry: GEOMETRY_SYSTEM_PROMPT,
   chart: CHART_SYSTEM_PROMPT,
   circuit: CIRCUIT_SYSTEM_PROMPT,
+  pedigree: PEDIGREE_SYSTEM_PROMPT,
+  graph: GRAPH_SYSTEM_PROMPT,
 };
 
 export function getTaskInstruction(task: TaskName): string {

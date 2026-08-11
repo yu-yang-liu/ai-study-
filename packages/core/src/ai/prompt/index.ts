@@ -5,5 +5,7 @@ export { schemaToFormatInstruction } from './format';
 export { GEOMETRY_SYSTEM_PROMPT, GEOMETRY_BLOCK_INSTRUCTION, buildGeometryUserPrompt } from './geometry';
 export { CHART_SYSTEM_PROMPT, buildChartUserPrompt } from './chart';
 export { CIRCUIT_SYSTEM_PROMPT, buildCircuitUserPrompt } from './circuit';
+export { PEDIGREE_SYSTEM_PROMPT, buildPedigreeUserPrompt } from './pedigree';
+export { GRAPH_SYSTEM_PROMPT, buildGraphUserPrompt } from './graph';
 export { composePrompt, composeMessages } from './compose';
 export type { ComposeOptions } from './compose';
