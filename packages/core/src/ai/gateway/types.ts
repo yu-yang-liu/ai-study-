@@ -23,7 +23,8 @@ export type TaskName =
   | 'chart'
   | 'circuit'
   | 'pedigree'
-  | 'graph';
+  | 'graph'
+  | 'lab';
 
 export interface TaskRoute {
   capability: Capability;
@@ -46,6 +47,7 @@ export const TASK_ROUTING: Record<TaskName, TaskRoute> = {
   circuit: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
   pedigree: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
   graph: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
+  lab: { capability: 'text-reasoning', temperature: 0.1, jsonMode: true },
 };
 
 // ── Provider interface ──

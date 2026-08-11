@@ -37,6 +37,8 @@ public enum ContentBlock: Codable, Sendable, Equatable {
     case pedigree(block: PedigreeBlock)
     /// 关系图（Visual AST 扩展 · P1-4，食物链/网），由 `GraphCanvasView` 渲染。
     case graph(block: GraphBlock)
+    /// 实验装置图（Visual AST 扩展 · P2-1 化学实验），由 `LabCanvasView` 渲染。
+    case lab(block: LabBlock)
 
     // MARK: CodingKeys
 
@@ -65,6 +67,8 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case generations
         case marriages
         case edges
+        case apparatus
+        case connections
     }
 
     // MARK: Decodable
@@ -120,6 +124,12 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case "graph":
             if let block = try? GraphBlock(from: decoder) {
                 self = .graph(block: block)
+            } else {
+                self = .text(content: "")
+            }
+        case "lab":
+            if let block = try? LabBlock(from: decoder) {
+                self = .lab(block: block)
             } else {
                 self = .text(content: "")
             }
@@ -183,6 +193,11 @@ public enum ContentBlock: Codable, Sendable, Equatable {
             try container.encodeIfPresent(block.title, forKey: .title)
             try container.encode(block.nodes, forKey: .nodes)
             try container.encode(block.edges, forKey: .edges)
+        case .lab(let block):
+            try container.encode("lab", forKey: .type)
+            try container.encodeIfPresent(block.title, forKey: .title)
+            try container.encode(block.apparatus, forKey: .apparatus)
+            try container.encode(block.connections, forKey: .connections)
         }
     }
 }

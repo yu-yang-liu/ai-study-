@@ -50,6 +50,8 @@ export function blocksToPlainText(blocks?: Block[] | null): string {
           return `[遗传系谱图] ${b.title ?? '系谱图'}`;
         case 'graph':
           return `[关系图] ${b.title ?? '图'}`;
+        case 'lab':
+          return `[实验装置图] ${b.title ?? '装置图'}`;
         default:
           return '';
       }

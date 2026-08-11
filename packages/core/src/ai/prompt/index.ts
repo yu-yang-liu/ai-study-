@@ -7,5 +7,6 @@ export { CHART_SYSTEM_PROMPT, buildChartUserPrompt } from './chart';
 export { CIRCUIT_SYSTEM_PROMPT, buildCircuitUserPrompt } from './circuit';
 export { PEDIGREE_SYSTEM_PROMPT, buildPedigreeUserPrompt } from './pedigree';
 export { GRAPH_SYSTEM_PROMPT, buildGraphUserPrompt } from './graph';
+export { LAB_SYSTEM_PROMPT, buildLabUserPrompt } from './lab';
 export { composePrompt, composeMessages } from './compose';
 export type { ComposeOptions } from './compose';
