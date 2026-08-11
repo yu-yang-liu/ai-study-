@@ -188,8 +188,15 @@ public enum GeometryAST: Codable, Sendable {
 |------|------|------|
 | 数学 | 平面几何 | triangle / angle / circle / line / point / label |
 | 数学 | 函数图像 | coordinateSystem + functionCurve |
-| 物理 | 实验示意 / 参数变化 | scene + vector / line / 滑块驱动重绘 |
-| 化学 | 分子结构 | graph 布局（V2 末段，节点 + 边） |
+| 数学 | 立体几何 / 圆锥曲线 | G2（solid / conic，规划 B1/B2） |
+| 数学 | 统计图表 | M（chart block，补建档 P1-1） |
+| 物理 | 受力 / 运动图像 | scene + vector / line / coordinateSystem（✅ 已建） |
+| 物理 | 电场/磁场线、光路、电路 | G2（field/ray）+ M（circuit，补建档 P1-2/P1-3） |
+| 化学 | 分子结构 | M（molecular block，规划 C） |
+| 生物 | 遗传系谱、食物链、细胞图 | M（pedigree/graph/biology，补建档 P1-4/P2） |
+| 地理 | 场图、统计图表、剖面 | M（field/chart/cross-section，补建档） |
+
+> 全学科覆盖总表见 [VISUAL_AST_COVERAGE.md](./VISUAL_AST_COVERAGE.md)（2026-08-10 补建档）。
 
 **4) 后端**
 
