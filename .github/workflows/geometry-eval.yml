@@ -71,3 +71,8 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: pnpm --filter @ai-study/core eval:lab
+
+      - name: Run cell eval (requires DEEPSEEK_API_KEY)
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: pnpm --filter @ai-study/core eval:cell

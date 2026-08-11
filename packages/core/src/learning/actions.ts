@@ -1,6 +1,6 @@
 import { composeMessages } from '../ai/prompt/compose';
 import { structuredCall } from '../ai/structured/call';
-import { TASK_SCHEMA, normalizeLabOutput } from '../ai/structured/schemas';
+import { TASK_SCHEMA, normalizeLabOutput, normalizeCellOutput } from '../ai/structured/schemas';
 import { blocksToPlainText, sanitizeBlocks } from '../ai/structured/blocks';
 import { retrieveReferences } from '../ai/rag';
 import { getLearnerContext } from '../ai/learner/context';
@@ -16,6 +16,7 @@ import type {
   PedigreeOutput,
   GraphOutput,
   LabOutputRaw,
+  CellOutputRaw,
 } from '../ai/structured/schemas';
 import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
@@ -79,6 +80,13 @@ const LAB_KEYWORDS = [
   '制取', '制气', '装置图', '实验装置', '蒸馏', '冷凝管', '过滤', '滤纸',
   '萃取', '分液', '蒸发', '加热分解', '排水集气', '排空气法', '收集气体',
   '酒精灯', '试管加热', '烧瓶', '锥形瓶', '分液漏斗', '长颈漏斗', '水浴加热', '坩埚',
+];
+/** cell task 触发关键词（生物细胞结构/细胞器/跨膜运输题）。 */
+const CELL_SUBJECTS = new Set(['生物']);
+const CELL_KEYWORDS = [
+  '细胞', '细胞器', '细胞壁', '细胞膜', '细胞核', '叶绿体', '线粒体', '核糖体',
+  '内质网', '高尔基体', '液泡', '溶酶体', '中心体', '拟核', '荚膜', '质粒', '鞭毛',
+  '跨膜', '协助扩散', '主动运输', '自由扩散', '渗透', '模式图', '原核',
 ];
 
 /**
@@ -281,6 +289,38 @@ export async function attachLabBlock(opts: {
   }
 }
 
+/**
+ * P2-2：analyze 后置生物细胞模式图检测（生物）。
+ * 命中则把合法 Cell AST 以 `cell` block 追加到 analysisBlocks。失败静默降级。
+ */
+export async function attachCellBlock(opts: {
+  subject: string;
+  question: string;
+  blocks: Block[] | undefined;
+}): Promise<Block[] | undefined> {
+  if (!CELL_SUBJECTS.has(opts.subject) || !opts.question.trim()) return opts.blocks;
+  if (!CELL_KEYWORDS.some((keyword) => opts.question.includes(keyword))) return opts.blocks;
+  try {
+    const messages = composeMessages({
+      task: 'cell',
+      subject: opts.subject,
+      phase: 'high',
+      userInput: opts.question,
+    });
+    const output = normalizeCellOutput((await structuredCall({
+      task: 'cell',
+      schema: TASK_SCHEMA.cell,
+      messages,
+      phase: 'high',
+    })) as CellOutputRaw);
+    if (!output.cell) return opts.blocks;
+    return [...(opts.blocks ?? []), output.cell as Block];
+  } catch (err) {
+    console.warn('attachCellBlock failed:', err);
+    return opts.blocks;
+  }
+}
+
 export async function executeAnalyze(opts: {
   userId: string;
   subject: string;
@@ -358,6 +398,11 @@ export async function executeAnalyze(opts: {
       blocks: result.analysisBlocks,
     });
     result.analysisBlocks = await attachLabBlock({
+      subject,
+      question: content,
+      blocks: result.analysisBlocks,
+    });
+    result.analysisBlocks = await attachCellBlock({
       subject,
       question: content,
       blocks: result.analysisBlocks,

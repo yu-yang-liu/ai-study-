@@ -299,6 +299,8 @@ public struct MarkdownRenderer: View {
             GraphCanvasView(block: block)
         case .lab(let block):
             LabCanvasView(block: block)
+        case .cell(let block):
+            CellCanvasView(block: block)
         }
     }
 
