@@ -1,9 +1,9 @@
 # Geometry V2 扩展规划（eval 等价匹配 / 立体几何 / 圆锥曲线 / 化学分子结构）
 
-> 状态：**Phase A（eval v2 相对几何匹配）代码已完成**（单测全绿，镜像/向量严格性已覆盖；真 key 全量回归待 CI 验证）；**Phase B/C 规划定稿待排期**
+> 状态：**Phase A（eval v2 相对几何匹配）代码已完成**（单测全绿，镜像/向量严格性已覆盖；真 key 全量回归 CI 已验证，2026-08-11）；**Phase B/C 规划定稿待排期**
 > 基线：2026-08-09 · M2 核心已交付（schema 严格化 + eval 8/8 + iOS 渲染 + analyze 生产链路端到端）
 > 关联：[GEOMETRY_PROMPT_EVAL.md](./GEOMETRY_PROMPT_EVAL.md)、[RENDER_AST.md](./RENDER_AST.md) §3、[VISUAL_AST.md](./VISUAL_AST.md)
-> 注：B/C 只是几何扩展的一部分；**高中学段全学科覆盖总表**（chart/circuit/field/ray/pedigree/lab/biology 等补建档项）见 [VISUAL_AST_COVERAGE.md](./VISUAL_AST_COVERAGE.md)。
+> 注：B/C 只是几何扩展的一部分；**高中学段全学科覆盖总表**（chart/circuit/field/ray/pedigree/lab/cell 等补建档项）见 [VISUAL_AST_COVERAGE.md](./VISUAL_AST_COVERAGE.md)。
 
 ---
 
@@ -145,4 +145,4 @@ Prompt：元素定义 + 1 个长方体 few-shot；约束「隐藏线用 dashed�
 - **conic.rotation 渲染复杂度**：先用无旋转样本，rotation 字段后补；
 - **分子坐标可靠性**：先限小分子；坐标与键序由 schema 校验 + eval 兜底。
 
-*文档版本：2026-08-10 · Phase A 代码完成（真 key 回归待 CI），Phase B/C 规划定稿*
+*文档版本：2026-08-11 · Phase A 代码完成（真 key 回归 CI 已验证），Phase B/C 规划定稿*

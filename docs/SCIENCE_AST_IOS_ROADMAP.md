@@ -158,6 +158,7 @@ type Block =
 - [x] 后端 `geometry` task + 提示词定稿 + eval 准确率（通过率 100%，见 [GEOMETRY_PROMPT_EVAL.md](./GEOMETRY_PROMPT_EVAL.md)）。
 - [x] analyze/gradeMath/chat 生产链路接入 visual block：`sanitizeBlocks` 校验 geometry，非法降级为占位，整响应不崩。
 - [x] **M-D 端到端**：独立 `geometry` task 后置检测 + attach（数学/物理题），`analyze-geometry-e2e.test.ts` 真 key 通过（2026-08-09）。
+- [x] 学科专用 M block 分批落地：chart / circuit / field / ray / pedigree / graph / lab / cell（2026-08-10/11，状态见 [VISUAL_AST_COVERAGE.md](./VISUAL_AST_COVERAGE.md)）。
 - [ ] 化学分子结构（图谱布局，V2 末段）。
 - [x] iOS 构建验证：macOS CI 全绿（PR #2/#3 合并，2026-08-09）。
 
@@ -189,14 +190,15 @@ public enum GeometryAST: Codable, Sendable {
 | 数学 | 平面几何 | triangle / angle / circle / line / point / label |
 | 数学 | 函数图像 | coordinateSystem + functionCurve |
 | 数学 | 立体几何 / 圆锥曲线 | G2（solid / conic，规划 B1/B2） |
-| 数学 | 统计图表 | M（chart block，补建档 P1-1） |
+| 数学 | 统计图表 | M（chart block，✅ P1-1 已实施） |
 | 物理 | 受力 / 运动图像 | scene + vector / line / coordinateSystem（✅ 已建） |
-| 物理 | 电场/磁场线、光路、电路 | G2（field/ray）+ M（circuit，补建档 P1-2/P1-3） |
+| 物理 | 电场/磁场线、光路、电路 | G2（field/ray ✅）+ M（circuit ✅，P1-2/P1-3 已实施） |
 | 化学 | 分子结构 | M（molecular block，规划 C） |
-| 生物 | 遗传系谱、食物链、细胞图 | M（pedigree/graph/biology，补建档 P1-4/P2） |
+| 化学 | 实验装置 | M（lab block，✅ P2-1 已实施） |
+| 生物 | 遗传系谱、食物链、细胞图 | M（pedigree/graph ✅ P1-4；cell ✅ P2-2） |
 | 地理 | 场图、统计图表、剖面 | M（field/chart/cross-section，补建档） |
 
-> 全学科覆盖总表见 [VISUAL_AST_COVERAGE.md](./VISUAL_AST_COVERAGE.md)（2026-08-10 补建档）。
+> 全学科覆盖总表见 [VISUAL_AST_COVERAGE.md](./VISUAL_AST_COVERAGE.md)（2026-08-11 更新）。
 
 **4) 后端**
 
@@ -296,4 +298,4 @@ V3（AI Learning Intelligence）→ 在 V2 的内容之上构建知识理解
 
 ---
 
-*文档版本：2026-08-10 · 严格对齐设计文件 Phase 1/2/3 · V1/V2 核心已完成，V3 长期积累未启动 · Swift/iOS 为主体，其他端不推进*
+*文档版本：2026-08-11 · 严格对齐设计文件 Phase 1/2/3 · V1/V2 核心已完成（M block 分批落地至 P2-2），V3 长期积累未启动 · Swift/iOS 为主体，其他端不推进*

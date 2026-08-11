@@ -410,12 +410,14 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | **Science AST 三版本方案** | [docs/SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md) |
 | **公式/几何渲染方案** | [docs/RENDER_AST.md](./RENDER_AST.md) |
 | **Visual AST 子项目** | [docs/VISUAL_AST.md](./VISUAL_AST.md) |
+| **Visual AST 覆盖总表** | [docs/VISUAL_AST_COVERAGE.md](./VISUAL_AST_COVERAGE.md) |
 | **几何提示词与 Eval** | [docs/GEOMETRY_PROMPT_EVAL.md](./GEOMETRY_PROMPT_EVAL.md)、[docs/GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md) |
 | **Agent Memory 专项** | [docs/AGENT_MEMORY.md](./AGENT_MEMORY.md) |
 | 环境变量模板 | `apps/web/.env.example` |
 | DB 迁移 | `packages/core/src/db/migrations/0000_initial.sql`、`0001_conversation_summaries.sql`、`0002_user_memory_facts.sql`、`0003_user_memories.sql` |
 | Geometry AST（core schema） | `packages/core/src/ai/structured/schemas.ts` |
 | 几何提示词（权威版） | `packages/core/src/ai/prompt/geometry.ts` |
+| 学科 Visual block 提示词（chart/circuit/pedigree/graph/lab/cell） | `packages/core/src/ai/prompt/{chart,circuit,pedigree,graph,lab,cell}.ts` |
 | 几何后置 attach | `packages/core/src/learning/actions.ts` |
 | Schema | `packages/core/src/db/schema.ts` |
 | 常量/学科 | `packages/core/src/constants.ts` |
@@ -440,6 +442,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | Android README | `packages/android/README.md` |
 | CI | `.github/workflows/ios-ci.yml`、`web-ci.yml`、`android-ci.yml`、`geometry-eval.yml` |
 | iOS 几何渲染 | `packages/ios/CoreKit/Sources/CoreKit/Geometry/GeometryCanvasView.swift` |
+| iOS 学科画布（chart/circuit/lab/cell/pedigree/graph） | `packages/ios/CoreKit/Sources/CoreKit/Geometry/{Chart,Circuit,Lab,Cell,Pedigree,Graph}CanvasView.swift` |
 
 ### Chat Agent 数据流
 
@@ -513,6 +516,7 @@ POST /api/chat
 - [ ] **V3 学习智能**：Knowledge Graph Agent + 学习状态模型 + 个性化推荐 + 智能规划（长期积累型，未启动，见 [SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md) §5）
 - [x] **公式渲染 M1**：后端 `Block[]` schema + 前端 `FormulaView`(iosMath) + `MarkdownRenderer(blocks:)`（见 [RENDER_AST.md](./RENDER_AST.md)）
 - [x] **几何渲染 M2（核心）**：Geometry AST + `GeometryCanvasView` + geometry task eval 8/8 + analyze 生产链路端到端（扩展项见 [GEOMETRY_V2_EXTENSIONS.md](./GEOMETRY_V2_EXTENSIONS.md)）
+- [x] **学科可视化 M block 批次**：chart（P1-1）、circuit（P1-2）、field/ray（P1-3）、pedigree/graph（P1-4）、lab（P2-1）、cell（P2-2）已实施并合并（详见 [VISUAL_AST_COVERAGE.md](./VISUAL_AST_COVERAGE.md)）
 
 ### Agent Memory 六项（[AGENT_MEMORY.md](./AGENT_MEMORY.md) §3）
 
@@ -525,4 +529,4 @@ POST /api/chat
 
 ---
 
-*文档版本：2026-08-10 · 对应当前工作区代码状态（M1–M6 全部已落地，第三阶段评审整改已完成：tsc 双包通过、vitest 108 passed / 2 skipped）*
+*文档版本：2026-08-11 · 对应当前工作区代码状态（M1–M6 全部已落地，第三阶段评审整改已完成：tsc 双包通过、core vitest 147 passed / 14 skipped、visual-ast 32 passed）*
