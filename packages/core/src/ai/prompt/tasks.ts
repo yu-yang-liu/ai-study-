@@ -1,6 +1,7 @@
 import type { TaskName } from '../gateway/types';
 import { CHAT_AGENT_TASK_INSTRUCTION } from './chatAgent';
 import { GEOMETRY_SYSTEM_PROMPT } from './geometry';
+import { CHART_SYSTEM_PROMPT } from './chart';
 
 const BLOCK_INSTRUCTION = `
 【分块输出】对于含数学公式的字段，请输出 blocks 数组而非纯字符串：
@@ -38,6 +39,7 @@ const TASK_INSTRUCTIONS: Record<TaskName, string> = {
   chat: `\u8bf7\u4ee5\u5b66\u79d1\u6559\u5e08\u7684\u8eab\u4efd\u56de\u7b54\u5b66\u751f\u95ee\u9898\u3002`,
   chatAgent: CHAT_AGENT_TASK_INSTRUCTION,
   geometry: GEOMETRY_SYSTEM_PROMPT,
+  chart: CHART_SYSTEM_PROMPT,
 };
 
 export function getTaskInstruction(task: TaskName): string {

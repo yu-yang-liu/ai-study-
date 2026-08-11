@@ -35,7 +35,7 @@
 | 圆锥曲线 | 椭圆/双曲线/抛物线 | G2（conic：center/a/b/rotation） | 规划（B2） | P1 |
 | 数列 | 等差/等比点列图 | G1（coordinateSystem + point） | 可建 | P2 |
 | 不等式 | 线性规划可行域 | G1（polygon + line + label） | 可建 | P2 |
-| 统计 | 频率分布直方图、茎叶图、散点图、回归直线 | M（chart block：bar/scatter/line 系列） | **未建档 → 本次补** | P1 |
+| 统计 | 频率分布直方图、茎叶图、散点图、回归直线 | M（chart block：bar/line/scatter/histogram/pie） | 🆕 **P1-1 实施完成**（core task/eval + iOS 渲染，2026-08-10 待 CI） | P1 |
 | 概率 | 正态分布曲线、几何概型区域、树状图 | G1（functionCurve/polygon）+ M（tree 简易） | 部分可建 | P2 |
 | 导数 | 切线、单调区间、极值图像 | G1（coordinateSystem + line/point） | 可建 | P2 |
 | 极坐标/参数方程 | 极坐标曲线、参数曲线 | G1/G2（functionCurve 参数化） | 可建 | P3 |
@@ -98,14 +98,14 @@
 | 水循环/洋流 | 水循环示意图、洋流分布 | M（flow + field） | **未建档 → 本次补** | P2 |
 | 地貌 | 等高线地形图、地形剖面 | G2（contour 曲线族）+ M（cross-section） | **未建档 → 本次补** | P3 |
 | 地质构造 | 褶皱/断层剖面 | M（cross-section） | 可建 | P3 |
-| 人口/城市/产业 | 统计图表、区位示意图 | M（chart 复用）+ G1 | 可建 | P2 |
+| 人口/城市/产业 | 统计图表、区位示意图 | M（chart 复用）+ G1 | 🆕 P1-1 可复用 | P2 |
 | 区域发展 | 示意图 | M | 可建 | P3 |
 
 ### 2.6 通用/未来
 
 | 内容 | 表达 | 状态 | 优先级 |
 |------|------|------|:--:|
-| 统计图表（柱状/折线/饼/直方图/散点） | M（chart block） | **未建档 → 本次补** | P1 |
+| 统计图表（柱状/折线/饼/直方图/散点） | M（chart block） | 🆕 **P1-1 实施完成**（`chart` task eval 8/8 + e2e 2/2 + iOS ChartCanvasView，2026-08-10） | P1 |
 | 流程图/思维导图 | M（graph/flow） | 未建档 | P2 |
 | 动态几何（拖动顶点、自动辅助线） | P（交互后置） | 设计文件「未来支持」 | P3 |
 | 参数变化联动（滑块重绘） | P | 设计文件 Phase 2「参数变化」 | P3 |
@@ -118,13 +118,13 @@
 
 - ✅ 已建：平面几何、函数图像、受力分析/向量、运动图像（G1 直接覆盖）
 - 📐 已规划（详设在手）：立体几何（B1）、圆锥曲线（B2）、分子结构（C）
-- 🆕 本次补建档（未实现）：**chart（统计图表）、circuit（电路）、field（场线/等高线）、ray（光路）、pedigree（遗传系谱）、graph/flow（图与流程）、lab（实验装置）、biology（细胞模式图）、levelDiagram（能级图）**，以及地理场图/剖面、生物曲线等 G1 可直建项
+- 🆕 本次补建档：**chart（统计图表，P1-1 已实施）**、circuit（电路）、field（场线/等高线）、ray（光路）、pedigree（遗传系谱）、graph/flow（图与流程）、lab（实验装置）、biology（细胞模式图）、levelDiagram（能级图），以及地理场图/剖面、生物曲线等 G1 可直建项（其余待排期）
 
 ### 3.2 推荐实施顺序（结合高考频次 × 渲染可行性 × AI 输出可靠性）
 
 | 批次 | 内容 | 理由 |
 |------|------|------|
-| **P1-1** | 统计图表 chart block（直方图/散点/折线/柱状） | 数学统计+地理+生物共用，AI 输出结构简单（数据数组），渲染纯 Canvas |
+| **P1-1** | 统计图表 chart block（直方图/散点/折线/柱状） | ✅ 已实施（2026-08-10）：`chart` task + 8 样本 eval + 后置 attach + iOS ChartCanvasView；待 CI 全绿后合并 |
 | **P1-2** | 电路图 circuit block（符号图元库） | 高考物理高频；符号固定、AI 输出可靠（元件清单+连接关系） |
 | **P1-3** | 场线 field（电场线/磁感线/等高线）+ 光路 ray | 物理高频；G2 扩展元素，几何语义清晰 |
 | **P1-4** | 遗传系谱 pedigree + 食物链/网 graph | 生物高频；符号规范，图布局可模板化 |

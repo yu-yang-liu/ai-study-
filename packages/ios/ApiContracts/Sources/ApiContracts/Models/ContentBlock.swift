@@ -29,6 +29,8 @@ public enum ContentBlock: Codable, Sendable, Equatable {
     /// 视觉内容（Visual AST）。Phase 2：`kind == "geometry"` 且携带 `GeometryAST` 时，
     /// 由 `GeometryCanvasView`（Swift Canvas/Shape）动态渲染；否则显示占位。
     case visual(kind: String, geometry: GeometryAST?)
+    /// 统计图表（Visual AST 扩展 · P1-1），由 `ChartCanvasView` 渲染。
+    case chart(block: ChartBlock)
 
     // MARK: CodingKeys
 
@@ -45,6 +47,13 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case interaction
         case kind
         case geometry
+        case categories
+        case series
+        case points
+        case bins
+        case slices
+        case xLabel
+        case yLabel
     }
 
     // MARK: Decodable
@@ -79,6 +88,12 @@ public enum ContentBlock: Codable, Sendable, Equatable {
             let kind = try container.decodeIfPresent(String.self, forKey: .kind) ?? "placeholder"
             let geometry = try container.decodeIfPresent(GeometryAST.self, forKey: .geometry)
             self = .visual(kind: kind, geometry: geometry)
+        case "chart":
+            if let block = try? ChartBlock(from: decoder) {
+                self = .chart(block: block)
+            } else {
+                self = .text(content: "")
+            }
         default:
             // 未知 type 降级为空文本，保证整响可解码。
             self = .text(content: "")
@@ -113,6 +128,17 @@ public enum ContentBlock: Codable, Sendable, Equatable {
             try container.encode("visual", forKey: .type)
             try container.encode(kind, forKey: .kind)
             try container.encodeIfPresent(geometry, forKey: .geometry)
+        case .chart(let block):
+            try container.encode("chart", forKey: .type)
+            try container.encode(block.kind, forKey: .kind)
+            try container.encodeIfPresent(block.title, forKey: .title)
+            try container.encodeIfPresent(block.xLabel, forKey: .xLabel)
+            try container.encodeIfPresent(block.yLabel, forKey: .yLabel)
+            try container.encodeIfPresent(block.categories, forKey: .categories)
+            try container.encodeIfPresent(block.series, forKey: .series)
+            try container.encodeIfPresent(block.points, forKey: .points)
+            try container.encodeIfPresent(block.bins, forKey: .bins)
+            try container.encodeIfPresent(block.slices, forKey: .slices)
         }
     }
 }

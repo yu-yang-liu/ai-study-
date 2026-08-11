@@ -48,6 +48,56 @@ final class ContentBlockTests: XCTestCase {
         XCTAssertEqual(block, .image(url: "fig.png", alt: nil))
     }
 
+    // MARK: chart（P1-1 统计图表）
+
+    func testDecodeChartBar() throws {
+        let json = #"""
+        {"type":"chart","kind":"bar","title":"成绩分布","categories":["A","B"],
+         "series":[{"name":"人数","values":[12,18]}]}
+        """#.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        guard case .chart(let chart) = block else {
+            return XCTFail("应为 chart block")
+        }
+        XCTAssertEqual(chart.kind, "bar")
+        XCTAssertEqual(chart.categories, ["A", "B"])
+        XCTAssertEqual(chart.series?.first?.values, [12, 18])
+        XCTAssertEqual(chart.series?.first?.name, "人数")
+    }
+
+    func testDecodeChartPie() throws {
+        let json = #"""
+        {"type":"chart","kind":"pie","slices":[{"label":"食品","value":40},
+         {"label":"住房","value":25}]}
+        """#.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        guard case .chart(let chart) = block else {
+            return XCTFail("应为 chart block")
+        }
+        XCTAssertEqual(chart.kind, "pie")
+        XCTAssertEqual(chart.slices?.count, 2)
+        XCTAssertEqual(chart.slices?.first?.label, "食品")
+    }
+
+    func testEncodeDecodeChartRoundtrip() throws {
+        let chart = ChartBlock(
+            kind: "line",
+            title: "气温变化",
+            categories: ["周一", "周二"],
+            series: [ChartSeries(name: "最高气温", values: [18, 20])]
+        )
+        let block: ContentBlock = .chart(block: chart)
+        let data = try JSONEncoder().encode(block)
+        let decoded = try JSONDecoder().decode(ContentBlock.self, from: data)
+        XCTAssertEqual(decoded, block)
+    }
+
+    func testDecodeChartMissingKindFallsBackToText() throws {
+        let json = #"{"type":"chart","categories":["A"]}"#.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        XCTAssertEqual(block, .text(content: ""))
+    }
+
     func testDecodeUnknownTypeDegradesToEmptyText() throws {
         let json = #"{"type":"geometry","content":"whatever"}"#.data(using: .utf8)!
         let block = try JSONDecoder().decode(ContentBlock.self, from: json)

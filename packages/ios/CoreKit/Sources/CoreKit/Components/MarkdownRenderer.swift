@@ -289,6 +289,8 @@ public struct MarkdownRenderer: View {
             } else {
                 VisualPlaceholderView(kind: kind)
             }
+        case .chart(let block):
+            ChartCanvasView(block: block)
         }
     }
 
