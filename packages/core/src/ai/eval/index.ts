@@ -61,5 +61,15 @@ export {
   LAB_CASE_PASS_THRESHOLD,
 } from './lab-scoring';
 export type { LabDimension } from './lab-scoring';
+export { cellSamples } from './cell-samples';
+export type { CellEvalCase } from './cell-samples';
+export {
+  scoreCell,
+  cellOverallScore,
+  cellCasePassed,
+  CELL_DIMENSIONS,
+  CELL_CASE_PASS_THRESHOLD,
+} from './cell-scoring';
+export type { CellDimension } from './cell-scoring';
 export type { GeometryDimension } from './geometry-scoring';
 export { evalExpr } from './geometry-math';

@@ -52,6 +52,8 @@ export function blocksToPlainText(blocks?: Block[] | null): string {
           return `[关系图] ${b.title ?? '图'}`;
         case 'lab':
           return `[实验装置图] ${b.title ?? '装置图'}`;
+        case 'cell':
+          return `[细胞模式图] ${b.title ?? '细胞结构'}`;
         default:
           return '';
       }

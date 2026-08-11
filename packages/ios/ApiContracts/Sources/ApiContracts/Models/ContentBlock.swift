@@ -39,6 +39,8 @@ public enum ContentBlock: Codable, Sendable, Equatable {
     case graph(block: GraphBlock)
     /// 实验装置图（Visual AST 扩展 · P2-1 化学实验），由 `LabCanvasView` 渲染。
     case lab(block: LabBlock)
+    /// 细胞模式图（Visual AST 扩展 · P2-2 生物细胞），由 `CellCanvasView` 渲染。
+    case cell(block: CellBlock)
 
     // MARK: CodingKeys
 
@@ -69,6 +71,9 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case edges
         case apparatus
         case connections
+        case cellType
+        case organelles
+        case transport
     }
 
     // MARK: Decodable
@@ -130,6 +135,12 @@ public enum ContentBlock: Codable, Sendable, Equatable {
         case "lab":
             if let block = try? LabBlock(from: decoder) {
                 self = .lab(block: block)
+            } else {
+                self = .text(content: "")
+            }
+        case "cell":
+            if let block = try? CellBlock(from: decoder) {
+                self = .cell(block: block)
             } else {
                 self = .text(content: "")
             }
@@ -198,6 +209,13 @@ public enum ContentBlock: Codable, Sendable, Equatable {
             try container.encodeIfPresent(block.title, forKey: .title)
             try container.encode(block.apparatus, forKey: .apparatus)
             try container.encode(block.connections, forKey: .connections)
+        case .cell(let block):
+            try container.encode("cell", forKey: .type)
+            try container.encodeIfPresent(block.title, forKey: .title)
+            try container.encode(block.cellType, forKey: .cellType)
+            try container.encode(block.organelles, forKey: .organelles)
+            try container.encodeIfPresent(block.connections, forKey: .connections)
+            try container.encodeIfPresent(block.transport, forKey: .transport)
         }
     }
 }

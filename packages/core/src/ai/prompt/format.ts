@@ -110,6 +110,18 @@ export function schemaToFormatInstruction(task: TaskName): string {
   "reason": "判断依据"
 }
 注意：graph 必须为合法 Graph AST（nodes/edges 见系统提示词，引用必须存在）；不需要关系图时 graph 为 null。`,
+    lab: `请输出 JSON：
+{
+  "lab": {"type":"lab","title":"制取装置","apparatus":[{"id":"a1","type":"stand","x":0,"y":0},{"id":"a2","type":"flask","x":0,"y":8,"content":"H2O2"}],"connections":[{"from":"a1","to":"a2"}]} 或 null,
+  "reason": "判断依据"
+}
+注意：lab 必须为合法 Lab AST（apparatus/connections 见系统提示词，connection 引用必须存在）；不需要装置图时 lab 为 null。`,
+    cell: `请输出 JSON：
+{
+  "cell": {"type":"cell","title":"植物细胞模式图","cellType":"plant","organelles":[{"id":"c1","type":"cellWall","x":0,"y":0},{"id":"c2","type":"cellMembrane","x":0,"y":0},{"id":"c3","type":"nucleus","x":0,"y":3,"label":"细胞核"}],"connections":[{"from":"c1","to":"c3"}]} 或 null,
+  "reason": "判断依据"
+}
+注意：cell 必须为合法 Cell AST（cellType/organelles/connections/transport 见系统提示词，connection 引用必须存在）；不需要模式图时 cell 为 null。`,
   };
 
   return FORMATS[task] ?? '\u8bf7\u8f93\u51fa\u7b26\u5408\u8981\u6c42\u7684 JSON \u683c\u5f0f';

@@ -45,7 +45,8 @@ export type Block =
   | CircuitBlock
   | PedigreeBlock
   | GraphBlock
-  | LabBlock;
+  | LabBlock
+  | CellBlock;
 
 const textBlockSchema = z.object({
   type: z.literal('text'),
@@ -365,6 +366,89 @@ export const labBlockSchema = z
   });
 export type LabBlock = z.infer<typeof labBlockSchema>;
 
+// ── Cell block（P2-2 生物细胞模式图；细胞器图元库：动植物/原核细胞 + 跨膜运输）──
+
+export const cellTypeSchema = z.enum(['plant', 'animal', 'prokaryotic', 'other']);
+export type CellType = z.infer<typeof cellTypeSchema>;
+
+export const organelleTypeSchema = z.enum([
+  'cellWall',        // 细胞壁（植物）
+  'cellMembrane',    // 细胞膜
+  'cytoplasm',       // 细胞质
+  'nucleus',         // 细胞核
+  'nucleolus',       // 核仁
+  'mitochondria',    // 线粒体
+  'chloroplast',     // 叶绿体（植物）
+  'ribosome',        // 核糖体
+  'er',              // 内质网
+  'golgi',           // 高尔基体
+  'vacuole',         // 液泡
+  'lysosome',        // 溶酶体（动物）
+  'centrosome',      // 中心体（动物/低等植物）
+  'flagellum',       // 鞭毛（细菌/精子）
+  'capsule',         // 荚膜（原核）
+  'nucleoid',        // 拟核（原核）
+  'plasmid',         // 质粒（原核）
+  'other',
+]);
+export type OrganelleType = z.infer<typeof organelleTypeSchema>;
+
+export const cellOrganelleSchema = z.object({
+  id: z.string().min(1).max(30),
+  type: organelleTypeSchema,
+  x: z.number().min(-100).max(100),
+  y: z.number().min(-100).max(100),
+  /** 细胞器尺寸倍数，缺省 1（0.6–2.5）。 */
+  scale: z.number().min(0.6).max(2.5).optional(),
+  label: z.string().max(40).optional(),
+  /** 功能/物质说明，如「有氧呼吸主要场所」「DNA」。 */
+  content: z.string().max(40).optional(),
+});
+
+export const cellConnectionSchema = z.object({
+  from: z.string().min(1).max(30),
+  to: z.string().min(1).max(30),
+  /** 细胞器间协作/流向；缺省 flow（物质流向）。 */
+  kind: z.enum(['flow', 'energy', 'synthesis', 'signal']).optional(),
+  label: z.string().max(40).optional(),
+});
+
+export const cellTransportSchema = z.object({
+  id: z.string().min(1).max(30),
+  /** 跨膜物质名，如「水」「葡萄糖」「Na+」「O2」。 */
+  substance: z.string().min(1).max(20),
+  /** 运输方式：diffusion 自由扩散 / facilitated 协助扩散 / activeTransport 主动运输 / osmosis 渗透。 */
+  kind: z.enum(['diffusion', 'facilitated', 'activeTransport', 'osmosis']),
+  /** 方向：in 进入细胞 / out 排出细胞。 */
+  direction: z.enum(['in', 'out']),
+  label: z.string().max(40).optional(),
+});
+
+export const cellBlockSchema = z
+  .object({
+    type: z.literal('cell'),
+    title: z.string().max(100).optional(),
+    /** 细胞类型：plant 植物 / animal 动物 / prokaryotic 原核。 */
+    cellType: cellTypeSchema,
+    organelles: z.array(cellOrganelleSchema).min(1).max(20),
+    /** 细胞器间协作/物质流向（可选）。 */
+    connections: z.array(cellConnectionSchema).max(20).optional(),
+    /** 跨膜运输（可选；表示物质进出细胞的箭头）。 */
+    transport: z.array(cellTransportSchema).max(10).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const ids = new Set(value.organelles.map((o) => o.id));
+    for (const connection of value.connections ?? []) {
+      if (!ids.has(connection.from) || !ids.has(connection.to)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `connection 引用了不存在的细胞器: ${connection.from}-${connection.to}`,
+        });
+      }
+    }
+  });
+export type CellBlock = z.infer<typeof cellBlockSchema>;
+
 export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   textBlockSchema,
   formulaBlockSchema,
@@ -377,6 +461,7 @@ export const blockSchema: z.ZodType<Block> = z.discriminatedUnion('type', [
   pedigreeBlockSchema,
   graphBlockSchema,
   labBlockSchema,
+  cellBlockSchema,
 ]);
 
 // ── Geometry AST（Phase 2 · Visual AST；与 visual-ast v1 对齐）──
@@ -599,6 +684,24 @@ export function normalizeLabOutput(output: LabOutputRaw): LabOutput {
   return { lab: output as LabBlock };
 }
 
+const cellOutputWrapperSchema = z.object({
+  cell: cellBlockSchema.nullable(),
+  reason: z.string().max(200).optional(),
+});
+export type CellOutput = z.infer<typeof cellOutputWrapperSchema>;
+/** 模型原始输出：允许包装对象 / 裸 Cell AST / null（容错归一，见 normalizeCellOutput）。 */
+export type CellOutputRaw = CellOutput | CellBlock | null;
+export const cellOutputSchema = z.union([cellOutputWrapperSchema, cellBlockSchema, z.null()]);
+
+/** 把模型原始输出归一化为统一包装形态 `{ cell, reason }`。 */
+export function normalizeCellOutput(output: CellOutputRaw): CellOutput {
+  if (output === null) return { cell: null };
+  if (typeof output === 'object' && 'cell' in output) {
+    return { cell: output.cell, reason: output.reason };
+  }
+  return { cell: output as CellBlock };
+}
+
 export const ocrOutput = z.object({
   text: z.string(),
   blocks: z.array(z.object({
@@ -740,4 +843,5 @@ export const TASK_SCHEMA: Record<TaskName, z.ZodType<unknown>> = {
   pedigree: pedigreeOutputSchema,
   graph: graphOutputSchema,
   lab: labOutputSchema,
+  cell: cellOutputSchema,
 };

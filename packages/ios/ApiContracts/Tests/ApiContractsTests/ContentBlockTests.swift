@@ -249,6 +249,57 @@ final class ContentBlockTests: XCTestCase {
         XCTAssertEqual(block, .text(content: ""))
     }
 
+    // MARK: cell（P2-2 生物细胞模式图）
+
+    func testDecodeCell() throws {
+        let json = #"""
+        {"type":"cell","title":"植物细胞模式图","cellType":"plant",
+         "organelles":[{"id":"c1","type":"cellWall","x":0,"y":0,"label":"细胞壁"},
+                       {"id":"c2","type":"cellMembrane","x":0,"y":0,"label":"细胞膜"},
+                       {"id":"c3","type":"nucleus","x":0,"y":3,"label":"细胞核","content":"DNA"}],
+         "connections":[{"from":"c1","to":"c3","kind":"flow"}],
+         "transport":[{"id":"t1","substance":"葡萄糖","kind":"facilitated","direction":"in","label":"协助扩散"}]}
+        """#.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        guard case .cell(let cell) = block else {
+            return XCTFail("应为 cell block")
+        }
+        XCTAssertEqual(cell.title, "植物细胞模式图")
+        XCTAssertEqual(cell.cellType, "plant")
+        XCTAssertEqual(cell.organelles.count, 3)
+        XCTAssertEqual(cell.organelles.first?.type, "cellWall")
+        XCTAssertEqual(cell.organelles[2].content, "DNA")
+        XCTAssertEqual(cell.connections?.first?.kind, "flow")
+        XCTAssertEqual(cell.transport?.first?.substance, "葡萄糖")
+        XCTAssertEqual(cell.transport?.first?.direction, "in")
+    }
+
+    func testEncodeDecodeCellRoundtrip() throws {
+        let cell = CellBlock(
+            title: "动物细胞模式图",
+            cellType: "animal",
+            organelles: [
+                CellOrganelle(id: "c1", type: "cellMembrane", x: 0, y: 0, scale: 1.1, label: "细胞膜"),
+                CellOrganelle(id: "c2", type: "mitochondria", x: 6, y: -3, label: "线粒体", content: "有氧呼吸"),
+            ],
+            connections: [
+                CellConnection(from: "c1", to: "c2", kind: "energy", label: "能量"),
+            ],
+            transport: [
+                CellTransport(id: "t1", substance: "水", kind: "osmosis", direction: "out", label: "渗透"),
+            ]
+        )
+        let block: ContentBlock = .cell(block: cell)
+        let data = try JSONEncoder().encode(block)
+        XCTAssertEqual(try JSONDecoder().decode(ContentBlock.self, from: data), block)
+    }
+
+    func testDecodeCellMissingOrganellesFallsBackToText() throws {
+        let json = #"{"type":"cell","title":"细胞","cellType":"plant","connections":[]}"#.data(using: .utf8)!
+        let block = try JSONDecoder().decode(ContentBlock.self, from: json)
+        XCTAssertEqual(block, .text(content: ""))
+    }
+
     func testDecodeUnknownTypeDegradesToEmptyText() throws {
         let json = #"{"type":"geometry","content":"whatever"}"#.data(using: .utf8)!
         let block = try JSONDecoder().decode(ContentBlock.self, from: json)

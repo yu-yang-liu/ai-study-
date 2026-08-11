@@ -78,8 +78,8 @@
 
 | 模块 | 可视化内容 | 表达 | 状态 | 优先级 |
 |------|-----------|------|------|:--:|
-| 分子与细胞 | 细胞模式图（动植物）、细胞器 | M（biology block + 细胞器图元） | **未建档 → 本次补** | P2 |
-| 物质运输 | 跨膜运输示意 | G1/M | 可建 | P3 |
+| 分子与细胞 | 细胞模式图（动植物）、细胞器 | M（cell block + 细胞器图元） | 🆕 **P2-2 实施完成**（`cell` task + eval 样本 + iOS CellCanvasView，2026-08-11） | P2 |
+| 物质运输 | 跨膜运输示意 | M（cell block 的 transport 字段 + 进出箭头） | 🆕 P2-2 已覆盖（协助扩散/自由扩散/主动运输/渗透） | P3 |
 | 代谢 | 光合/呼吸作用过程图 | M（flow/多帧） | **未建档 → 本次补** | P2 |
 | 细胞增殖 | 有丝/减数分裂示意 | P（多帧/动画）或 M（sequence） | 暂缓 | P3 |
 | 遗传 | 遗传系谱图、DNA 结构、中心法则 | M（pedigree block ✅；DNA 示意；flow） | 🆕 **P1-4 实施完成**（`pedigree` task eval 5/5 + e2e + iOS PedigreeCanvasView，2026-08-10 待 CI） | P1 |
@@ -118,7 +118,7 @@
 
 - ✅ 已建：平面几何、函数图像、受力分析/向量、运动图像（G1 直接覆盖）
 - 📐 已规划（详设在手）：立体几何（B1）、圆锥曲线（B2）、分子结构（C）
-- 🆕 本次补建档：**chart（P1-1 ✅）、circuit（P1-2 ✅）、field/ray（P1-3 ✅）、pedigree/graph（P1-4 ✅）、lab（P2-1 ✅）**；待排期：biology（细胞模式图）、levelDiagram（能级图）、flow（流程图）、等高线 contour，以及地理场图/剖面、生物曲线等 G1 可直建项
+- 🆕 本次补建档：**chart（P1-1 ✅）、circuit（P1-2 ✅）、field/ray（P1-3 ✅）、pedigree/graph（P1-4 ✅）、lab（P2-1 ✅）、cell（P2-2 ✅）**；待排期：levelDiagram（能级图）、flow（流程图）、等高线 contour，以及地理场图/剖面、生物曲线等 G1 可直建项
 
 ### 3.2 推荐实施顺序（结合高考频次 × 渲染可行性 × AI 输出可靠性）
 
@@ -129,7 +129,8 @@
 | **P1-3** | 场线 field + 光路 ray | ✅ 已实施（2026-08-10）：G2 元素 `field`（平行带/放射）+ `ray`（折线+箭头）入 Geometry AST，eval 样本 15 例，iOS drawer；等高线 contour 留 P3 |
 | **P1-4** | 遗传系谱 pedigree + 食物链/网 graph | ✅ 已实施（2026-08-10）：两个专用 block（世代行符号系谱 + 有向图），各 5 样本 eval + 后置 attach + iOS 渲染；待 CI 全绿后合并 |
 | **P2-1** | 实验装置 lab（制气/蒸馏/过滤/萃取） | ✅ 已实施（2026-08-11）：`lab` task + 5 样本 eval + 后置 attach（化学门控）+ iOS LabCanvasView；待 CI 全绿后合并 |
-| **P2** | 细胞模式图 biology、能级图 levelDiagram、流程图 flow | 覆盖面广但 AI 输出与渲染成本上升 |
+| **P2-2** | 细胞模式图 cell（动植物/原核 + 跨膜运输） | 🆕 实施中（2026-08-11）：`cell` task + 5 样本 eval + 后置 attach（生物门控）+ iOS CellCanvasView |
+| **P2** | 能级图 levelDiagram、流程图 flow | 覆盖面广但 AI 输出与渲染成本上升 |
 | **P3** | 动态几何、动画、3D、参数联动 | 交互后置，等 G1/G2/M 稳定后再做 |
 
 ### 3.3 每批次交付门槛
