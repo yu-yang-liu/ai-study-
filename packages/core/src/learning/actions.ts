@@ -1,6 +1,11 @@
 import { composeMessages } from '../ai/prompt/compose';
 import { structuredCall } from '../ai/structured/call';
-import { TASK_SCHEMA, normalizeLabOutput, normalizeCellOutput, normalizeMolecularOutput } from '../ai/structured/schemas';
+import {
+  TASK_SCHEMA,
+  normalizeLabOutput,
+  normalizeCellOutput,
+  normalizeMolecularOutput,
+} from '../ai/structured/schemas';
 import { blocksToPlainText, sanitizeBlocks } from '../ai/structured/blocks';
 import { retrieveReferences } from '../ai/rag';
 import { getLearnerContext } from '../ai/learner/context';
@@ -36,6 +41,10 @@ export type GradeResult = {
   score: number;
   maxScore: number;
   isCorrect?: boolean;
+  knowledgePoints?: string[];
+  difficulty?: number;
+  errorType?: string;
+  abilityAssessment?: Record<string, '强' | '中' | '弱'>;
   summary: string;
   steps?: Array<{ stepNumber: number; isCorrect: boolean; feedback?: string }>;
   /** 公式块（M1 公式渲染）：存在时 iOS 优先渲染 blocks，缺省回退 summary string。由 executeGrade 从模型输出透传。 */
@@ -59,35 +68,125 @@ const GEOMETRY_SUBJECTS = new Set(['数学', '物理']);
 /** chart task 覆盖的学科与触发关键词（统计类题目）。 */
 const CHART_SUBJECTS = new Set(['数学', '地理', '生物']);
 const CHART_KEYWORDS = [
-  '统计', '频率', '直方图', '平均数', '中位数', '众数', '方差', '标准差',
-  '样本', '分布', '占比', '饼图', '柱状图', '折线图', '散点图', '回归', '气温', '数据', '频数',
+  '统计',
+  '频率',
+  '直方图',
+  '平均数',
+  '中位数',
+  '众数',
+  '方差',
+  '标准差',
+  '样本',
+  '分布',
+  '占比',
+  '饼图',
+  '柱状图',
+  '折线图',
+  '散点图',
+  '回归',
+  '气温',
+  '数据',
+  '频数',
 ];
 /** circuit task 触发关键词（物理电路题）。 */
 const CIRCUIT_KEYWORDS = [
-  '电路', '电阻', '电流表', '电压表', '滑动变阻器', '电源', '开关',
-  '串联', '并联', '灯泡', '电表', '欧姆', '伏特', '安培', '测电阻', '电动机',
+  '电路',
+  '电阻',
+  '电流表',
+  '电压表',
+  '滑动变阻器',
+  '电源',
+  '开关',
+  '串联',
+  '并联',
+  '灯泡',
+  '电表',
+  '欧姆',
+  '伏特',
+  '安培',
+  '测电阻',
+  '电动机',
 ];
 /** pedigree task 触发关键词（生物遗传系谱题）。 */
 const PEDIGREE_KEYWORDS = [
-  '遗传', '系谱', '患病', '家族', '常染色体', '伴X', '伴性', '显性', '隐性', '先证者', '携带者',
+  '遗传',
+  '系谱',
+  '患病',
+  '家族',
+  '常染色体',
+  '伴X',
+  '伴性',
+  '显性',
+  '隐性',
+  '先证者',
+  '携带者',
 ];
 /** graph task 触发关键词（生物生态系统/食物链网题）。 */
 const GRAPH_KEYWORDS = [
-  '食物链', '食物网', '生态系统', '能量流动', '捕食', '营养级', '分解者', '生产者', '消费者',
+  '食物链',
+  '食物网',
+  '生态系统',
+  '能量流动',
+  '捕食',
+  '营养级',
+  '分解者',
+  '生产者',
+  '消费者',
 ];
 /** lab task 触发关键词（化学实验装置题）。 */
 const LAB_SUBJECTS = new Set(['化学']);
 const LAB_KEYWORDS = [
-  '制取', '制气', '装置图', '实验装置', '蒸馏', '冷凝管', '过滤', '滤纸',
-  '萃取', '分液', '蒸发', '加热分解', '排水集气', '排空气法', '收集气体',
-  '酒精灯', '试管加热', '烧瓶', '锥形瓶', '分液漏斗', '长颈漏斗', '水浴加热', '坩埚',
+  '制取',
+  '制气',
+  '装置图',
+  '实验装置',
+  '蒸馏',
+  '冷凝管',
+  '过滤',
+  '滤纸',
+  '萃取',
+  '分液',
+  '蒸发',
+  '加热分解',
+  '排水集气',
+  '排空气法',
+  '收集气体',
+  '酒精灯',
+  '试管加热',
+  '烧瓶',
+  '锥形瓶',
+  '分液漏斗',
+  '长颈漏斗',
+  '水浴加热',
+  '坩埚',
 ];
 /** cell task 触发关键词（生物细胞结构/细胞器/跨膜运输题）。 */
 const CELL_SUBJECTS = new Set(['生物']);
 const CELL_KEYWORDS = [
-  '细胞', '细胞器', '细胞壁', '细胞膜', '细胞核', '叶绿体', '线粒体', '核糖体',
-  '内质网', '高尔基体', '液泡', '溶酶体', '中心体', '拟核', '荚膜', '质粒', '鞭毛',
-  '跨膜', '协助扩散', '主动运输', '自由扩散', '渗透', '模式图', '原核',
+  '细胞',
+  '细胞器',
+  '细胞壁',
+  '细胞膜',
+  '细胞核',
+  '叶绿体',
+  '线粒体',
+  '核糖体',
+  '内质网',
+  '高尔基体',
+  '液泡',
+  '溶酶体',
+  '中心体',
+  '拟核',
+  '荚膜',
+  '质粒',
+  '鞭毛',
+  '跨膜',
+  '协助扩散',
+  '主动运输',
+  '自由扩散',
+  '渗透',
+  '模式图',
+  '原核',
 ];
 
 /**
@@ -291,12 +390,14 @@ export async function attachLabBlock(opts: {
       phase: 'high',
       userInput: opts.question,
     });
-    const output = normalizeLabOutput((await structuredCall({
-      task: 'lab',
-      schema: TASK_SCHEMA.lab,
-      messages,
-      phase: 'high',
-    })) as LabOutputRaw);
+    const output = normalizeLabOutput(
+      (await structuredCall({
+        task: 'lab',
+        schema: TASK_SCHEMA.lab,
+        messages,
+        phase: 'high',
+      })) as LabOutputRaw,
+    );
     if (!output.lab) return opts.blocks;
     return [...(opts.blocks ?? []), output.lab as Block];
   } catch (err) {
@@ -323,12 +424,14 @@ export async function attachCellBlock(opts: {
       phase: 'high',
       userInput: opts.question,
     });
-    const output = normalizeCellOutput((await structuredCall({
-      task: 'cell',
-      schema: TASK_SCHEMA.cell,
-      messages,
-      phase: 'high',
-    })) as CellOutputRaw);
+    const output = normalizeCellOutput(
+      (await structuredCall({
+        task: 'cell',
+        schema: TASK_SCHEMA.cell,
+        messages,
+        phase: 'high',
+      })) as CellOutputRaw,
+    );
     if (!output.cell) return opts.blocks;
     return [...(opts.blocks ?? []), output.cell as Block];
   } catch (err) {
@@ -351,12 +454,14 @@ export async function attachMolecularBlock(opts: {
       phase: 'high',
       userInput: opts.question,
     });
-    const output = normalizeMolecularOutput((await structuredCall({
-      task: 'molecular',
-      schema: TASK_SCHEMA.molecular,
-      messages,
-      phase: 'high',
-    })) as MolecularOutputRaw);
+    const output = normalizeMolecularOutput(
+      (await structuredCall({
+        task: 'molecular',
+        schema: TASK_SCHEMA.molecular,
+        messages,
+        phase: 'high',
+      })) as MolecularOutputRaw,
+    );
     if (!output.molecular) return opts.blocks;
     return [...(opts.blocks ?? []), output.molecular as Block];
   } catch (err) {
@@ -378,7 +483,7 @@ export async function executeAnalyze(opts: {
   const task = isImage ? ('analyzeImg' as const) : ('analyze' as const);
   const userInput = isImage
     ? `\u8bf7\u5206\u6790\u56fe\u7247\u4e2d\u7684\u8bd5\u9898\u5185\u5bb9\u3002${content ? `\n\u8865\u5145\u8bf4\u660e\uff1a${content}` : ''}`
-    : content ?? '';
+    : (content ?? '');
 
   const messages = composeMessages({
     task,
@@ -460,7 +565,11 @@ export async function executeAnalyze(opts: {
 
   let questionId: string | undefined;
   try {
-    questionId = await persistAnalyzeResult(userId, { subject, content: content ?? '', imageUrl }, result);
+    questionId = await persistAnalyzeResult(
+      userId,
+      { subject, content: content ?? '', imageUrl },
+      result,
+    );
   } catch (persistErr) {
     console.warn('analyze persist failed:', persistErr);
   }
@@ -489,7 +598,14 @@ export async function executeGrade(opts: {
   ]);
 
   const userInput = `\u9898\u76ee\uff1a${questionContent}\n\n\u5b66\u751f\u4f5c\u7b54\uff1a${studentAnswer}`;
-  const messages = composeMessages({ task, subject, phase: 'high', userInput, references, learnerContext });
+  const messages = composeMessages({
+    task,
+    subject,
+    phase: 'high',
+    userInput,
+    references,
+    learnerContext,
+  });
 
   const result = (await structuredCall({
     task,
@@ -525,9 +641,14 @@ export async function executeGrade(opts: {
     maxScore: result.maxScore,
     summary: result.summary ?? '',
     isCorrect: 'isCorrect' in result ? result.isCorrect : undefined,
+    knowledgePoints: 'knowledgePoints' in result ? result.knowledgePoints : undefined,
+    difficulty: 'difficulty' in result ? result.difficulty : undefined,
+    errorType: 'errorType' in result ? result.errorType : undefined,
+    abilityAssessment: 'abilityAssessment' in result ? result.abilityAssessment : undefined,
     steps: 'steps' in result ? result.steps : undefined,
     // 透传 blocks 供 API 响应携带，iOS 优先渲染。
-    summaryBlocks: 'summaryBlocks' in result ? (result as GradeMathOutput).summaryBlocks : undefined,
+    summaryBlocks:
+      'summaryBlocks' in result ? (result as GradeMathOutput).summaryBlocks : undefined,
     stepsBlocks:
       'steps' in result
         ? (result as GradeMathOutput).steps.map((s) => ({
@@ -537,11 +658,20 @@ export async function executeGrade(opts: {
         : undefined,
   };
 
-  const isCorrect = gradeResult.isCorrect ?? gradeResult.score >= gradeResult.maxScore * GRADE_PASS_RATIO;
+  const isCorrect =
+    gradeResult.isCorrect ?? gradeResult.score >= gradeResult.maxScore * GRADE_PASS_RATIO;
 
   if (persist) {
     try {
-      await persistGradeResult(userId, subject, questionType, questionContent, studentAnswer, gradeResult, isCorrect);
+      await persistGradeResult(
+        userId,
+        subject,
+        questionType,
+        questionContent,
+        studentAnswer,
+        gradeResult,
+        isCorrect,
+      );
     } catch (err) {
       console.warn('grade persist failed:', err);
     }
@@ -596,7 +726,10 @@ export async function executePlan(opts: {
   return normalized;
 }
 
-export async function fetchWrongQuestionSummary(userId: string, limit = 5): Promise<WrongQuestionSummary> {
+export async function fetchWrongQuestionSummary(
+  userId: string,
+  limit = 5,
+): Promise<WrongQuestionSummary> {
   const supabase = getServiceClient();
 
   const { count } = await supabase
@@ -616,7 +749,10 @@ export async function fetchWrongQuestionSummary(userId: string, limit = 5): Prom
     .limit(limit);
 
   const items = (data ?? []).map((row) => {
-    const q = row.questions as { subject?: string; content?: string } | { subject?: string; content?: string }[] | null;
+    const q = row.questions as
+      | { subject?: string; content?: string }
+      | { subject?: string; content?: string }[]
+      | null;
     const question = Array.isArray(q) ? q[0] : q;
     const content = question?.content ?? '';
     return {

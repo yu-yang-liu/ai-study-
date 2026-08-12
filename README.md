@@ -48,6 +48,7 @@ pnpm --filter @ai-study/core eval:geometry   # 需 DEEPSEEK_API_KEY（视觉 blo
 - **Visual AST 覆盖总表**: [docs/VISUAL_AST_COVERAGE.md](docs/VISUAL_AST_COVERAGE.md)
 - **几何提示词与 Eval**: [docs/GEOMETRY_PROMPT_EVAL.md](docs/GEOMETRY_PROMPT_EVAL.md) / [docs/GEOMETRY_V2_EXTENSIONS.md](docs/GEOMETRY_V2_EXTENSIONS.md)
 - **Agent Memory（M1–M6 六项已实现）**: [docs/AGENT_MEMORY.md](docs/AGENT_MEMORY.md)
+- **北京高中学习算法基线**: [docs/BEIJING_LEARNING_ALGORITHM.md](docs/BEIJING_LEARNING_ALGORITHM.md)
 - iOS: [packages/ios/README.md](packages/ios/README.md)
 - Android: [packages/android/README.md](packages/android/README.md)
 - Env template: [apps/web/.env.example](apps/web/.env.example)

@@ -10,8 +10,10 @@ import { GRAPH_SYSTEM_PROMPT } from './graph';
  * Uses a static map rather than introspecting zod internals (v4 incompatible).
  */
 export function schemaToFormatInstruction(task: TaskName): string {
-  const subjects = '\u8bed\u6587|\u6570\u5b66|\u82f1\u8bed|\u7269\u7406|\u5316\u5b66|\u751f\u7269|\u653f\u6cbb|\u5386\u53f2|\u5730\u7406';
-  const qTypes = '\u9009\u62e9\u9898|\u586b\u7a7a\u9898|\u89e3\u7b54\u9898|\u8bc1\u660e\u9898|\u8ba1\u7b97\u9898|\u5176\u4ed6';
+  const subjects =
+    '\u8bed\u6587|\u6570\u5b66|\u82f1\u8bed|\u7269\u7406|\u5316\u5b66|\u751f\u7269|\u653f\u6cbb|\u5386\u53f2|\u5730\u7406';
+  const qTypes =
+    '\u9009\u62e9\u9898|\u586b\u7a7a\u9898|\u89e3\u7b54\u9898|\u8bc1\u660e\u9898|\u8ba1\u7b97\u9898|\u5176\u4ed6';
 
   const FORMATS: Record<string, string> = {
     ocr: `\u8bf7\u8f93\u51fa JSON\uff1a
@@ -45,6 +47,10 @@ export function schemaToFormatInstruction(task: TaskName): string {
   "score": 85,
   "maxScore": 100,
   "isCorrect": true|false,
+  "knowledgePoints": ["知识点1", "知识点2"],
+  "difficulty": 1-10,
+  "errorType": "审题不清|概念混淆|公式错误|计算失误|方法错误|表达不完整",
+  "abilityAssessment": {"理解": "强|中|弱", "推理": "强|中|弱", "计算": "强|中|弱", "应用": "强|中|弱"},
   "steps": [{"stepNumber": 1, "isCorrect": true, "feedbackBlocks": [{"type": "text", "content": "\u6b65\u9aa4\u8bc4\u4ef7"}, {"type": "formula", "latex": "x^2"}]}],
   "summaryBlocks": [{"type": "text", "content": "\u603b\u4f53\u8bc4\u4ef7"}]
 }

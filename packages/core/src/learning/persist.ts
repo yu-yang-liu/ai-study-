@@ -10,10 +10,9 @@ import type { GradeQuestionType, GradeResult } from './actions';
 export async function bootstrapUserRecords(userId: string, email: string): Promise<void> {
   const supabase = getServiceClient();
 
-  await supabase.from('profiles').upsert(
-    { user_id: userId, phase: APP_PHASE, email },
-    { onConflict: 'user_id' },
-  );
+  await supabase
+    .from('profiles')
+    .upsert({ user_id: userId, phase: APP_PHASE, email }, { onConflict: 'user_id' });
 
   await supabase.from('user_profiles').upsert(
     {
@@ -72,10 +71,18 @@ export async function persistAnalyzeResult(
     type: 'analyze',
     subject: result.subject,
     knowledge_points: result.knowledgePoints,
+    difficulty: result.difficulty,
   });
   if (lErr) console.warn('persistAnalyze learning_events:', lErr.message);
 
-  await updateKnowledgeMastery(userId, result.subject, result.knowledgePoints, 'exposure');
+  await updateKnowledgeMastery(
+    userId,
+    result.subject,
+    result.knowledgePoints,
+    'exposure',
+    undefined,
+    { difficulty: result.difficulty },
+  );
   return question.id;
 }
 
@@ -94,8 +101,18 @@ export async function persistChatExchange(
   const resolvedConversationId = await getOrCreateConversation(userId, subject, conversationId);
 
   const { error: mErr } = await supabase.from('conversation_messages').insert([
-    { user_id: userId, conversation_id: resolvedConversationId, role: 'user', content: userMessage },
-    { user_id: userId, conversation_id: resolvedConversationId, role: 'assistant', content: assistantReply },
+    {
+      user_id: userId,
+      conversation_id: resolvedConversationId,
+      role: 'user',
+      content: userMessage,
+    },
+    {
+      user_id: userId,
+      conversation_id: resolvedConversationId,
+      role: 'assistant',
+      content: assistantReply,
+    },
   ]);
   if (mErr) console.warn('persistChat conversation_messages:', mErr.message);
 
@@ -157,6 +174,7 @@ export async function persistGradeResult(
     max_score: result.maxScore,
     user_answer: studentAnswer,
     ai_feedback: result.summary ?? null,
+    error_type: result.errorType ?? null,
   });
   if (prErr) throw new Error(`grade practice_records insert: ${prErr.message}`);
 
@@ -166,7 +184,8 @@ export async function persistGradeResult(
     question_id: question.id,
     subject,
     question_type: questionType === 'math' ? '计算题' : '作文',
-    knowledge_points: [],
+    knowledge_points: result.knowledgePoints ?? [],
+    difficulty: result.difficulty ?? null,
     analysis: result.summary ?? null,
   });
   if (qaErr) throw new Error(`grade question_analysis insert: ${qaErr.message}`);
@@ -185,7 +204,8 @@ export async function persistGradeResult(
         user_id: userId,
         phase: APP_PHASE,
         question_id: question.id,
-        knowledge_points: [],
+        knowledge_points: result.knowledgePoints ?? [],
+        error_type: result.errorType ?? null,
         review_count: 0,
         ease_factor: 2.5,
         interval_days: 1,
@@ -199,16 +219,31 @@ export async function persistGradeResult(
     phase: APP_PHASE,
     type: 'grade',
     subject,
+    knowledge_points: result.knowledgePoints ?? [],
     is_correct: isCorrect,
     score: result.score,
     max_score: result.maxScore,
+    difficulty: result.difficulty ?? null,
+    error_type: result.errorType ?? null,
+    ability_assessment: result.abilityAssessment ?? null,
   });
   if (evErr) throw new Error(`grade learning_events insert: ${evErr.message}`);
 
-  await updateKnowledgeMastery(userId, subject, [], isCorrect ? 'correct' : 'incorrect');
+  await updateKnowledgeMastery(
+    userId,
+    subject,
+    result.knowledgePoints ?? [],
+    isCorrect ? 'correct' : 'incorrect',
+    undefined,
+    { difficulty: result.difficulty },
+  );
 }
 
-export async function persistPlanResult(userId: string, subject: string, plan: PlanOutput): Promise<void> {
+export async function persistPlanResult(
+  userId: string,
+  subject: string,
+  plan: PlanOutput,
+): Promise<void> {
   const supabase = getServiceClient();
 
   const { error: deErr } = await supabase

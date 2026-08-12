@@ -3,7 +3,15 @@ import type { TaskName } from '../gateway/types';
 
 export const knowledgePointSchema = z.string().min(1);
 export const subjectSchema = z.enum([
-  '语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理',
+  '语文',
+  '数学',
+  '英语',
+  '物理',
+  '化学',
+  '生物',
+  '政治',
+  '历史',
+  '地理',
 ]);
 
 /**
@@ -129,7 +137,10 @@ function barLineChartSchema(kind: 'bar' | 'line') {
 const scatterChartSchema = z.object({
   type: z.literal('chart'),
   kind: z.literal('scatter'),
-  points: z.array(z.tuple([z.number(), z.number()])).min(1).max(200),
+  points: z
+    .array(z.tuple([z.number(), z.number()]))
+    .min(1)
+    .max(200),
   ...chartMetaFields,
 });
 
@@ -175,8 +186,18 @@ export type ChartBlock = z.infer<typeof chartBlockSchema>;
 // ── Circuit block（P1-2 电路图；Visual AST 扩展：元件符号 + 拓扑）──
 
 export const circuitNodeTypeSchema = z.enum([
-  'battery', 'resistor', 'switch', 'bulb', 'ammeter', 'voltmeter',
-  'rheostat', 'motor', 'capacitor', 'diode', 'wire', 'ground',
+  'battery',
+  'resistor',
+  'switch',
+  'bulb',
+  'ammeter',
+  'voltmeter',
+  'rheostat',
+  'motor',
+  'capacitor',
+  'diode',
+  'wire',
+  'ground',
 ]);
 export type CircuitNodeType = z.infer<typeof circuitNodeTypeSchema>;
 
@@ -292,7 +313,10 @@ export const graphBlockSchema = z
     const ids = new Set(value.nodes.map((node) => node.id));
     for (const edge of value.edges) {
       if (!ids.has(edge.from) || !ids.has(edge.to)) {
-        ctx.addIssue({ code: 'custom', message: `edge 引用了不存在的节点: ${edge.from}-${edge.to}` });
+        ctx.addIssue({
+          code: 'custom',
+          message: `edge 引用了不存在的节点: ${edge.from}-${edge.to}`,
+        });
       }
     }
   });
@@ -301,26 +325,26 @@ export type GraphBlock = z.infer<typeof graphBlockSchema>;
 // ── Lab block（P2-1 化学实验装置图；专用器材图元库：制气/蒸馏/过滤/萃取分液）──
 
 export const labApparatusTypeSchema = z.enum([
-  'flask',             // 圆底烧瓶
-  'erlenmeyerFlask',   // 锥形瓶
-  'beaker',            // 烧杯
-  'testTube',          // 试管
-  'funnel',            // 普通漏斗（过滤）
-  'separatoryFunnel',  // 分液漏斗（萃取分液）
-  'droppingFunnel',    // 滴液漏斗（制气加液）
-  'condenser',         // 冷凝管（蒸馏）
-  'thermometer',       // 温度计（蒸馏）
-  'alcoholLamp',       // 酒精灯（加热）
-  'stand',             // 铁架台
-  'clamp',             // 铁夹
-  'gasBottle',         // 集气瓶
-  'waterTrough',       // 水槽（排水集气）
-  'glassRod',          // 玻璃棒
-  'filterPaper',       // 滤纸
-  'deliveryTube',      // 导管
-  'evaporatingDish',   // 蒸发皿
-  'crucible',          // 坩埚
-  'spoon',             // 药匙/镊子
+  'flask', // 圆底烧瓶
+  'erlenmeyerFlask', // 锥形瓶
+  'beaker', // 烧杯
+  'testTube', // 试管
+  'funnel', // 普通漏斗（过滤）
+  'separatoryFunnel', // 分液漏斗（萃取分液）
+  'droppingFunnel', // 滴液漏斗（制气加液）
+  'condenser', // 冷凝管（蒸馏）
+  'thermometer', // 温度计（蒸馏）
+  'alcoholLamp', // 酒精灯（加热）
+  'stand', // 铁架台
+  'clamp', // 铁夹
+  'gasBottle', // 集气瓶
+  'waterTrough', // 水槽（排水集气）
+  'glassRod', // 玻璃棒
+  'filterPaper', // 滤纸
+  'deliveryTube', // 导管
+  'evaporatingDish', // 蒸发皿
+  'crucible', // 坩埚
+  'spoon', // 药匙/镊子
   'other',
 ]);
 export type LabApparatusType = z.infer<typeof labApparatusTypeSchema>;
@@ -373,23 +397,23 @@ export const cellTypeSchema = z.enum(['plant', 'animal', 'prokaryotic', 'other']
 export type CellType = z.infer<typeof cellTypeSchema>;
 
 export const organelleTypeSchema = z.enum([
-  'cellWall',        // 细胞壁（植物）
-  'cellMembrane',    // 细胞膜
-  'cytoplasm',       // 细胞质
-  'nucleus',         // 细胞核
-  'nucleolus',       // 核仁
-  'mitochondria',    // 线粒体
-  'chloroplast',     // 叶绿体（植物）
-  'ribosome',        // 核糖体
-  'er',              // 内质网
-  'golgi',           // 高尔基体
-  'vacuole',         // 液泡
-  'lysosome',        // 溶酶体（动物）
-  'centrosome',      // 中心体（动物/低等植物）
-  'flagellum',       // 鞭毛（细菌/精子）
-  'capsule',         // 荚膜（原核）
-  'nucleoid',        // 拟核（原核）
-  'plasmid',         // 质粒（原核）
+  'cellWall', // 细胞壁（植物）
+  'cellMembrane', // 细胞膜
+  'cytoplasm', // 细胞质
+  'nucleus', // 细胞核
+  'nucleolus', // 核仁
+  'mitochondria', // 线粒体
+  'chloroplast', // 叶绿体（植物）
+  'ribosome', // 核糖体
+  'er', // 内质网
+  'golgi', // 高尔基体
+  'vacuole', // 液泡
+  'lysosome', // 溶酶体（动物）
+  'centrosome', // 中心体（动物/低等植物）
+  'flagellum', // 鞭毛（细菌/精子）
+  'capsule', // 荚膜（原核）
+  'nucleoid', // 拟核（原核）
+  'plasmid', // 质粒（原核）
   'other',
 ]);
 export type OrganelleType = z.infer<typeof organelleTypeSchema>;
@@ -610,7 +634,10 @@ const conicElementSchema = z.object({
 const boxElementSchema = z.object({
   type: z.literal('box'),
   vertices: z.array(vec2Schema).length(8),
-  faces: z.array(z.array(z.number().int().min(0).max(7)).min(3).max(4)).min(1).max(6),
+  faces: z
+    .array(z.array(z.number().int().min(0).max(7)).min(3).max(4))
+    .min(1)
+    .max(6),
   ...baseElementFields,
 });
 
@@ -636,7 +663,9 @@ const relationElementSchema = z.object({
   type: z.literal('relation'),
   from: vec2Schema,
   to: vec2Schema,
-  relation: z.enum(['parallel', 'perpendicular', 'equal', 'similar', 'dependsOn', 'custom']).optional(),
+  relation: z
+    .enum(['parallel', 'perpendicular', 'equal', 'similar', 'dependsOn', 'custom'])
+    .optional(),
   style: z.enum(['solid', 'dashed']).optional(),
   ...baseElementFields,
 });
@@ -693,18 +722,20 @@ export type GeometryElement = z.infer<typeof geometryElementSchema>;
 
 /** Geometry AST 根节点（scene / coordinateSystem）。 */
 export const geometryAstSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('scene'),
-    elements: z.array(geometryElementSchema).max(20),
-    bounds: sceneBoundsSchema.optional(),
-  }).superRefine((value, ctx) => {
-    if (value.elements.some((element) => element.type === 'functionCurve')) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'scene 不能包含 functionCurve，函数图像应使用 coordinateSystem 根节点',
-      });
-    }
-  }),
+  z
+    .object({
+      type: z.literal('scene'),
+      elements: z.array(geometryElementSchema).max(20),
+      bounds: sceneBoundsSchema.optional(),
+    })
+    .superRefine((value, ctx) => {
+      if (value.elements.some((element) => element.type === 'functionCurve')) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'scene 不能包含 functionCurve，函数图像应使用 coordinateSystem 根节点',
+        });
+      }
+    }),
   z.object({
     type: z.literal('coordinateSystem'),
     xRange: vec2Schema,
@@ -810,11 +841,15 @@ export function normalizeMolecularOutput(output: MolecularOutputRaw): MolecularO
 
 export const ocrOutput = z.object({
   text: z.string(),
-  blocks: z.array(z.object({
-    type: z.enum(['text', 'formula', 'image']),
-    content: z.string(),
-    confidence: z.number().min(0).max(1).optional(),
-  })).optional(),
+  blocks: z
+    .array(
+      z.object({
+        type: z.enum(['text', 'formula', 'image']),
+        content: z.string(),
+        confidence: z.number().min(0).max(1).optional(),
+      }),
+    )
+    .optional(),
 });
 export type OcrOutput = z.infer<typeof ocrOutput>;
 
@@ -841,13 +876,19 @@ export type AnalyzeOutput = z.infer<typeof analyzeOutput>;
 export const gradeMathOutput = z.object({
   score: z.number().min(0),
   maxScore: z.number().min(1).default(100),
-    isCorrect: z.boolean(),
-    steps: z.array(z.object({
+  isCorrect: z.boolean(),
+  knowledgePoints: z.array(knowledgePointSchema).max(20).default([]),
+  difficulty: z.number().int().min(1).max(10).optional(),
+  errorType: z.string().trim().min(1).max(80).optional(),
+  abilityAssessment: z.record(z.string(), z.enum(['强', '中', '弱'])).optional(),
+  steps: z.array(
+    z.object({
       stepNumber: z.number().int(),
       isCorrect: z.boolean(),
       feedback: z.string().optional(),
       feedbackBlocks: z.array(blockSchema).optional(),
-    })),
+    }),
+  ),
   summary: z.string().optional(),
   summaryBlocks: z.array(blockSchema).optional(),
 });
@@ -866,18 +907,20 @@ export type GradeEssayOutput = z.infer<typeof gradeEssayOutput>;
 export const planOutput = z.object({
   title: z.string(),
   description: z.string(),
-  tasks: z.array(z.object({
-    taskId: z.string().optional(),
-    title: z.string(),
-    subject: subjectSchema,
-    knowledgePoints: z.array(knowledgePointSchema),
-    estimatedMinutes: z.number().int().min(1),
-    priority: z.enum(['高', '中', '低']),
-    reason: z.string(),
-    status: z.enum(['pending', 'completed', 'skipped']).optional(),
-    completedAt: z.string().optional(),
-    skippedAt: z.string().optional(),
-  })),
+  tasks: z.array(
+    z.object({
+      taskId: z.string().optional(),
+      title: z.string(),
+      subject: subjectSchema,
+      knowledgePoints: z.array(knowledgePointSchema),
+      estimatedMinutes: z.number().int().min(1),
+      priority: z.enum(['高', '中', '低']),
+      reason: z.string(),
+      status: z.enum(['pending', 'completed', 'skipped']).optional(),
+      completedAt: z.string().optional(),
+      skippedAt: z.string().optional(),
+    }),
+  ),
   createdAt: z.string().optional(),
 });
 export type PlanOutput = z.infer<typeof planOutput>;

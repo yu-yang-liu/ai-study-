@@ -3,6 +3,7 @@ import {
   masteryDelta,
   clampLevel,
   masteryTrend,
+  calculateDataRichness,
   resolveKnowledgePoints,
 } from './mastery';
 
@@ -44,5 +45,13 @@ describe('resolveKnowledgePoints', () => {
 
   it('filters blanks', () => {
     expect(resolveKnowledgePoints(['导数', '  ', '极限'], '数学')).toEqual(['导数', '极限']);
+  });
+});
+
+describe('calculateDataRichness', () => {
+  it('uses coverage instead of counting repeated events as new knowledge', () => {
+    expect(calculateDataRichness(1, 100)).toBeLessThan(0.1);
+    expect(calculateDataRichness(30, 100)).toBe(1);
+    expect(calculateDataRichness(30, 200)).toBe(1);
   });
 });

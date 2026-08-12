@@ -1,13 +1,20 @@
 import type { LearnerModel, LearnerPace, LearnerPreferences, ErrorProfile } from './types';
 import { DEFAULT_LEARNER_MODEL } from './types';
+import type { BeijingEducationState } from '../../beijing';
 
 // ── Forgetting curve ──
-const DECAY_HALF_LIFE_DAYS = 14; // mastery halves if unseen for 2 weeks
+const DECAY_HALF_LIFE_DAYS = 30;
 
 function applyDecay(level: number, daysSinceLastSeen: number): number {
   if (daysSinceLastSeen <= 0) return level;
   const decayFactor = Math.pow(0.5, daysSinceLastSeen / DECAY_HALF_LIFE_DAYS);
-  return Math.max(0, level * decayFactor);
+  return Math.max(0, Math.min(1, 0.5 + (level - 0.5) * decayFactor));
+}
+
+function applyUncertaintyDecay(uncertainty: number, daysSinceLastSeen: number): number {
+  if (daysSinceLastSeen <= 0) return uncertainty;
+  const retention = Math.pow(0.5, daysSinceLastSeen / DECAY_HALF_LIFE_DAYS);
+  return Math.min(1, uncertainty + (1 - uncertainty) * (1 - retention) * 0.5);
 }
 
 function determineTrend(oldLevel: number, newLevel: number): 'up' | 'flat' | 'down' {
@@ -16,9 +23,7 @@ function determineTrend(oldLevel: number, newLevel: number): 'up' | 'flat' | 'do
   return 'flat';
 }
 
-function buildErrorProfile(
-  errorEvents: Array<{ errorType: string | null }>,
-): ErrorProfile[] {
+function buildErrorProfile(errorEvents: Array<{ errorType: string | null }>): ErrorProfile[] {
   if (errorEvents.length === 0) return [];
 
   const errorMap = new Map<string, number>();
@@ -56,10 +61,13 @@ export function buildLearnerModel(opts: {
   knowledgeMastery: Array<{
     knowledgePoint: string;
     level: number;
+    uncertainty?: number;
+    evidenceCount?: number;
     lastSeen: string; // ISO
     trend: string;
   }>;
   errorEvents?: Array<{ errorType: string | null }>;
+  educationState?: BeijingEducationState;
 }): LearnerModel {
   if (!opts.userProfiles) return { ...DEFAULT_LEARNER_MODEL };
 
@@ -70,20 +78,23 @@ export function buildLearnerModel(opts: {
   for (const kp of opts.knowledgeMastery) {
     const daysSince = (now - new Date(kp.lastSeen).getTime()) / (1000 * 60 * 60 * 24);
     const decayedLevel = applyDecay(kp.level, daysSince);
+    const uncertainty = applyUncertaintyDecay(kp.uncertainty ?? 1, daysSince);
     mastery[kp.knowledgePoint] = {
       knowledgePoint: kp.knowledgePoint,
       level: decayedLevel,
+      uncertainty,
+      evidenceCount: kp.evidenceCount ?? 0,
       lastSeen: kp.lastSeen,
       trend: determineTrend(kp.level, decayedLevel),
     };
   }
 
   const abilities = {
-    '理解': opts.userProfiles.abilities['理解'] ?? 0.5,
-    '表达': opts.userProfiles.abilities['表达'] ?? 0.5,
-    '推理': opts.userProfiles.abilities['推理'] ?? 0.5,
-    '计算': opts.userProfiles.abilities['计算'] ?? 0.5,
-    '应用': opts.userProfiles.abilities['应用'] ?? 0.5,
+    理解: opts.userProfiles.abilities['理解'] ?? 0.5,
+    表达: opts.userProfiles.abilities['表达'] ?? 0.5,
+    推理: opts.userProfiles.abilities['推理'] ?? 0.5,
+    计算: opts.userProfiles.abilities['计算'] ?? 0.5,
+    应用: opts.userProfiles.abilities['应用'] ?? 0.5,
   };
 
   const pace: LearnerPace = {
@@ -93,8 +104,8 @@ export function buildLearnerModel(opts: {
   };
 
   const preferences: LearnerPreferences = {
-    explainStyle: (opts.userProfiles.preferences.explainStyle as LearnerPreferences['explainStyle']),
-    preferredDifficulty: (opts.userProfiles.preferences.preferredDifficulty as number),
+    explainStyle: opts.userProfiles.preferences.explainStyle as LearnerPreferences['explainStyle'],
+    preferredDifficulty: opts.userProfiles.preferences.preferredDifficulty as number,
   };
 
   const errorProfile = buildErrorProfile(opts.errorEvents ?? []);
@@ -109,5 +120,6 @@ export function buildLearnerModel(opts: {
     preferences,
     targetScore: opts.userProfiles.targetScore,
     dataRichness: opts.userProfiles.dataRichness ?? 0,
+    educationState: opts.educationState,
   };
 }

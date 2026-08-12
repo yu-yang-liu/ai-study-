@@ -1,9 +1,11 @@
 import { getServiceClient } from '../db';
 import { APP_PHASE } from '../constants';
+import { updateMasteryState } from './mastery-state';
+import type { MasteryOutcome } from './mastery-state';
 
-export type MasteryOutcome = 'exposure' | 'correct' | 'incorrect' | 'review';
+export type { MasteryOutcome } from './mastery-state';
 
-/** Per-event mastery delta (level is 0–1). */
+/** Legacy delta helper kept for compatibility with existing callers. */
 export function masteryDelta(outcome: MasteryOutcome, quality?: number): number {
   switch (outcome) {
     case 'exposure':
@@ -40,6 +42,16 @@ export function resolveKnowledgePoints(knowledgePoints: string[], subject: strin
 }
 
 /**
+ * Data richness is a coverage signal, not a raw event counter. Repeating one
+ * knowledge point should not make a learner profile look fully calibrated.
+ */
+export function calculateDataRichness(masteryPointCount: number, eventCount: number): number {
+  const masteryCoverage = Math.min(1, Math.max(0, masteryPointCount) / 30);
+  const eventCoverage = Math.min(1, Math.max(0, eventCount) / 100);
+  return Number((0.7 * masteryCoverage + 0.3 * masteryCoverage * eventCoverage).toFixed(3));
+}
+
+/**
  * Upsert knowledge_mastery rows and bump user_profiles.data_richness.
  * Safe to call with empty points after resolveKnowledgePoints.
  */
@@ -49,6 +61,7 @@ export async function updateKnowledgeMastery(
   knowledgePoints: string[],
   outcome: MasteryOutcome,
   quality?: number,
+  evidenceOptions?: { difficulty?: number; confidence?: number },
 ): Promise<void> {
   const points = resolveKnowledgePoints(knowledgePoints, subject);
   const delta = masteryDelta(outcome, quality);
@@ -60,14 +73,33 @@ export async function updateKnowledgeMastery(
   for (const kp of points) {
     const { data: existing } = await supabase
       .from('knowledge_mastery')
-      .select('level')
+      .select('level, uncertainty, evidence_count, last_seen')
       .eq('user_id', userId)
       .eq('phase', APP_PHASE)
       .eq('knowledge_point', kp)
       .maybeSingle();
 
-    const oldLevel = Number(existing?.level ?? 0);
-    const newLevel = clampLevel(oldLevel + delta);
+    const oldLevel = Number(existing?.level ?? 0.5);
+    const next = updateMasteryState(
+      {
+        level: oldLevel,
+        uncertainty: Number(existing?.uncertainty ?? 1),
+        evidenceCount: Number(existing?.evidence_count ?? 0),
+        lastSeen: existing?.last_seen ?? undefined,
+      },
+      {
+        outcome,
+        quality,
+        difficulty:
+          evidenceOptions?.difficulty === undefined
+            ? undefined
+            : evidenceOptions.difficulty > 1
+              ? (evidenceOptions.difficulty - 1) / 9
+              : evidenceOptions.difficulty,
+        confidence: evidenceOptions?.confidence,
+      },
+      now,
+    );
 
     await supabase.from('knowledge_mastery').upsert(
       {
@@ -75,9 +107,12 @@ export async function updateKnowledgeMastery(
         phase: APP_PHASE,
         knowledge_point: kp,
         subject,
-        level: newLevel,
+        level: next.level,
+        uncertainty: next.uncertainty,
+        evidence_count: next.evidenceCount,
+        mastery_version: 'evidence-v1',
         last_seen: now,
-        trend: masteryTrend(oldLevel, newLevel),
+        trend: next.trend,
         updated_at: now,
       },
       { onConflict: 'user_id,phase,knowledge_point' },
@@ -89,14 +124,24 @@ export async function updateKnowledgeMastery(
 
 async function bumpDataRichness(userId: string): Promise<void> {
   const supabase = getServiceClient();
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('data_richness')
-    .eq('user_id', userId)
-    .maybeSingle();
+  const [{ data: profile }, { count: masteryPointCount }, { count: eventCount }] =
+    await Promise.all([
+      supabase.from('user_profiles').select('data_richness').eq('user_id', userId).maybeSingle(),
+      supabase
+        .from('knowledge_mastery')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('phase', APP_PHASE),
+      supabase
+        .from('learning_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('phase', APP_PHASE),
+    ]);
 
   const current = Number(profile?.data_richness ?? 0);
-  const next = Math.min(1, Number((current + 0.02).toFixed(3)));
+  const calculated = calculateDataRichness(masteryPointCount ?? 0, eventCount ?? 0);
+  const next = Math.max(current, calculated);
 
   await supabase
     .from('user_profiles')

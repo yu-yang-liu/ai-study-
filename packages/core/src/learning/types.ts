@@ -38,7 +38,15 @@ export type StatsResponse = {
   subjectBreakdown: Record<string, { correct: number; wrong: number; avgScore: number }>;
   recentActivity: Array<{ date: string; count: number }>;
   trend: Array<{ date: string; count: number; accuracy: number; avgScore: number }>;
-  mastery: Array<{ knowledgePoint: string; subject: string; level: number; trend: string; lastSeen: string }>;
+  mastery: Array<{
+    knowledgePoint: string;
+    subject: string;
+    level: number;
+    uncertainty: number;
+    evidenceCount: number;
+    trend: string;
+    lastSeen: string;
+  }>;
   abilities: Record<string, number>;
   abilityTrend: Array<{ date: string; abilities: Record<string, number> }>;
 };
@@ -66,8 +74,18 @@ export type WrongRow = {
 };
 
 export type DetailedAnalysisRef =
-  | { answer: string | null; analysis?: string | null; exam_points?: string | null; is_favorite?: boolean }
-  | { answer: string | null; analysis?: string | null; exam_points?: string | null; is_favorite?: boolean }[]
+  | {
+      answer: string | null;
+      analysis?: string | null;
+      exam_points?: string | null;
+      is_favorite?: boolean;
+    }
+  | {
+      answer: string | null;
+      analysis?: string | null;
+      exam_points?: string | null;
+      is_favorite?: boolean;
+    }[]
   | null;
 
 /** 从 practice_records（单行或数组）中取最近一次作答。 */

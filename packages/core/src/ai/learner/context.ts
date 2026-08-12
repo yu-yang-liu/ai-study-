@@ -2,6 +2,7 @@ import { createServiceClient, getServiceClient } from '../../db';
 import { createClientFromToken } from '../../auth';
 import type { LearnerModel } from './types';
 import { buildLearnerModel } from './model';
+import { beijingEducationStateSchema } from '../../beijing';
 
 /**
  * Fetches the learner context for a given user, generating a text summary
@@ -21,10 +22,35 @@ export async function getLearnerContext(
     .eq('user_id', userId)
     .maybeSingle();
 
+  const { data: educationStateRow } = await supabase
+    .from('beijing_education_states')
+    .select(
+      'region, grade, stage, selection_status, selected_subjects, selection_changed_at, qualification_status, subject_performance, policy_version, updated_at',
+    )
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  const educationState = educationStateRow
+    ? beijingEducationStateSchema.safeParse({
+        region: educationStateRow.region,
+        grade: educationStateRow.grade,
+        stage: educationStateRow.stage,
+        selection: {
+          status: educationStateRow.selection_status,
+          subjects: educationStateRow.selected_subjects ?? [],
+          changedAt: educationStateRow.selection_changed_at ?? undefined,
+        },
+        qualificationStatus: educationStateRow.qualification_status ?? {},
+        subjectPerformance: educationStateRow.subject_performance ?? {},
+        policyVersion: educationStateRow.policy_version,
+        updatedAt: educationStateRow.updated_at,
+      })
+    : null;
+
   // Query knowledge_mastery
   const { data: masteryRows } = await supabase
     .from('knowledge_mastery')
-    .select('knowledge_point, level, last_seen, trend')
+    .select('knowledge_point, level, uncertainty, evidence_count, last_seen, trend')
     .eq('user_id', userId);
 
   // Query recent error events (last 90 days) for errorProfile aggregation
@@ -57,10 +83,13 @@ export async function getLearnerContext(
     knowledgeMastery: (masteryRows ?? []).map((r) => ({
       knowledgePoint: r.knowledge_point,
       level: Number(r.level),
+      uncertainty: Number(r.uncertainty ?? 1),
+      evidenceCount: Number(r.evidence_count ?? 0),
       lastSeen: r.last_seen,
       trend: r.trend ?? 'flat',
     })),
     errorEvents,
+    educationState: educationState?.success ? educationState.data : undefined,
   });
 
   // Generate text context for prompt injection
@@ -69,7 +98,7 @@ export async function getLearnerContext(
 }
 
 function formatLearnerContext(model: LearnerModel): string {
-  if (model.dataRichness < 0.1) return '';
+  if (model.dataRichness < 0.1 && !model.educationState) return '';
 
   const parts: string[] = [];
 
@@ -81,6 +110,24 @@ function formatLearnerContext(model: LearnerModel): string {
   }
   if (model.targetScore) {
     parts.push(`\u76ee\u6807\u5206\uff1a${model.targetScore}\u5206`);
+  }
+
+  if (model.educationState) {
+    const state = model.educationState;
+    parts.push(`\u5317\u4eac\u9ad8\u4e2d\u9636\u6bb5\uff1a${state.grade}\u00b7${state.stage}`);
+    if (state.selection.subjects.length > 0) {
+      parts.push(
+        `\u9009\u79d1\u72b6\u6001\uff1a${state.selection.status}\uff08${state.selection.subjects.join('\u3001')}\uff09`,
+      );
+    }
+    const failedSubjects = Object.entries(state.qualificationStatus)
+      .filter(([, status]) => status === 'failed')
+      .map(([subject]) => subject);
+    if (failedSubjects.length > 0) {
+      parts.push(
+        `\u5408\u683c\u8003\u5f85\u5904\u7406\u79d1\u76ee\uff1a${failedSubjects.join('\u3001')}`,
+      );
+    }
   }
 
   const lowMastery = Object.entries(model.mastery)

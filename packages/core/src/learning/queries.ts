@@ -56,7 +56,7 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
       .limit(200),
     supabase
       .from('knowledge_mastery')
-      .select('knowledge_point, subject, level, trend, last_seen')
+      .select('knowledge_point, subject, level, uncertainty, evidence_count, trend, last_seen')
       .eq('user_id', userId)
       .eq('phase', APP_PHASE)
       .order('level', { ascending: true })
@@ -99,7 +99,10 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
     }
   }
 
-  const recentMap: Record<string, { count: number; correct: number; scoreSum: number; scoreCount: number }> = {};
+  const recentMap: Record<
+    string,
+    { count: number; correct: number; scoreSum: number; scoreCount: number }
+  > = {};
   const abilityTrend = (events ?? [])
     .filter((event) => event.ability_assessment && typeof event.ability_assessment === 'object')
     .slice(0, 14)
@@ -107,8 +110,10 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
     .map((event) => ({
       date: new Date(event.created_at).toISOString().slice(0, 10),
       abilities: Object.fromEntries(
-        Object.entries(event.ability_assessment as Record<string, unknown>)
-          .map(([key, value]) => [key, Number(value) || 0]),
+        Object.entries(event.ability_assessment as Record<string, unknown>).map(([key, value]) => [
+          key,
+          Number(value) || 0,
+        ]),
       ),
     }));
   for (const ev of events ?? []) {
@@ -140,7 +145,10 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
       avgScore: value.scoreCount > 0 ? Math.round(value.scoreSum / value.scoreCount) : 0,
     }));
 
-  const recentActivity = trend.slice(-7).reverse().map(({ date, count }) => ({ date, count }));
+  const recentActivity = trend
+    .slice(-7)
+    .reverse()
+    .map(({ date, count }) => ({ date, count }));
 
   const accuracy = totalPractice > 0 ? Math.round((correctCount / totalPractice) * 100) : 0;
 
@@ -151,9 +159,10 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
     ]),
   );
 
-  const profileAbilities = profileRow?.abilities && typeof profileRow.abilities === 'object'
-    ? (profileRow.abilities as Record<string, unknown>)
-    : {};
+  const profileAbilities =
+    profileRow?.abilities && typeof profileRow.abilities === 'object'
+      ? (profileRow.abilities as Record<string, unknown>)
+      : {};
   const abilities = Object.fromEntries(
     Object.entries(profileAbilities).map(([key, value]) => [key, Number(value) || 0]),
   );
@@ -170,6 +179,8 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
       knowledgePoint: row.knowledge_point,
       subject: row.subject,
       level: Number(row.level) || 0,
+      uncertainty: Number(row.uncertainty ?? 1),
+      evidenceCount: Number(row.evidence_count ?? 0),
       trend: row.trend ?? 'flat',
       lastSeen: row.last_seen,
     })),

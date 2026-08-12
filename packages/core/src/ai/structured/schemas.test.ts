@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { blockSchema, geometryAstSchema, molecularBlockSchema } from './schemas';
+import { blockSchema, geometryAstSchema, gradeMathOutput, molecularBlockSchema } from './schemas';
 
 describe('blockSchema (Phase 1 判别联合)', () => {
   it('accepts all six block types', () => {
@@ -103,10 +103,19 @@ describe('blockSchema (Phase 1 判别联合)', () => {
         {
           type: 'box',
           vertices: [
-            [0, 0], [2, 0], [2, 2], [0, 2],
-            [0.5, 0.5], [2.5, 0.5], [2.5, 2.5], [0.5, 2.5],
+            [0, 0],
+            [2, 0],
+            [2, 2],
+            [0, 2],
+            [0.5, 0.5],
+            [2.5, 0.5],
+            [2.5, 2.5],
+            [0.5, 2.5],
           ],
-          faces: [[0, 1, 2, 3], [4, 5, 6, 7]],
+          faces: [
+            [0, 1, 2, 3],
+            [4, 5, 6, 7],
+          ],
         },
         {
           type: 'cylinder',
@@ -132,5 +141,21 @@ describe('blockSchema (Phase 1 判别联合)', () => {
     });
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe('gradeMathOutput learning evidence', () => {
+  it('accepts structured learning evidence and defaults knowledgePoints', () => {
+    const result = gradeMathOutput.parse({
+      score: 70,
+      maxScore: 100,
+      isCorrect: false,
+      difficulty: 7,
+      errorType: '计算失误',
+      abilityAssessment: { 理解: '强', 计算: '弱' },
+      steps: [],
+    });
+    expect(result.knowledgePoints).toEqual([]);
+    expect(result.errorType).toBe('计算失误');
   });
 });

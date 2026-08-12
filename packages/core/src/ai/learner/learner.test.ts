@@ -26,25 +26,31 @@ describe('buildLearnerModel', () => {
     expect(model.dataRichness).toBe(0);
   });
 
-  it('applies forgetting decay to knowledge mastery', () => {
+  it('applies forgetting decay while retaining partial mastery and increasing uncertainty', () => {
     const model = buildLearnerModel({
       userProfiles: {
         targetScore: 120,
         weakSubjects: ['数学'],
         strongSubjects: ['英语'],
-        abilities: { '计算': 0.3 },
+        abilities: { 计算: 0.3 },
         pace: { avgDailyMinutes: 45, activeHours: [], streakDays: 5 },
         preferences: { explainStyle: '步骤化' },
         dataRichness: 0.6,
       },
-      knowledgeMastery: [{
-        knowledgePoint: '导数',
-        level: 0.8,
-        lastSeen: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        trend: 'flat',
-      }],
+      knowledgeMastery: [
+        {
+          knowledgePoint: '导数',
+          level: 0.8,
+          uncertainty: 0.2,
+          evidenceCount: 10,
+          lastSeen: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          trend: 'flat',
+        },
+      ],
     });
-    expect(model.mastery['导数']!.level).toBeLessThan(0.4);
+    expect(model.mastery['导数']!.level).toBeGreaterThan(0.5);
+    expect(model.mastery['导数']!.level).toBeLessThan(0.8);
+    expect(model.mastery['导数']!.uncertainty).toBeGreaterThan(0.2);
   });
 
   it('aggregates error events into errorProfile', () => {

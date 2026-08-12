@@ -1,8 +1,11 @@
 import type { AppPhase } from '../../constants';
+import type { BeijingEducationState } from '../../beijing';
 
 export interface KnowledgeMasteryEntry {
   knowledgePoint: string;
   level: number;
+  uncertainty: number;
+  evidenceCount: number;
   lastSeen: string;
   trend: 'up' | 'flat' | 'down';
 }
@@ -34,6 +37,7 @@ export interface LearnerModel {
   preferences: LearnerPreferences;
   targetScore?: number;
   dataRichness: number;
+  educationState?: BeijingEducationState;
 }
 
 export interface LearningEvent {
@@ -45,6 +49,7 @@ export interface LearningEvent {
   isCorrect?: boolean;
   score?: number;
   maxScore?: number;
+  difficulty?: number;
   errorType?: string;
   abilityAssessment?: Record<string, '强' | '中' | '弱'>;
   durationSec?: number;
@@ -53,7 +58,7 @@ export interface LearningEvent {
 
 export const DEFAULT_LEARNER_MODEL: LearnerModel = {
   mastery: {},
-  abilities: { '理解': 0.5, '表达': 0.5, '推理': 0.5, '计算': 0.5, '应用': 0.5 },
+  abilities: { 理解: 0.5, 表达: 0.5, 推理: 0.5, 计算: 0.5, 应用: 0.5 },
   errorProfile: [],
   weakSubjects: [],
   strongSubjects: [],

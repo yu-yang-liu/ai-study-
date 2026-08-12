@@ -7,6 +7,7 @@ import {
   boolean,
   numeric,
   jsonb,
+  date,
   index,
   uniqueIndex,
   pgEnum,
@@ -33,19 +34,16 @@ export const vector1024 = customType<{ data: number[]; driverData: string }>({
 });
 
 // ── 1. profiles ──
-export const profiles = pgTable(
-  'profiles',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    userId: uuid('user_id').notNull().unique(),
-    phase: phaseEnum('phase').notNull(),
-    email: text('email').notNull(),
-    displayName: text('display_name'),
-    grade: text('grade'),
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-  },
-);
+export const profiles = pgTable('profiles', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull().unique(),
+  phase: phaseEnum('phase').notNull(),
+  email: text('email').notNull(),
+  displayName: text('display_name'),
+  grade: text('grade'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
 
 // ── 2. learning_events ──
 export const learningEvents = pgTable(
@@ -60,6 +58,7 @@ export const learningEvents = pgTable(
     isCorrect: boolean('is_correct'),
     score: numeric('score', { precision: 5, scale: 2 }),
     maxScore: numeric('max_score', { precision: 5, scale: 2 }),
+    difficulty: integer('difficulty'),
     errorType: text('error_type'),
     abilityAssessment: jsonb('ability_assessment'),
     durationSec: integer('duration_sec'),
@@ -102,25 +101,32 @@ export const questionAnalysis = pgTable('question_analysis', {
 });
 
 // ── 5. practice_records ──
-export const practiceRecords = pgTable('practice_records', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull(),
-  phase: phaseEnum('phase').notNull(),
-  questionId: uuid('question_id')
-    .notNull()
-    .references(() => questions.id, { onDelete: 'cascade' }),
-  isCorrect: boolean('is_correct').notNull(),
-  score: numeric('score', { precision: 5, scale: 2 }),
-  maxScore: numeric('max_score', { precision: 5, scale: 2 }).default('100'),
-  userAnswer: text('user_answer'),
-  aiFeedback: text('ai_feedback'),
-  errorType: text('error_type'),
-  durationSec: integer('duration_sec'),
-  clientRequestId: uuid('client_request_id'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  uniqueIndex('practice_records_user_client_request_uidx').on(table.userId, table.clientRequestId),
-]);
+export const practiceRecords = pgTable(
+  'practice_records',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull(),
+    phase: phaseEnum('phase').notNull(),
+    questionId: uuid('question_id')
+      .notNull()
+      .references(() => questions.id, { onDelete: 'cascade' }),
+    isCorrect: boolean('is_correct').notNull(),
+    score: numeric('score', { precision: 5, scale: 2 }),
+    maxScore: numeric('max_score', { precision: 5, scale: 2 }).default('100'),
+    userAnswer: text('user_answer'),
+    aiFeedback: text('ai_feedback'),
+    errorType: text('error_type'),
+    durationSec: integer('duration_sec'),
+    clientRequestId: uuid('client_request_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('practice_records_user_client_request_uidx').on(
+      table.userId,
+      table.clientRequestId,
+    ),
+  ],
+);
 
 // ── 6. wrong_questions ──
 export const wrongQuestions = pgTable(
@@ -160,12 +166,17 @@ export const knowledgeMastery = pgTable(
     knowledgePoint: text('knowledge_point').notNull(),
     subject: text('subject').notNull(),
     level: numeric('level', { precision: 5, scale: 2 }).notNull().default('0'),
+    uncertainty: numeric('uncertainty', { precision: 5, scale: 4 }).notNull().default('1'),
+    evidenceCount: integer('evidence_count').notNull().default(0),
+    masteryVersion: text('mastery_version').notNull().default('legacy-v1'),
     lastSeen: timestamp('last_seen', { withTimezone: true }).defaultNow().notNull(),
     trend: text('trend').notNull().default('flat'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [uniqueIndex('knowledge_mastery_uidx').on(table.userId, table.phase, table.knowledgePoint)],
+  (table) => [
+    uniqueIndex('knowledge_mastery_uidx').on(table.userId, table.phase, table.knowledgePoint),
+  ],
 );
 
 // ── 8. study_plans ──
@@ -216,9 +227,12 @@ export const conversationSummaries = pgTable(
     userId: uuid('user_id').notNull(),
     summary: text('summary').notNull(),
     summaryUpTo: timestamp('summary_up_to', { withTimezone: true }).notNull(),
-    summaryUpToMessageId: uuid('summary_up_to_message_id').references(() => conversationMessages.id, {
-      onDelete: 'set null',
-    }),
+    summaryUpToMessageId: uuid('summary_up_to_message_id').references(
+      () => conversationMessages.id,
+      {
+        onDelete: 'set null',
+      },
+    ),
     messageCount: integer('message_count').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -345,3 +359,70 @@ export const userMemories = pgTable(
   },
   (table) => [index('idx_user_memories_user').on(table.userId)],
 );
+
+// ── 17. standard exam calibration data ──
+export const standardExams = pgTable(
+  'standard_exams',
+  {
+    examId: text('exam_id').primaryKey(),
+    schemaVersion: text('schema_version').notNull(),
+    examType: text('exam_type').notNull().default('standard_exam'),
+    examStage: text('exam_stage').notNull(),
+    subject: text('subject').notNull(),
+    grade: text('grade').notNull(),
+    region: text('region').notNull(),
+    examDate: date('exam_date', { mode: 'string' }).notNull(),
+    maxRawScore: numeric('max_raw_score', { precision: 7, scale: 2 }).notNull(),
+    maxConvertedScore: numeric('max_converted_score', { precision: 7, scale: 2 }),
+    candidateCount: integer('candidate_count'),
+    sourceLevel: text('source_level').notNull(),
+    sourceName: text('source_name').notNull(),
+    sourceUrl: text('source_url'),
+    verificationStatus: text('verification_status').notNull().default('pending'),
+    policyVersion: text('policy_version'),
+    rawPayload: jsonb('raw_payload').notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('idx_standard_exam_subject_date').on(table.subject, table.examDate.desc())],
+);
+
+export const standardExamRecords = pgTable(
+  'standard_exam_records',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    examId: text('exam_id')
+      .notNull()
+      .references(() => standardExams.examId, { onDelete: 'cascade' }),
+    recordKey: text('record_key').notNull(),
+    rawScore: numeric('raw_score', { precision: 7, scale: 2 }),
+    rawScoreMin: numeric('raw_score_min', { precision: 7, scale: 2 }),
+    rawScoreMax: numeric('raw_score_max', { precision: 7, scale: 2 }),
+    rank: integer('rank'),
+    percentile: numeric('percentile', { precision: 7, scale: 6 }),
+    percentileDefinition: text('percentile_definition'),
+    convertedScore: numeric('converted_score', { precision: 7, scale: 2 }),
+    gradeBand: text('grade_band'),
+    recordType: text('record_type').notNull(),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex('standard_exam_records_uidx').on(table.examId, table.recordKey)],
+);
+
+export const beijingEducationStates = pgTable('beijing_education_states', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull().unique(),
+  region: text('region').notNull().default('北京'),
+  grade: text('grade').notNull(),
+  stage: text('stage').notNull(),
+  selectionStatus: text('selection_status').notNull().default('not_started'),
+  selectedSubjects: text('selected_subjects').array().notNull().default([]),
+  selectionChangedAt: date('selection_changed_at', { mode: 'string' }),
+  qualificationStatus: jsonb('qualification_status').notNull().default({}),
+  subjectPerformance: jsonb('subject_performance').notNull().default({}),
+  policyVersion: text('policy_version').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
