@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4f6fb" />
+    <title>学习画像 · iOS 预览</title>
+    <style>
+      :root {
+        --bg: #f4f6fb;
+        --card: rgba(255, 255, 255, .88);
+        --ink: #172033;
+        --muted: #7a8498;
+        --line: #e8ebf2;
+        --blue: #4f6df5;
+        --blue-soft: #e9edff;
+        --purple: #7d68ef;
+        --green: #20a77a;
+        --orange: #e7923a;
+        --red: #e4676a;
+        --shadow: 0 14px 36px rgba(46, 62, 105, .08);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--bg);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button { font: inherit; }
+      .phone {
+        width: min(100%, 430px);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: max(20px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
+      }
+
+      .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+      .back, .more { width: 36px; height: 36px; border: 0; border-radius: 12px; color: var(--ink); background: rgba(255,255,255,.7); font-size: 20px; cursor: pointer; }
+      .title { font-size: 18px; font-weight: 760; letter-spacing: -.02em; }
+
+      .hero { margin-bottom: 16px; }
+      .eyebrow { color: var(--blue); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+      h1 { margin: 5px 0 7px; font-size: 30px; line-height: 1.18; letter-spacing: -.04em; }
+      .hero-copy { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
+
+      .card { margin-bottom: 14px; padding: 18px; border: 1px solid rgba(255,255,255,.88); border-radius: 24px; background: var(--card); box-shadow: var(--shadow); }
+      .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+      .section-head > div:first-child { min-width: 0; }
+      .section-title { font-size: 16px; font-weight: 760; }
+      .section-subtitle { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+      .switcher { display: flex; flex-shrink: 0; padding: 3px; border-radius: 11px; background: #eef1f8; }
+      .switcher button { padding: 7px 9px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; font-size: 11px; cursor: pointer; }
+      .switcher button.active { color: var(--ink); background: white; box-shadow: 0 2px 8px rgba(36, 48, 81, .1); font-weight: 700; }
+
+      .radar-wrap { position: relative; display: grid; place-items: center; min-height: 280px; margin: 12px -4px 0; }
+      .radar-wrap svg { width: 100%; max-width: 320px; overflow: visible; }
+      .radar-wrap.is-hidden, .chart-legend.is-hidden { display: none; }
+      .radar-grid { fill: none; stroke: #e8ebf3; stroke-width: 1; }
+      .radar-axis { stroke: #e8ebf3; stroke-width: 1; }
+      .radar-area { fill: url(#areaFill); stroke: var(--blue); stroke-width: 2.5; stroke-linejoin: round; }
+      .radar-target { fill: none; stroke: #b5bee4; stroke-width: 1.5; stroke-dasharray: 5 5; }
+      .radar-point { fill: white; stroke: var(--blue); stroke-width: 2; }
+      .radar-labels { transition: opacity .18s ease; }
+      .radar-labels.is-switching { opacity: .25; }
+      .radar-label { fill: #68738a; font-size: 11px; font-weight: 600; }
+      .radar-center { fill: var(--blue); opacity: .12; }
+      .chart-legend { display: flex; justify-content: center; gap: 18px; color: var(--muted); font-size: 11px; }
+      .legend-item { display: flex; align-items: center; gap: 6px; }
+      .legend-line { width: 18px; height: 3px; border-radius: 3px; background: var(--blue); }
+      .legend-line.dashed { height: 0; border-top: 2px dashed #b5bee4; background: transparent; }
+
+      .subject-overview { display: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; min-height: 280px; margin-top: 12px; align-content: center; }
+      .subject-overview.is-visible { display: grid; animation: subjectOverviewIn .42s ease both; }
+      @keyframes subjectOverviewIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      .subject-tile { min-width: 0; padding: 11px 10px; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); background: #fbfcff; text-align: left; cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+      .subject-tile:hover, .subject-tile:focus-visible { border-color: #aebcff; box-shadow: 0 6px 16px rgba(79, 109, 245, .12); outline: none; transform: translateY(-2px); }
+      .subject-tile strong { display: block; font-size: 13px; }
+      .subject-tile span { display: block; margin-top: 4px; color: var(--blue); font-size: 12px; font-weight: 750; }
+      .subject-tile small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+
+      .subject-modal { position: fixed; inset: 0; z-index: 20; display: none; overflow: auto; padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); background: rgba(244, 246, 251, .96); }
+      .subject-modal.is-open { display: block; animation: modalIn .24s ease both; }
+      @keyframes modalIn { from { opacity: 0; } to { opacity: 1; } }
+      .modal-sheet { width: min(100%, 720px); min-height: calc(100vh - 42px); margin: 0 auto; }
+      .modal-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+      .modal-close { width: 38px; height: 38px; border: 0; border-radius: 13px; color: var(--ink); background: white; font-size: 20px; cursor: pointer; }
+      .modal-kicker { color: var(--blue); font-size: 12px; font-weight: 750; letter-spacing: .08em; }
+      .modal-title { margin: 5px 0 4px; font-size: 30px; letter-spacing: -.04em; }
+      .modal-subtitle { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+      .modal-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+      .modal-metric { padding: 14px 12px; border-radius: 17px; background: white; box-shadow: 0 6px 20px rgba(46, 62, 105, .06); }
+      .modal-metric strong { display: block; font-size: 20px; }
+      .modal-metric span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+      .modal-card { margin-bottom: 14px; padding: 18px; border-radius: 22px; background: white; box-shadow: var(--shadow); }
+      .modal-card h3 { margin: 0; font-size: 16px; }
+      .modal-card p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+      .modal-bars { display: grid; gap: 13px; margin-top: 15px; }
+      .modal-bar-row { display: grid; grid-template-columns: 78px 1fr 40px; gap: 10px; align-items: center; font-size: 12px; }
+      .modal-bar-row .track { height: 8px; }
+      .modal-bar-row em { color: var(--muted); font-size: 11px; font-style: normal; text-align: right; }
+      .modal-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+      .modal-chip { padding: 8px 10px; border-radius: 999px; color: #c64b5b; background: #fff0f1; font-size: 12px; font-weight: 650; }
+      .modal-action { display: block; width: 100%; padding: 13px; border: 0; border-radius: 14px; color: white; background: linear-gradient(135deg, #536ff5, #7562e8); font-size: 13px; font-weight: 750; cursor: pointer; }
+
+      .insight { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; padding: 12px; border-radius: 15px; background: #f5f7ff; transition: opacity .18s ease, transform .18s ease; }
+      .insight.is-switching { opacity: .35; transform: translateY(2px); }
+      .insight-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 9px; color: var(--blue); background: var(--blue-soft); font-size: 14px; }
+      .insight strong { display: block; margin-bottom: 3px; font-size: 13px; }
+      .insight p { margin: 0; color: #68738a; font-size: 12px; line-height: 1.55; }
+
+      .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+      .chip { padding: 8px 11px; border-radius: 999px; font-size: 12px; font-weight: 650; }
+      .chip.red { color: #c64b5b; background: #fff0f1; }
+      .chip.green { color: #168761; background: #eaf9f2; }
+
+      .subject-list { display: grid; gap: 13px; margin-top: 16px; }
+      .subject-row { display: grid; grid-template-columns: 38px 1fr 38px; align-items: center; gap: 10px; font-size: 13px; }
+      .subject-name { font-weight: 650; }
+      .track { height: 8px; overflow: hidden; border-radius: 10px; background: #edf0f6; }
+      .track > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #7d8ffc, #4f6df5); }
+      .subject-score { color: var(--muted); text-align: right; font-size: 12px; }
+
+      .knowledge { display: grid; gap: 13px; margin-top: 15px; }
+      .knowledge-row { display: grid; grid-template-columns: 1fr 48px; gap: 12px; align-items: center; }
+      .knowledge-title { margin-bottom: 6px; font-size: 13px; font-weight: 650; }
+      .knowledge-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; }
+      .knowledge-score { color: var(--orange); font-size: 12px; font-weight: 700; text-align: right; }
+
+      .exam { display: flex; align-items: center; gap: 12px; margin-top: 15px; padding: 12px; border: 1px solid var(--line); border-radius: 15px; }
+      .exam-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; color: var(--purple); background: #f0edff; font-size: 17px; }
+      .exam-main { min-width: 0; flex: 1; }
+      .exam-title { overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+      .exam-meta { margin-top: 4px; color: var(--muted); font-size: 11px; }
+      .exam-score { text-align: right; }
+      .exam-score strong { display: block; color: var(--purple); font-size: 17px; }
+      .exam-score span { color: var(--muted); font-size: 10px; }
+
+      .cta { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-radius: 20px; color: white; background: linear-gradient(135deg, #536ff5, #7562e8); box-shadow: 0 12px 22px rgba(79, 109, 245, .22); }
+      .cta-title { font-size: 14px; font-weight: 750; }
+      .cta-copy { margin-top: 4px; color: rgba(255,255,255,.76); font-size: 11px; }
+      .cta button { flex-shrink: 0; padding: 10px 13px; border: 0; border-radius: 12px; color: var(--blue); background: white; font-size: 12px; font-weight: 750; cursor: pointer; }
+      .footnote { margin: 17px 6px 0; color: var(--muted); font-size: 11px; line-height: 1.55; text-align: center; }
+
+      /* iPad 竖屏：用双列承载画像详情，不再模拟一张居中的手机卡片。 */
+      @media (min-width: 600px) and (max-width: 899px) and (orientation: portrait) {
+        body { padding: 0; }
+        .phone {
+          width: min(100%, 900px);
+          min-height: 100vh;
+          padding: max(24px, env(safe-area-inset-top)) max(30px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(30px, env(safe-area-inset-left));
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px;
+          border-radius: 0;
+          box-shadow: none;
+        }
+        .topbar, .hero, .core-card, .cta, .footnote { grid-column: 1 / -1; }
+        .card { min-width: 0; margin-bottom: 0; }
+        .core-card {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(250px, .9fr);
+          column-gap: 18px;
+          align-items: center;
+        }
+        .core-card .section-head { grid-column: 1 / -1; }
+        .core-card .radar-column { grid-column: 1; grid-row: 2; min-width: 0; }
+        .core-card .insight-column { grid-column: 2; grid-row: 2; align-self: center; }
+        .radar-wrap { min-height: 300px; }
+      }
+
+      /* iPad 横屏和更宽的平板：形成三段式学习画像仪表盘。 */
+      @media (min-width: 900px) and (orientation: landscape) {
+        body { padding: 0; }
+        .phone {
+          width: min(100%, 1200px);
+          min-height: 100vh;
+          padding: max(30px, env(safe-area-inset-top)) max(40px, env(safe-area-inset-right)) max(36px, env(safe-area-inset-bottom)) max(40px, env(safe-area-inset-left));
+          display: grid;
+          grid-template-columns: repeat(12, minmax(0, 1fr));
+          gap: 18px;
+          border-radius: 0;
+          box-shadow: none;
+        }
+        .topbar, .hero, .cta, .footnote { grid-column: 1 / -1; }
+        .card { min-width: 0; margin-bottom: 0; }
+        .core-card {
+          grid-column: span 6;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, .82fr);
+          column-gap: 18px;
+          align-items: center;
+        }
+        .core-card .section-head { grid-column: 1 / -1; }
+        .core-card .radar-column { grid-column: 1; grid-row: 2; min-width: 0; }
+        .core-card .insight-column { grid-column: 2; grid-row: 2; align-self: center; }
+        .phone > .card:has(.subject-list) { grid-column: span 6; }
+        .phone > .card:has(.chips), .phone > .card:has(.knowledge), .phone > .card:has(.exam) { grid-column: span 4; }
+        .radar-wrap { min-height: 260px; }
+        .radar-wrap svg { max-width: 280px; }
+      }
+
+      /* iPhone 横屏：占满横向空间，并压缩首屏高度，减少无效纵向滚动。 */
+      @media (orientation: landscape) and (max-height: 500px) and (max-width: 899px) {
+        body { padding: 0; }
+        .phone {
+          width: 100%;
+          max-width: none;
+          min-height: 100vh;
+          padding: max(12px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+          border-radius: 0;
+          box-shadow: none;
+        }
+        .topbar { margin-bottom: 10px; }
+        .hero { margin-bottom: 10px; }
+        h1 { font-size: 25px; }
+        .hero-copy { max-width: 620px; font-size: 13px; }
+        .card { margin-bottom: 12px; padding: 16px; border-radius: 20px; }
+        .core-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .9fr); column-gap: 18px; align-items: center; }
+        .core-card .section-head { grid-column: 1 / -1; }
+        .core-card .radar-column { grid-column: 1; grid-row: 2; min-width: 0; }
+        .core-card .insight-column { grid-column: 2; grid-row: 2; align-self: center; }
+        .radar-wrap { min-height: 220px; margin-top: 4px; }
+        .radar-wrap svg { max-width: 250px; }
+        .subject-list, .knowledge { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .footnote { margin-top: 8px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="phone">
+      <header class="topbar">
+        <button class="back" aria-label="返回">‹</button>
+        <div class="title">学习画像</div>
+        <button class="more" aria-label="更多">···</button>
+      </header>
+
+      <section class="hero">
+        <div class="eyebrow">BEIJING HIGH SCHOOL · PERSONAL INSIGHT</div>
+        <h1>你的学习画像</h1>
+        <p class="hero-copy">基于最近 30 天的练习、批改与标准卷数据，看看你正在形成的能力结构。</p>
+      </section>
+
+      <section class="card core-card">
+        <div class="section-head">
+          <div>
+            <div class="section-title">核心画像</div>
+            <div class="section-subtitle" id="chartSubtitle">六项能力的当前水平与目标水平</div>
+          </div>
+          <div class="switcher" role="tablist" aria-label="画像类型">
+            <button class="active" data-mode="ability" role="tab" aria-selected="true">能力维度</button>
+            <button data-mode="subject" role="tab" aria-selected="false">学科表现</button>
+          </div>
+        </div>
+
+        <div class="radar-column">
+        <div id="radarWrap" class="radar-wrap">
+          <svg viewBox="0 0 320 280" role="img" aria-label="学习画像雷达图">
+            <defs>
+              <linearGradient id="areaFill" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#6e83ff" stop-opacity=".42" />
+                <stop offset="100%" stop-color="#8c6df0" stop-opacity=".15" />
+              </linearGradient>
+            </defs>
+            <g transform="translate(160 132)">
+              <polygon class="radar-grid" points="0,-102 97,-31 60,83 -60,83 -97,-31" />
+              <polygon class="radar-grid" points="0,-76 72,-23 44,62 -44,62 -72,-23" />
+              <polygon class="radar-grid" points="0,-51 48,-16 30,42 -30,42 -48,-16" />
+              <polygon class="radar-grid" points="0,-25 24,-8 15,21 -15,21 -24,-8" />
+              <line class="radar-axis" x1="0" y1="0" x2="0" y2="-102" />
+              <line class="radar-axis" x1="0" y1="0" x2="97" y2="-31" />
+              <line class="radar-axis" x1="0" y1="0" x2="60" y2="83" />
+              <line class="radar-axis" x1="0" y1="0" x2="-60" y2="83" />
+              <line class="radar-axis" x1="0" y1="0" x2="-97" y2="-31" />
+              <polygon id="targetPolygon" class="radar-target" points="0,-87 82,-26 54,74 -54,74 -82,-26" />
+              <polygon id="dataPolygon" class="radar-area" points="0,-70 69,-22 42,58 -39,53 -77,-25" />
+              <circle class="radar-center" cx="0" cy="0" r="6" />
+              <g id="radarPoints">
+                <circle class="radar-point" cx="0" cy="-70" r="4" />
+                <circle class="radar-point" cx="69" cy="-22" r="4" />
+                <circle class="radar-point" cx="42" cy="58" r="4" />
+                <circle class="radar-point" cx="-39" cy="53" r="4" />
+                <circle class="radar-point" cx="-77" cy="-25" r="4" />
+              </g>
+              <g id="radarLabels" class="radar-labels">
+                <text id="label0" class="radar-label" x="0" y="-116" text-anchor="middle">理解</text>
+                <text id="label1" class="radar-label" x="111" y="-27" text-anchor="start">计算</text>
+                <text id="label2" class="radar-label" x="72" y="103" text-anchor="middle">应用</text>
+                <text id="label3" class="radar-label" x="-72" y="103" text-anchor="middle">推理</text>
+                <text id="label4" class="radar-label" x="-111" y="-27" text-anchor="end">迁移</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+        </div>
+        <div id="chartLegend" class="chart-legend">
+          <span class="legend-item"><i class="legend-line"></i>当前水平</span>
+          <span class="legend-item"><i class="legend-line dashed"></i>阶段目标</span>
+        </div>
+        </div>
+        <div id="subjectOverview" class="subject-overview" aria-label="九科学科表现">
+          <button class="subject-tile" data-subject="语文"><strong>语文</strong><span>76%</span><small>点击查看</small></button>
+          <button class="subject-tile" data-subject="数学"><strong>数学</strong><span>78%</span><small>点击查看</small></button>
+          <button class="subject-tile" data-subject="英语"><strong>英语</strong><span>82%</span><small>点击查看</small></button>
+          <button class="subject-tile" data-subject="物理"><strong>物理</strong><span>64%</span><small>点击查看</small></button>
+          <button class="subject-tile" data-subject="化学"><strong>化学</strong><span>71%</span><small>点击查看</small></button>
+          <button class="subject-tile" data-subject="生物"><strong>生物</strong><span>69%</span><small>点击查看</small></button>
+          <button class="subject-tile" data-subject="政治"><strong>政治</strong><span>74%</span><small>点击查看</small></button>
+          <button class="subject-tile" data-subject="历史"><strong>历史</strong><span>68%</span><small>点击查看</small></button>
+          <button class="subject-tile" data-subject="地理"><strong>地理</strong><span>73%</span><small>点击查看</small></button>
+        </div>
+        <div class="insight-column">
+        <div class="insight">
+          <div class="insight-icon">✦</div>
+          <div><strong id="insightTitle">当前优势：理解与计算</strong><p id="insightCopy">基础题处理稳定，下一阶段建议把训练重点放在推理和迁移。</p></div>
+        </div>
+        </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head"><div><div class="section-title">学科表现</div><div class="section-subtitle">综合普通练习与批改结果，不包含赋分</div></div><span style="color:var(--muted);font-size:12px">近 30 天</span></div>
+        <div class="subject-list">
+          <div class="subject-row"><span class="subject-name">数学</span><div class="track"><i style="width:78%"></i></div><span class="subject-score">78%</span></div>
+          <div class="subject-row"><span class="subject-name">英语</span><div class="track"><i style="width:82%"></i></div><span class="subject-score">82%</span></div>
+          <div class="subject-row"><span class="subject-name">物理</span><div class="track"><i style="width:64%;background:linear-gradient(90deg,#f6b56b,#e7923a)"></i></div><span class="subject-score">64%</span></div>
+          <div class="subject-row"><span class="subject-name">化学</span><div class="track"><i style="width:71%;background:linear-gradient(90deg,#67cba6,#20a77a)"></i></div><span class="subject-score">71%</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-title">当前最需要关注</div>
+        <div class="chips"><span class="chip red">物理 · 动力学综合题</span><span class="chip red">数学 · 三角函数应用</span><span class="chip red">英语 · 长难句理解</span></div>
+      </section>
+
+      <section class="card">
+        <div class="section-head"><div><div class="section-title">知识点掌握</div><div class="section-subtitle">按当前掌握度排序</div></div><span style="color:var(--blue);font-size:12px;font-weight:700">查看全部</span></div>
+        <div class="knowledge">
+          <div class="knowledge-row"><div><div class="knowledge-title">物理 · 牛顿运动定律</div><div class="track"><i style="width:43%;background:linear-gradient(90deg,#f6b56b,#e7923a)"></i></div></div><div class="knowledge-score">43%</div></div>
+          <div class="knowledge-row"><div><div class="knowledge-title">数学 · 三角函数</div><div class="track"><i style="width:57%;background:linear-gradient(90deg,#f6b56b,#e7923a)"></i></div></div><div class="knowledge-score">57%</div></div>
+          <div class="knowledge-row"><div><div class="knowledge-title">英语 · 长难句</div><div class="track"><i style="width:62%;background:linear-gradient(90deg,#75b9ff,#4f6df5)"></i></div></div><div class="knowledge-score" style="color:var(--blue)">62%</div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head"><div><div class="section-title">标准卷记录</div><div class="section-subtitle">仅标准卷显示百分位与赋分</div></div><span style="color:var(--blue);font-size:12px;font-weight:700">查看全部</span></div>
+        <div class="exam"><div class="exam-icon">▤</div><div class="exam-main"><div class="exam-title">2026 北京高考适应性考试 · 物理</div><div class="exam-meta">原始分 72 · 百分位 58%</div></div><div class="exam-score"><strong>赋分 76</strong><span>标准卷</span></div></div>
+      </section>
+
+      <section class="cta"><div><div class="cta-title">把薄弱点变成下一步行动</div><div class="cta-copy">学习计划会根据这份画像生成任务</div></div><button type="button">进入计划 →</button></section>
+      <p class="footnote">画像结论会随新数据更新。继续完成标准卷和错题复习，画像会逐步变得更准确。</p>
+    </main>
+
+    <div id="subjectModal" class="subject-modal" aria-hidden="true">
+      <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-topbar">
+          <button class="back" type="button" data-close-subject aria-label="返回">‹</button>
+          <div class="title">单科画像</div>
+          <button class="modal-close" type="button" data-close-subject aria-label="关闭">×</button>
+        </div>
+        <div class="modal-kicker">BEIJING HIGH SCHOOL · SUBJECT INSIGHT</div>
+        <h2 id="modalTitle" class="modal-title">物理</h2>
+        <p id="modalSubtitle" class="modal-subtitle">近 30 天综合表现 · 普通练习与批改数据</p>
+        <div class="modal-metrics">
+          <div class="modal-metric"><strong id="modalScore">64%</strong><span>近期正确率</span></div>
+          <div class="modal-metric"><strong id="modalPractice">38</strong><span>完成练习</span></div>
+          <div class="modal-metric"><strong id="modalChange">+5%</strong><span>较上周期</span></div>
+        </div>
+        <section class="modal-card">
+          <h3>能力结构</h3>
+          <p id="modalSummary">基础题掌握较稳定，综合应用仍需要更多训练。</p>
+          <div id="modalBars" class="modal-bars"></div>
+        </section>
+        <section class="modal-card">
+          <h3>当前薄弱点</h3>
+          <div id="modalChips" class="modal-chips"></div>
+        </section>
+        <section class="modal-card">
+          <h3>下一步建议</h3>
+          <p id="modalAdvice">建议先完成对应知识点的基础题，再进行一组综合题训练。</p>
+        </section>
+        <button class="modal-action" type="button">进入该学科学习计划 →</button>
+      </div>
+    </div>
+
+    <script>
+      const modes = {
+        ability: {
+          labels: ['理解', '计算', '应用', '推理', '迁移'],
+          points: '0,-70 69,-22 42,58 -39,53 -77,-25',
+          target: '0,-87 82,-26 54,74 -54,74 -82,-26',
+          subtitle: '六项能力的当前水平与目标水平',
+          title: '当前优势：理解与计算',
+          copy: '基础题处理稳定，下一阶段建议把训练重点放在推理和迁移。'
+        },
+        subject: {
+          labels: ['数学', '英语', '物理', '化学', '生物'],
+          points: '0,-79 78,-25 38,52 -44,50 -63,-21',
+          target: '0,-89 88,-28 53,73 -58,70 -82,-26',
+          subtitle: '各学科近期综合表现，普通练习不参与赋分',
+          title: '当前优势：英语与数学',
+          copy: '物理是当前最需要投入的学科，建议从动力学综合题开始。'
+        }
+      };
+
+      const dataPolygon = document.getElementById('dataPolygon');
+      const targetPolygon = document.getElementById('targetPolygon');
+      const subtitle = document.getElementById('chartSubtitle');
+      const insightTitle = document.getElementById('insightTitle');
+      const insightCopy = document.getElementById('insightCopy');
+      const labels = [0, 1, 2, 3, 4].map(i => document.getElementById(`label${i}`));
+      const radarPoints = [...document.querySelectorAll('.radar-point')];
+      const radarLabels = document.getElementById('radarLabels');
+      const insight = document.querySelector('.insight');
+      const radarWrap = document.getElementById('radarWrap');
+      const chartLegend = document.getElementById('chartLegend');
+      const subjectOverview = document.getElementById('subjectOverview');
+      const subjectModal = document.getElementById('subjectModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalScore = document.getElementById('modalScore');
+      const modalPractice = document.getElementById('modalPractice');
+      const modalChange = document.getElementById('modalChange');
+      const modalSummary = document.getElementById('modalSummary');
+      const modalBars = document.getElementById('modalBars');
+      const modalChips = document.getElementById('modalChips');
+      const modalAdvice = document.getElementById('modalAdvice');
+      const modalSubjectSubtitle = document.getElementById('modalSubtitle');
+      const subjectModeCopy = {
+        subtitle: '九门学科的近期表现，点击学科查看单科画像',
+        title: '学科总览：点击查看单科画像',
+        copy: '北京高中九门学科不适合塞进同一张多边形，先看整体表现，再进入单科详情。'
+      };
+      const subjectDetails = {
+        '语文': { score: '76%', practice: '42', change: '+4%', summary: '阅读理解基础较稳，信息提取和规范表达还有提升空间。', abilities: { '阅读理解': 74, '信息提取': 72, '表达运用': 78 }, weak: ['现代文阅读', '文言文实词'], advice: '建议先做一组现代文阅读限时训练，再整理文言文高频实词。' },
+        '数学': { score: '78%', practice: '56', change: '+8%', summary: '计算和基础建模较稳定，综合应用题的迁移还不够稳定。', abilities: { '计算能力': 82, '建模能力': 75, '综合应用': 68 }, weak: ['三角函数应用', '函数综合题'], advice: '建议先复习三角函数模型，再完成 3 道综合应用题。' },
+        '英语': { score: '82%', practice: '49', change: '+6%', summary: '词汇和基础阅读表现较好，长难句分析需要持续积累。', abilities: { '词汇基础': 86, '阅读理解': 83, '句法分析': 70 }, weak: ['长难句理解', '概要写作'], advice: '建议每天完成 2 句长难句拆解，并保留自己的句法标注。' },
+        '物理': { score: '64%', practice: '38', change: '+5%', summary: '基础题掌握较稳定，综合应用仍需要更多训练。', abilities: { '概念理解': 72, '计算能力': 65, '综合应用': 54 }, weak: ['动力学综合题', '受力分析'], advice: '建议先完成受力分析专项，再进入动力学综合题训练。' },
+        '化学': { score: '71%', practice: '34', change: '+3%', summary: '基本概念掌握尚可，实验推理和陌生情境迁移需要加强。', abilities: { '概念理解': 75, '实验推理': 66, '情境迁移': 61 }, weak: ['实验探究', '陌生情境'], advice: '建议整理实验现象与结论的对应关系，再练习陌生情境题。' },
+        '生物': { score: '69%', practice: '31', change: '+2%', summary: '知识记忆比较完整，图表信息提取和综合判断还需加强。', abilities: { '知识理解': 76, '图表分析': 64, '综合判断': 63 }, weak: ['遗传图表', '生态系统综合'], advice: '建议用图表题带动知识回忆，减少单纯重复背诵。' },
+        '政治': { score: '74%', practice: '28', change: '+5%', summary: '基础知识掌握较好，材料分析和观点组织仍有提升空间。', abilities: { '知识理解': 79, '材料分析': 70, '观点表达': 68 }, weak: ['材料分析', '时政结合'], advice: '建议练习“材料关键词—教材观点—结论”三步作答。' },
+        '历史': { score: '68%', practice: '26', change: '+1%', summary: '时间线索基本清晰，比较分析和史料解读还不够稳定。', abilities: { '时序理解': 74, '史料解读': 63, '比较分析': 61 }, weak: ['史料解读', '中外比较'], advice: '建议按主题整理史料，再练习同类历史现象的比较题。' },
+        '地理': { score: '73%', practice: '30', change: '+4%', summary: '区域基础较稳定，图表判读和综合推理需要继续训练。', abilities: { '区域认知': 77, '图表判读': 69, '综合推理': 65 }, weak: ['等值线判读', '区域综合题'], advice: '建议先完成图表判读专项，再进行区域综合题限时训练。' }
+      };
+      let currentPoints = parsePoints(dataPolygon.getAttribute('points'));
+      let currentTarget = parsePoints(targetPolygon.getAttribute('points'));
+      let animationFrame;
+
+      function parsePoints(value) {
+        return value.trim().split(/\s+/).map(pair => pair.split(',').map(Number));
+      }
+
+      function formatPoints(points) {
+        return points.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
+      }
+
+      function interpolatePoints(from, to, progress) {
+        return from.map(([x, y], index) => [
+          x + (to[index][0] - x) * progress,
+          y + (to[index][1] - y) * progress
+        ]);
+      }
+
+      function easeInOutCubic(value) {
+        return value < .5
+          ? 4 * value * value * value
+          : 1 - Math.pow(-2 * value + 2, 3) / 2;
+      }
+
+      function animateRadar(nextPoints, nextTarget) {
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        const fromPoints = currentPoints;
+        const fromTarget = currentTarget;
+        const start = performance.now();
+        const duration = 920;
+
+        function frame(now) {
+          const progress = Math.min((now - start) / duration, 1);
+          const eased = easeInOutCubic(progress);
+          currentPoints = interpolatePoints(fromPoints, nextPoints, eased);
+          currentTarget = interpolatePoints(fromTarget, nextTarget, eased);
+          dataPolygon.setAttribute('points', formatPoints(currentPoints));
+          targetPolygon.setAttribute('points', formatPoints(currentTarget));
+          radarPoints.forEach((point, index) => {
+            point.setAttribute('cx', currentPoints[index][0].toFixed(2));
+            point.setAttribute('cy', currentPoints[index][1].toFixed(2));
+          });
+          if (progress < 1) animationFrame = requestAnimationFrame(frame);
+        }
+
+        animationFrame = requestAnimationFrame(frame);
+      }
+
+      document.querySelectorAll('.switcher button').forEach(button => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('.switcher button').forEach(item => {
+            item.classList.toggle('active', item === button);
+            item.setAttribute('aria-selected', item === button ? 'true' : 'false');
+          });
+          const mode = modes[button.dataset.mode];
+          const isSubjectMode = button.dataset.mode === 'subject';
+          radarLabels.classList.add('is-switching');
+          insight.classList.add('is-switching');
+          if (isSubjectMode) {
+            radarWrap.classList.add('is-hidden');
+            chartLegend.classList.add('is-hidden');
+            subjectOverview.classList.add('is-visible');
+          } else {
+            subjectOverview.classList.remove('is-visible');
+            radarWrap.classList.remove('is-hidden');
+            chartLegend.classList.remove('is-hidden');
+            animateRadar(parsePoints(mode.points), parsePoints(mode.target));
+          }
+          window.setTimeout(() => {
+            if (!isSubjectMode) {
+              mode.labels.forEach((label, index) => { labels[index].textContent = label; });
+              subtitle.textContent = mode.subtitle;
+              insightTitle.textContent = mode.title;
+              insightCopy.textContent = mode.copy;
+            } else {
+              subtitle.textContent = subjectModeCopy.subtitle;
+              insightTitle.textContent = subjectModeCopy.title;
+              insightCopy.textContent = subjectModeCopy.copy;
+            }
+            radarLabels.classList.remove('is-switching');
+            insight.classList.remove('is-switching');
+          }, 360);
+        });
+      });
+
+      function openSubjectModal(subject) {
+        const detail = subjectDetails[subject];
+        if (!detail) return;
+        modalTitle.textContent = subject;
+        modalSubjectSubtitle.textContent = '近 30 天综合表现 · 普通练习与批改数据';
+        modalScore.textContent = detail.score;
+        modalPractice.textContent = detail.practice;
+        modalChange.textContent = detail.change;
+        modalSummary.textContent = detail.summary;
+        modalBars.innerHTML = Object.entries(detail.abilities).map(([label, value]) => `
+          <div class="modal-bar-row">
+            <span>${label}</span>
+            <div class="track"><i style="width:${value}%;background:linear-gradient(90deg,#7d8ffc,#4f6df5)"></i></div>
+            <em>${value}%</em>
+          </div>
+        `).join('');
+        modalChips.innerHTML = detail.weak.map(item => `<span class="modal-chip">${item}</span>`).join('');
+        modalAdvice.textContent = detail.advice;
+        subjectModal.classList.add('is-open');
+        subjectModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeSubjectModal() {
+        subjectModal.classList.remove('is-open');
+        subjectModal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      }
+
+      document.querySelectorAll('.subject-tile').forEach(tile => {
+        tile.addEventListener('click', () => openSubjectModal(tile.dataset.subject));
+      });
+      document.querySelectorAll('[data-close-subject]').forEach(button => {
+        button.addEventListener('click', closeSubjectModal);
+      });
+      subjectModal.addEventListener('click', event => {
+        if (event.target === subjectModal) closeSubjectModal();
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && subjectModal.classList.contains('is-open')) closeSubjectModal();
+      });
+    </script>
+  </body>
+</html>
