@@ -5,6 +5,10 @@
 
 ---
 
+## 当前运行模式（2026-08）
+
+项目运行时已切换为本地 SQLite：数据库文件默认是 `data/ai-study.sqlite`，账号、题库、错题、学习记录和对话都写入本地。`试卷/` 保存原始试卷文件。旧的 Supabase/PostgreSQL migration 仅作历史参考，不是启动步骤。
+
 ## 1. 项目概览
 
 ### 1.1 平台定位
@@ -134,7 +138,7 @@ ai-study/
 | Core 共享库 | ~80% | AI/鉴权/Schema/Agent/Actions 较完整 |
 | Web 应用 | ~70% | 功能齐全，Chat Agent 串联学情 |
 | iOS 客户端 | ~75% | 与 Web API 基本对等，TestFlight 可演示 |
-| 测试 | ~25% | Core 18 个测试文件（108 passed / 2 skipped，2 个需 key） |
+| 测试 | ~25% | Core 38 个测试文件（本地 183 passed / 15 skipped；15 个需 `DEEPSEEK_API_KEY` 的 LLM eval 无 key 时自动跳过，待 Mac 环境真跑） |
 | 文档/运维 | ~50% | 有 README、Web CI；仍缺部署指南 |
 | **可演示** | **~75%** | Chat Agent + 批改闭环可完整演示 |
 | **可上线** | **~45%** | 运营/题库/RAG 深度仍不足 |
@@ -157,11 +161,11 @@ ai-study/
 
 ```bash
 pnpm install
-cd packages/core && pnpm exec tsc --noEmit && pnpm exec vitest run   # 108 passed / 2 skipped
+cd packages/core && pnpm exec tsc --noEmit && pnpm exec vitest run   # 183 passed / 15 skipped（15 个 LLM eval 需 DEEPSEEK_API_KEY，无 key 自动跳过）
 cd apps/web && pnpm exec tsc --noEmit
 ```
 
-> 2 个跳过项为需 `DEEPSEEK_API_KEY` 的真跑测试：geometry eval 与 analyze e2e。
+> 15 个跳过项为需 `DEEPSEEK_API_KEY` 的 LLM 真跑 eval（geometry/chart/circuit/pedigree/graph/lab/cell/molecular 与 analyze 端到端）；本地无 key 自动跳过，待 Mac 环境真跑。
 
 ---
 
@@ -197,7 +201,7 @@ cd apps/web && pnpm exec tsc --noEmit
 | 功能 | 依赖 | 环境变量 |
 |------|------|----------|
 | 图片上传 | S3 兼容存储 | `S3_*` 五项 |
-| 多实例限流 | Redis | `REDIS_URL` |
+| 跨实例限流 | 未接入（限流为单实例内存实现；Redis 分支属幽灵依赖死代码，已移除） | — |
 | 本地对话降级 | Ollama | `OLLAMA_HOST`、`OLLAMA_MODEL` |
 | 管理接口 | 邮箱白名单 | `ADMIN_EMAILS` |
 
@@ -285,12 +289,12 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | 工具 | 触发示例 | 行为 |
 |------|----------|------|
 | `generate_plan` | 「帮我制定数学计划」 | 生成计划、落库、返回计划卡片 |
-| `summarize_wrong_questions` | 「我有哪些错题」 | 读 DB 摘要，零额外 LLM |
+| `summarize_wrong_questions` | 「我有哪些错题」 | 读 DB 摘要（工具本身不调 LLM；最终回复仍会经一次合成调用） |
 | `analyze_question` | 粘贴足够长的题目 | 调用 analyze 并落库 |
 | `grade_submission` | 同时给题目+作答 | 调用 grade 并落库 |
 | 纯聊天 | 学情/薄弱点问答 | 基于 `getAssistantContext` 快照回答 |
 
-限制：Chat 内暂不支持直接发图 OCR（仍走 `/upload`）；一次用户消息 = 一次 AI 限流。
+限制：Chat 内暂不支持直接发图 OCR（仍走 `/upload`）；一次用户消息 = 一次 AI 限流，但可能触发两次 LLM 调用（意图分类 + 回复合成）。
 
 ### 5.5 产品形态定位
 
@@ -509,6 +513,7 @@ POST /api/chat
   - `getOrCreateConversationRow` 返回真实 `updated_at`（修正冷启动伪时间戳）
   - upload key 改用 `crypto.randomUUID()`；`assistant-context` 检索补 `limit(50)`
   - schema `userMemoryFacts/userMemories.phase` 由 `phaseEnum` 改 `text`，与迁移 0002/0003 对齐（零迁移）
+  - **代码卫生（2026-08-14）**：`rate-limit.ts` 移除 ioredis 幽灵依赖死代码（依赖未声明、`require` 必然失败并静默回退内存），改为单实例内存实现并增加上限淘汰防泄漏；全库乱码（U+FFFD）清扫 + 32 文件 1739 处 `\uXXXX` 转义还原为真实中文（控制字符/BOM 转义刻意保留）；新增 `.gitattributes` 统一换行符
 
 ### 未完成
 
@@ -532,4 +537,4 @@ POST /api/chat
 
 ---
 
-*文档版本：2026-08-11 · 对应当前工作区代码状态（M1–M6 全部已落地，第三阶段评审整改已完成：tsc 双包通过、core vitest 147 passed / 14 skipped、visual-ast 32 passed）*
+*文档版本：2026-08-14 · 对应当前工作区代码状态（M1–M6 全部已落地；代码卫生整改：Redis 幽灵依赖死代码移除、全库乱码清扫与 `\uXXXX` 转义还原、`.gitattributes` 换行符规范化；tsc 双包通过、core vitest 183 passed / 15 skipped——15 个 LLM eval 无 key 跳过待 Mac 真跑、visual-ast 32 passed）*

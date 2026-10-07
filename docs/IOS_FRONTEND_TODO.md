@@ -208,7 +208,7 @@
 
 ## P1 Implementation Status (2026-08-11)
 
-Validation: Core/Web `ts-check` passed; Core Vitest passed with `171 passed / 15 skipped`; visual-ast passed with 32 Node tests; `git diff --check` passed. macOS Xcode, device, staging API, and migration verification remain external checks.
+Validation（2026-08-14 复验）: Core/Web `ts-check` passed; Core Vitest passed with `183 passed / 15 skipped`（15 个 LLM eval 无 key 自动跳过，待 Mac 真跑）; visual-ast passed with 32 Node tests; `git diff --check` passed. macOS Xcode, device, staging API, and migration verification remain external checks.
 
 Completed in code:
 
@@ -275,7 +275,7 @@ Still pending external validation or dedicated tests:
 - P1 Chat 追问：图片分析结果可带上下文继续进入 Chat，待 macOS iOS 编译和 API 冒烟验证
 - P1 Chat 结果卡片：已支持查看完整详情、带上下文再次练习和手动加入错题
 - P1 图片 Chat 历史：服务端保存富消息元数据，iOS 在线恢复图片和分析卡片，同步失败可重试；待执行 `0007` 迁移与 iOS/API 验证
-- 当前工作区验证：`@ai-study/core` / `@ai-study/web` TypeScript 通过；Core Vitest 171 passed、15 skipped；visual-ast Node 测试 32 passed；visual-ast TypeScript 通过；`git diff --check` 通过
+- 当前工作区验证：`@ai-study/core` / `@ai-study/web` TypeScript 通过；Core Vitest 183 passed、15 skipped（15 个 LLM eval 无 key 自动跳过，待 Mac 真跑）；visual-ast Node 测试 32 passed；visual-ast TypeScript 通过；`git diff --check` 通过
 - P0：8 / 12
 - P1：25 / 26（仅完整 UI 测试仍待补）
 - P2：9 / 10（仅 V3 学习智能长期项未启动）

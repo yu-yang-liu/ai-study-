@@ -40,7 +40,7 @@ Implementation count: P0 8/12, P1 25/26, P2 9/10. The remaining P0/P1 items requ
 
 - Core TypeScript check: passed.
 - Web TypeScript check: passed.
-- Core Vitest: passed, 171 tests passed and 15 skipped; external-key evals are skipped when no key is configured.
+- Core Vitest: passed, 183 tests passed and 15 skipped; external-key evals are skipped when no key is configured（真跑待 Mac 环境）.
 - visual-ast Node tests: passed, 32 tests passed.
 - visual-ast TypeScript check: passed.
 - `git diff --check`: passed after the latest documentation changes.

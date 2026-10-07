@@ -67,7 +67,7 @@
 - [x] Prompt：`tasks.ts` BLOCK_INSTRUCTION 与 `format.ts` 增加表格/步骤/视觉分块指令。
 - [x] Chat 链路：`chatAgentOutput` / `chatOutput` 增加 `replyBlocks`（双字段过渡），`runChatAgent` + `/api/chat` 透传，iOS `ChatResponse.replyBlocks` + 气泡走 blocks。
 - [x] Swift Renderer：`ContentBlock` 新增 table / steps / visual + `StepContent` / `InteractionHint`；`MarkdownRenderer(blocks:)` 三个新分支；`TableBlockView` / `StepsBlockView` / `VisualPlaceholderView` 新建。
-- [x] 后端验证：core `tsc --noEmit` 通过、vitest 108 passed / 2 skipped（2 个需 `DEEPSEEK_API_KEY` 的真跑测试）；web `tsc --noEmit` 通过。
+- [x] 后端验证：core `tsc --noEmit` 通过、vitest 183 passed / 15 skipped（15 个需 `DEEPSEEK_API_KEY` 的 LLM eval 无 key 自动跳过）；web `tsc --noEmit` 通过。
 - [x] iOS 构建验证：macOS CI 全绿（PR #2/#3，2026-08-09）。
 - [x] iosMath 集成：`kostub/iosMath from: "2.5.0"`；`IosMathBackend` 默认启用，`UnicodeMathBackend` 降级保留。
 

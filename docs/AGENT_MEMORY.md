@@ -174,7 +174,7 @@ flowchart TD
 | 项 | 说明 |
 |----|------|
 | 题库 RAG | 保持 `question_bank` 专用，不混入用户 memory |
-| Redis 限流内存 | `rate-limit.ts` in-memory fallback，与 Agent 无关 |
+| 限流 | `rate-limit.ts` 单实例内存实现（Redis 死代码已移除），与 Agent 无关 |
 | OCR 图片缓存 | `ocr.ts` 进程内 Map，非用户记忆 |
 | DeepSeek native `tool_calls` | 属 Agent 协议迭代，见 PROJECT_REFERENCE §7 P1 #4，非 Memory 专项 |
 

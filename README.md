@@ -17,15 +17,17 @@ packages/visual-ast  Geometry AST 开源子模块（schema/validator/SVG rendere
 ```bash
 pnpm install
 cp apps/web/.env.example apps/web/.env.local
-# Fill Supabase, AI keys, optional S3
+# Fill AI keys; S3 is optional
 
 pnpm --filter @ai-study/web dev     # http://localhost:3000
 ```
 
+本地数据库和账号说明见 [docs/LOCAL_STORAGE.md](docs/LOCAL_STORAGE.md)。题库原始资料保存在根目录 `试卷/`。
+
 ## Verify
 
 ```bash
-cd packages/core && pnpm exec tsc --noEmit && pnpm exec vitest run
+cd packages/core && pnpm exec tsc --noEmit && pnpm exec vitest run   # 无 DEEPSEEK_API_KEY 时 15 个 LLM eval 自动跳过
 cd apps/web && pnpm exec tsc --noEmit
 cd packages/visual-ast && node --test src/*.test.ts
 pnpm --filter @ai-study/core eval:geometry   # 需 DEEPSEEK_API_KEY（视觉 block 真跑 eval：geometry/chart/circuit/pedigree/graph/lab/cell + analyze e2e）
@@ -40,6 +42,7 @@ pnpm --filter @ai-study/core eval:geometry   # 需 DEEPSEEK_API_KEY（视觉 blo
 - Visual AST: `packages/visual-ast` (零依赖开源子模块，不纳入 pnpm workspace)
 
 ## Docs
+
 
 - **项目参考（对话汇总）**: [docs/PROJECT_REFERENCE.md](docs/PROJECT_REFERENCE.md)
 - **Science AST 三版本（V1/V2/V3）**: [docs/SCIENCE_AST_IOS_ROADMAP.md](docs/SCIENCE_AST_IOS_ROADMAP.md)
