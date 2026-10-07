@@ -58,7 +58,22 @@ function rerank(
  * Uses service_role client (RLS bypass) to call match_questions RPC.
  */
 export async function retrieveReferences(opts: RetrieveOptions): Promise<RAGReference[]> {
-  const embedding = await embedQuery(opts.query);
+  if (!getEmbeddingApiKey()) {
+    // RAG is an optional enhancement: degrade to no references instead of failing grade.
+    console.warn('[rag] DASHSCOPE_API_KEY not set, skipping reference retrieval');
+    return [];
+  }
+
+  let embedding: number[];
+  try {
+    embedding = await embedQuery(opts.query);
+  } catch (err) {
+    console.warn(
+      `[rag] query embedding failed, skipping reference retrieval: ${err instanceof Error ? err.message : err}`,
+    );
+    return [];
+  }
+
   const minScore = opts.minScore ?? 0.78;
 
   const supabase = getServiceClient();

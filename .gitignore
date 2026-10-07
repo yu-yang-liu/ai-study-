@@ -41,3 +41,8 @@ tmp/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+# Exam source material (large binaries, kept locally only)
+试卷/
+aistudy资料/
+aistudy资料2/

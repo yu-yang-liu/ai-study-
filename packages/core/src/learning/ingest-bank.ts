@@ -25,14 +25,22 @@ function inferYear(source?: string): number | null {
   return match ? Number(match[0]) : null;
 }
 
-/** Insert question_bank rows with DashScope embeddings (batch). */
+/** Insert question_bank rows with DashScope embeddings (batch).
+ *  Embedding is optional: without DASHSCOPE_API_KEY (or on failure) rows are
+ *  still ingested with NULL embeddings; run the backfill later to enable RAG. */
 export async function ingestQuestionBankEntries(
   entries: BankEntryInput[],
 ): Promise<{ inserted: number }> {
   if (entries.length === 0) return { inserted: 0 };
 
-  const texts = entries.map(embeddingText);
-  const { vectors } = await embedTexts(texts);
+  let vectors: number[][] | null = null;
+  try {
+    vectors = (await embedTexts(entries.map(embeddingText))).vectors;
+  } catch (err) {
+    console.warn(
+      `[ingest-bank] embedding skipped, rows saved without vectors: ${err instanceof Error ? err.message : err}`,
+    );
+  }
   const supabase = getServiceClient();
 
   const rows = entries.map((entry, i) => ({
@@ -48,7 +56,7 @@ export async function ingestQuestionBankEntries(
     analysis: entry.analysis ?? null,
     source: entry.source ?? 'ingest',
     difficulty: entry.difficulty ?? null,
-    embedding: `[${vectors[i]!.join(',')}]`,
+    embedding: vectors ? `[${vectors[i]!.join(',')}]` : null,
   }));
 
   const { error } = await supabase.from('question_bank').insert(rows);

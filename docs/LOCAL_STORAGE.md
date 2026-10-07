@@ -42,9 +42,25 @@ SQLite 数据库和 WAL 临时文件已加入 `.gitignore`。备份时复制 `da
 
 ## 题库
 
-题库数据写入 SQLite 的 `question_bank` 表；题目图片、PDF 等二进制文件不塞进数据库。原始试卷继续放在根目录 `试卷/`，后续解析模型再把结构化结果写入题库。
+题库数据写入 SQLite 的 `question_bank` 表；题目图片、PDF 等二进制文件不塞进数据库。原始试卷放在根目录 `试卷/`（不进 git），后续解析模型再把结构化结果写入题库。
 
-题库的向量字段仍以 JSON 文本保存。需要 DashScope embedding 时可以继续配置 `DASHSCOPE_API_KEY`；没有 embedding 时，普通题库浏览和练习不受影响，语义 RAG 会返回空结果或跳过。
+### 题库 seed 管线（scripts/seed-bank）
+
+原料：`试卷/高考/2025/`（9 科试卷+答案成对 PDF）与 `试卷/高考/2026/`（语文 txt 等）。三条命令按顺序执行（Node 24+）：
+
+```bash
+node scripts/seed-bank/extract-pdf.mts          # 试卷/ PDF+txt → tmp/seed/text/*.txt
+node scripts/seed-bank/parse-exam.mts           # DeepSeek/qwen 拆题 → tmp/seed/entries.jsonl（--subject 数学 可单科试跑）
+node scripts/seed-bank/import-bank.mts          # entries.jsonl → question_bank（按 id upsert，幂等）
+```
+
+拆题需要 `DEEPSEEK_API_KEY`（失效时自动回退 `DASHSCOPE_API_KEY` 的 qwen）。embedding 是可选的：
+
+- `.env.local` 配了 `DASHSCOPE_API_KEY`：import 时自动批量算向量，语义 RAG 立即可用；
+- 没配：题目文本照常入库（浏览/练习不受影响），RAG 检索返回空。之后补上 key 跑 `node scripts/seed-bank/backfill-embedding.mts` 一键补算。
+- `node scripts/seed-bank/smoke-rag.mts` 可验证相似度检索（需要 embedding）。
+
+题库的向量字段以 JSON 文本保存。没有 embedding 时，普通题库浏览和练习不受影响，语义 RAG 会返回空结果或跳过。
 
 ## 不再使用的配置
 

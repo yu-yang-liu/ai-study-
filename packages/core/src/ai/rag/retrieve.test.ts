@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { retrieveReferences } from './retrieve';
 
 // Clone the rerank logic from retrieve.ts for in-unit testing
 function rerank(
@@ -52,5 +53,18 @@ describe('rerank', () => {
     const ranked = rerank(candidates, '数学');
     // None contains '数学' explicitly, so no boost
     expect(ranked[0]!.id).toBe('b'); // 0.85
+  });
+});
+
+describe('retrieveReferences degradation', () => {
+  it('returns [] instead of throwing when DASHSCOPE_API_KEY is missing', async () => {
+    const prev = process.env.DASHSCOPE_API_KEY;
+    delete process.env.DASHSCOPE_API_KEY;
+    try {
+      const refs = await retrieveReferences({ query: '抛物线焦点', subject: '数学', phase: 'high' });
+      expect(refs).toEqual([]);
+    } finally {
+      if (prev !== undefined) process.env.DASHSCOPE_API_KEY = prev;
+    }
   });
 });
