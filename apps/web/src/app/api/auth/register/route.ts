@@ -1,4 +1,4 @@
-import { createServerSupabaseClient, AUTH_RATE_LIMIT, checkRateLimit, bootstrapUserRecords } from '@ai-study/core';
+import { createServerAuthClient, AUTH_RATE_LIMIT, checkRateLimit, bootstrapUserRecords } from '@ai-study/core';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -8,7 +8,7 @@ const registerSchema = z.object({
 });
 
 function getClientIp(request: Request): string {
-  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  return request.headers.get('x-forwarded-for')?.split(',').pop()?.trim() ?? 'unknown';
 }
 
 export async function POST(request: Request) {
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const rl = await checkRateLimit(`auth:register:${ip}`, AUTH_RATE_LIMIT.maxRequests, AUTH_RATE_LIMIT.windowMs);
   if (!rl.allowed) {
     return NextResponse.json(
-      { error: '\u8bf7\u6c42\u8fc7\u4e8e\u9891\u7e41\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5' },
+      { error: '请求过于频繁，请稍后再试' },
       { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.retryAfterMs ?? 1000) / 1000)) } },
     );
   }
@@ -32,12 +32,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = await createServerSupabaseClient();
-  const { email, password } = parsed.data;
+  const email = parsed.data.email.trim().toLowerCase();
+  const emailRl = await checkRateLimit(`auth:register:email:${email}`, 5, 3_600_000);
+  if (!emailRl.allowed) {
+    return NextResponse.json(
+      { error: '注册请求过于频繁，请稍后再试' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((emailRl.retryAfterMs ?? 3_600_000) / 1000)) } },
+    );
+  }
 
-  const { data, error } = await supabase.auth.signUp({
+  const authClient = await createServerAuthClient();
+
+  const { data, error } = await authClient.auth.signUp({
     email,
-    password,
+    password: parsed.data.password,
     options: {
       emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
     },
@@ -57,6 +65,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     user: data.user ? { id: data.user.id, email: data.user.email } : null,
-    message: '\u6ce8\u518c\u6210\u529f\u3002\u82e5\u542f\u7528\u90ae\u7bb1\u9a8c\u8bc1\uff0c\u8bf7\u67e5\u6536\u9a8c\u8bc1\u90ae\u4ef6\u540e\u767b\u5f55\u3002',
+    message: '注册成功。若启用邮箱验证，请查收验证邮件后登录。',
   });
 }

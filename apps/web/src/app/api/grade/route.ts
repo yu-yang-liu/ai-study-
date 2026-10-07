@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
   const rl = await checkAIRateLimit(user.id);
   if (!rl.allowed) {
-    return NextResponse.json({ error: '\u8bf7\u6c42\u8fc7\u4e8e\u9891\u7e41' }, { status: 429 });
+    return NextResponse.json({ error: '请求过于频繁' }, { status: 429 });
   }
 
   let body: unknown;
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     if (err instanceof AIStructuredError) {
       return NextResponse.json({ error: err.message }, { status: 422 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error('[api/grade]', err);
+    return NextResponse.json({ error: '服务器内部错误，请稍后再试' }, { status: 500 });
   }
 }

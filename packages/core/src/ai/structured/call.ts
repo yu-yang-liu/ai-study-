@@ -29,7 +29,7 @@ export async function structuredCall<T>(opts: {
   const baseMessages = route.jsonMode
     ? [
         ...opts.messages,
-        { role: 'system' as const, content: '\u8bf7\u4e25\u683c\u8f93\u51fa JSON\uff0c\u4e0d\u8981\u5305\u542b\u5176\u4ed6\u6587\u5b57\u3002' },
+        { role: 'system' as const, content: '请严格输出 JSON，不要包含其他文字。' },
       ]
     : opts.messages;
 

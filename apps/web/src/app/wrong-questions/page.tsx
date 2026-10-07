@@ -60,7 +60,7 @@ export default function WrongQuestionsPage() {
   );
 
   return (
-    <LayoutShell title={'\u0041\u0049\u9ad8\u4e2d'}>
+    <LayoutShell title={'AI高中'}>
       <PageTitle title="错题复习" subtitle={`${dueQuestions.length} 道待复习 · 共 ${questions.length} 道错题`} />
       {error && <div className="mb-4"><ErrorBanner message={error} onDismiss={() => setError('')} /></div>}
       {loading ? (

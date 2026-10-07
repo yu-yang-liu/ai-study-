@@ -80,7 +80,7 @@ export async function getLearnerContext(
           dataRichness: profiles.data_richness ?? 0,
         }
       : null,
-    knowledgeMastery: (masteryRows ?? []).map((r) => ({
+    knowledgeMastery: (masteryRows ?? []).map((r: any) => ({
       knowledgePoint: r.knowledge_point,
       level: Number(r.level),
       uncertainty: Number(r.uncertainty ?? 1),
@@ -103,21 +103,21 @@ function formatLearnerContext(model: LearnerModel): string {
   const parts: string[] = [];
 
   if (model.weakSubjects.length) {
-    parts.push(`\u8584\u5f31\u5b66\u79d1\uff1a${model.weakSubjects.join('\u3001')}`);
+    parts.push(`薄弱学科：${model.weakSubjects.join('、')}`);
   }
   if (model.strongSubjects.length) {
-    parts.push(`\u4f18\u52bf\u5b66\u79d1\uff1a${model.strongSubjects.join('\u3001')}`);
+    parts.push(`优势学科：${model.strongSubjects.join('、')}`);
   }
   if (model.targetScore) {
-    parts.push(`\u76ee\u6807\u5206\uff1a${model.targetScore}\u5206`);
+    parts.push(`目标分：${model.targetScore}分`);
   }
 
   if (model.educationState) {
     const state = model.educationState;
-    parts.push(`\u5317\u4eac\u9ad8\u4e2d\u9636\u6bb5\uff1a${state.grade}\u00b7${state.stage}`);
+    parts.push(`北京高中阶段：${state.grade}·${state.stage}`);
     if (state.selection.subjects.length > 0) {
       parts.push(
-        `\u9009\u79d1\u72b6\u6001\uff1a${state.selection.status}\uff08${state.selection.subjects.join('\u3001')}\uff09`,
+        `选科状态：${state.selection.status}（${state.selection.subjects.join('、')}）`,
       );
     }
     const failedSubjects = Object.entries(state.qualificationStatus)
@@ -125,7 +125,7 @@ function formatLearnerContext(model: LearnerModel): string {
       .map(([subject]) => subject);
     if (failedSubjects.length > 0) {
       parts.push(
-        `\u5408\u683c\u8003\u5f85\u5904\u7406\u79d1\u76ee\uff1a${failedSubjects.join('\u3001')}`,
+        `合格考待处理科目：${failedSubjects.join('、')}`,
       );
     }
   }
@@ -134,20 +134,20 @@ function formatLearnerContext(model: LearnerModel): string {
     .filter(([, v]) => v.level < 0.4)
     .map(([k]) => k);
   if (lowMastery.length) {
-    parts.push(`\u638c\u63e1\u5ea6\u8f83\u4f4e\uff1a${lowMastery.slice(0, 5).join('\u3001')}`);
+    parts.push(`掌握度较低：${lowMastery.slice(0, 5).join('、')}`);
   }
 
   if (model.errorProfile.length > 0) {
     const topErrors = model.errorProfile
       .slice(0, 3)
-      .map((e) => `${e.type}(${e.count}\u6b21)`)
-      .join('\u3001');
-    parts.push(`\u5e38\u89c1\u9519\u8bef\uff1a${topErrors}`);
+      .map((e) => `${e.type}(${e.count}次)`)
+      .join('、');
+    parts.push(`常见错误：${topErrors}`);
   }
 
   if (model.preferences.explainStyle) {
-    parts.push(`\u8bb2\u89e3\u98ce\u683c\u504f\u597d\uff1a${model.preferences.explainStyle}`);
+    parts.push(`讲解风格偏好：${model.preferences.explainStyle}`);
   }
 
-  return parts.join('\u3002') + (parts.length > 0 ? '\u3002' : '');
+  return parts.join('。') + (parts.length > 0 ? '。' : '');
 }

@@ -15,6 +15,7 @@ packages/ios/tools/node_modules/
 .cursor/
 .idea/
 .claude/
+.zcode/
 .vscode/*
 !.vscode/extensions.json
 *.swp
@@ -35,3 +36,8 @@ packages/android/captures/
 # Generated local artifacts (PDF exports, render previews, and scratch data)
 output/
 tmp/
+
+# Local SQLite database and sidecar files
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

@@ -131,7 +131,7 @@ export async function loadConversationMessages(
 
   return (data ?? [])
     .reverse()
-    .map((row) => ({
+    .map((row: any) => ({
       id: row.id as string,
       role: row.role as 'user' | 'assistant',
       content: row.content as string,
@@ -199,7 +199,7 @@ export async function listConversations(
   const { data, error } = await query;
   if (error) throw new Error(`listConversations: ${error.message}`);
 
-  return (data ?? []).map((row) => ({
+  return (data ?? []).map((row: any) => ({
     id: row.id as string,
     title: row.title as string,
     updatedAt: row.updated_at as string,

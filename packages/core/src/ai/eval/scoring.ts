@@ -46,20 +46,20 @@ function scoreDimensionsEnum(actual: unknown, expected: object): number {
 }
 
 /**
- * 按任务类型配置的评估权重�?
- * 权重越高，该维度在总分中的占比越大�?
- * 如果某字段不�?evalWeights 中，默认权重�?1�?
+ * 按任务类型配置的评估权重；
+ * 权重越高，该维度在总分中的占比越大。
+ * 如果某字段不在 evalWeights 中，默认权重为 1。
  */
 const TASK_EVAL_WEIGHTS: Partial<Record<TaskName, Record<string, number>>> = {
   gradeMath: {
-    // 数学批改：最终答案和关键步骤权重最�?
+    // 数学批改：最终答案和关键步骤权重最高。
     finalAnswer: 1.5,
     keySteps: 1.2,
     overallScore: 1.0,
     feedback: 0.8,
   },
   gradeEssay: {
-    // 作文批改：思想内容和语言表达权重最�?
+    // 作文批改：思想内容和语言表达权重最高。
     思想内容: 1.5,
     语言表达: 1.5,
     结构: 1.0,
@@ -86,7 +86,7 @@ const TASK_EVAL_WEIGHTS: Partial<Record<TaskName, Record<string, number>>> = {
 /**
  * Computes scoring dimensions by comparing actual AI output against expected values.
  * Dimensions are weighted per task type (see TASK_EVAL_WEIGHTS).
- * Pure function �?no side effects, testable in isolation.
+ * Pure function — no side effects, testable in isolation.
  */
 export function computeDimensions(
   actual: unknown,

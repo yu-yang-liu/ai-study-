@@ -28,14 +28,14 @@ export function composePrompt(opts: ComposeOptions): string {
     const refText = opts.references
       .map(
         (r, i) =>
-          `${i + 1}. \u8003\u70b9\uff1a${r.examPoint}\n   \u8bc4\u5206\u8981\u70b9\uff1a${r.analysis}`,
+          `${i + 1}. 考点：${r.examPoint}\n   评分要点：${r.analysis}`,
       )
       .join('\n');
-    parts.push(`\u4ee5\u4e0b\u68c0\u7d22\u5230\u7684\u76f8\u5173\u8003\u70b9\u4e0e\u89e3\u6790\u53c2\u8003\uff1a\n${refText}`);
+    parts.push(`以下检索到的相关考点与解析参考：\n${refText}`);
   }
 
   if (opts.learnerContext) {
-    parts.push(`\u5b66\u751f\u5b66\u60c5\uff1a${opts.learnerContext}`);
+    parts.push(`学生学情：${opts.learnerContext}`);
   }
 
   if (opts.userInput) {
@@ -52,7 +52,7 @@ export function composeMessages(opts: ComposeOptions): ChatMessage[] {
     { role: 'system', content: fullPrompt },
     {
       role: 'user',
-      content: opts.userInput ?? `\u8bf7\u4ee5${persona.role}\u7684\u8eab\u4efd\uff0c\u5206\u6790\u4ee5\u4e0b\u5185\u5bb9`,
+      content: opts.userInput ?? `请以${persona.role}的身份，分析以下内容`,
     },
   ];
 }

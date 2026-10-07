@@ -196,19 +196,19 @@ const CELL_KEYWORDS = [
  * 合法 Geometry AST 以 `visual(kind:"geometry")` block 前置进 analysisBlocks。
  * 不直接依赖 analyze 主提示词输出图形（实测不可靠）；失败时静默降级，不影响 analyze 结果。
  */
-const MOLECULAR_SUBJECTS = new Set(['\u5316\u5b66']);
+const MOLECULAR_SUBJECTS = new Set(['化学']);
 const MOLECULAR_KEYWORDS = [
-  '\u5206\u5b50\u7ed3\u6784',
-  '\u7ed3\u6784\u5f0f',
-  '\u7403\u68cd\u6a21\u578b',
-  '\u5316\u5b66\u952e',
-  '\u6709\u673a\u7269\u7ed3\u6784',
-  '\u5b98\u80fd\u56e2',
-  '\u540c\u5206\u5f02\u6784',
-  '\u952e\u7ebf\u5f0f',
-  '\u7535\u5b50\u5f0f',
-  '\u7a7a\u95f4\u6784\u578b',
-  '\u5206\u5b50\u6a21\u578b',
+  '分子结构',
+  '结构式',
+  '球棍模型',
+  '化学键',
+  '有机物结构',
+  '官能团',
+  '同分异构',
+  '键线式',
+  '电子式',
+  '空间构型',
+  '分子模型',
 ];
 
 export async function attachGeometryVisualBlock(opts: {
@@ -482,7 +482,7 @@ export async function executeAnalyze(opts: {
   const isImage = Boolean(imageUrl);
   const task = isImage ? ('analyzeImg' as const) : ('analyze' as const);
   const userInput = isImage
-    ? `\u8bf7\u5206\u6790\u56fe\u7247\u4e2d\u7684\u8bd5\u9898\u5185\u5bb9\u3002${content ? `\n\u8865\u5145\u8bf4\u660e\uff1a${content}` : ''}`
+    ? `请分析图片中的试题内容。${content ? `\n补充说明：${content}` : ''}`
     : (content ?? '');
 
   const messages = composeMessages({
@@ -597,7 +597,7 @@ export async function executeGrade(opts: {
     getLearnerContext(userId),
   ]);
 
-  const userInput = `\u9898\u76ee\uff1a${questionContent}\n\n\u5b66\u751f\u4f5c\u7b54\uff1a${studentAnswer}`;
+  const userInput = `题目：${questionContent}\n\n学生作答：${studentAnswer}`;
   const messages = composeMessages({
     task,
     subject,
@@ -689,8 +689,8 @@ export async function executePlan(opts: {
   const { context: learnerContext } = await getLearnerContext(userId);
 
   const userInput = focus
-    ? `\u5b66\u751f\u5e0c\u671b\u91cd\u70b9\u5b66\u4e60\uff1a${focus}\n\u8bf7\u636e\u6b64\u5236\u5b9a\u5b66\u4e60\u8ba1\u5212\u3002`
-    : `\u8bf7\u6839\u636e\u5b66\u751f\u7684\u5b66\u60c5\u5206\u6790\u5236\u5b9a\u4e2a\u6027\u5316\u5b66\u4e60\u8ba1\u5212\u3002`;
+    ? `学生希望重点学习：${focus}\n请据此制定学习计划。`
+    : `请根据学生的学情分析制定个性化学习计划。`;
 
   const messages = composeMessages({
     task: 'plan',
@@ -748,7 +748,7 @@ export async function fetchWrongQuestionSummary(
     .order('next_review_at', { ascending: true })
     .limit(limit);
 
-  const items = (data ?? []).map((row) => {
+  const items = (data ?? []).map((row: any) => {
     const q = row.questions as
       | { subject?: string; content?: string }
       | { subject?: string; content?: string }[]
@@ -756,7 +756,7 @@ export async function fetchWrongQuestionSummary(
     const question = Array.isArray(q) ? q[0] : q;
     const content = question?.content ?? '';
     return {
-      subject: question?.subject ?? '\u672a\u77e5',
+      subject: question?.subject ?? '未知',
       preview: content.length > 60 ? `${content.slice(0, 60)}...` : content,
     };
   });
@@ -784,7 +784,7 @@ export async function fetchStudySnapshot(userId: string): Promise<StudySnapshot>
   ]);
 
   const practices = practiceRes.data ?? [];
-  const correct = practices.filter((p) => p.is_correct).length;
+  const correct = practices.filter((p: any) => p.is_correct).length;
   const accuracy7d = practices.length > 0 ? Math.round((correct / practices.length) * 100) : 0;
 
   return {

@@ -80,7 +80,7 @@ export default function UploadPage() {
   }
 
   return (
-    <LayoutShell title={'\u0041\u0049\u9ad8\u4e2d'}>
+    <LayoutShell title={'AI高中'}>
       <PageTitle title="拍照分析" subtitle="上传题目图片，AI 自动识别并分析" />
       <Card>
         <div className="space-y-4">

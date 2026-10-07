@@ -1,4 +1,4 @@
-import { createAnonClient, AUTH_RATE_LIMIT, checkRateLimit } from '@ai-study/core';
+import { refreshLocalSession, AUTH_RATE_LIMIT, checkRateLimit } from '@ai-study/core';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -7,10 +7,10 @@ const refreshSchema = z.object({
 });
 
 function getClientIp(request: Request): string {
-  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  return request.headers.get('x-forwarded-for')?.split(',').pop()?.trim() ?? 'unknown';
 }
 
-/** Supabase session refresh for mobile clients (iOS). */
+/** Local SQLite session refresh for mobile clients (iOS). */
 export async function POST(request: Request) {
   const ip = getClientIp(request);
   const rl = await checkRateLimit(`auth:refresh:${ip}`, AUTH_RATE_LIMIT.maxRequests, AUTH_RATE_LIMIT.windowMs);
@@ -33,10 +33,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = createAnonClient();
-    const { data, error } = await supabase.auth.refreshSession({
-      refresh_token: parsed.data.refreshToken,
-    });
+    const { data, error } = refreshLocalSession(parsed.data.refreshToken);
 
     if (error || !data.session) {
       return NextResponse.json({ error: error?.message ?? 'Refresh failed' }, { status: 401 });
@@ -49,6 +46,7 @@ export async function POST(request: Request) {
       user: data.user ? { id: data.user.id, email: data.user.email } : null,
     });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error('[api/auth/refresh]', err);
+    return NextResponse.json({ error: '服务器内部错误，请稍后再试' }, { status: 500 });
   }
 }

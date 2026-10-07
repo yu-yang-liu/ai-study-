@@ -18,7 +18,7 @@ const gradeArgsSchema = z.object({
 describe('chat agent tool args', () => {
   it('plan args accept optional focus', () => {
     expect(planArgsSchema.parse({}).focus).toBeUndefined();
-    expect(planArgsSchema.parse({ focus: '\u51fd\u6570' }).focus).toBe('\u51fd\u6570');
+    expect(planArgsSchema.parse({ focus: '函数' }).focus).toBe('函数');
   });
 
   it('analyze args require minimum content length', () => {

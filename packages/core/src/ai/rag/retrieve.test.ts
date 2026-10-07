@@ -36,21 +36,21 @@ describe('parseVectorLiteral', () => {
 
 describe('rerank', () => {
   const candidates = [
-    { id: 'a', examPoint: '\u5bfc\u6570\u7efc\u5408\u5e94\u7528', analysis: '\u5229\u7528\u5bfc\u6570\u6c42\u6781\u503c', questionType: '\u8ba1\u7b97\u9898', similarity: 0.82 },
-    { id: 'b', examPoint: '\u6570\u5217\u6c42\u548c', analysis: '\u7b49\u5dee\u7b49\u6bd4\u516c\u5f0f', questionType: '\u8ba1\u7b97\u9898', similarity: 0.85 },
-    { id: 'c', examPoint: '\u5bfc\u6570\u4e0e\u4e0d\u7b49\u5f0f', analysis: '\u6784\u9020\u51fd\u6570\u6cd5', questionType: '\u8bc1\u660e\u9898', similarity: 0.80 },
+    { id: 'a', examPoint: '导数综合应用', analysis: '利用导数求极值', questionType: '计算题', similarity: 0.82 },
+    { id: 'b', examPoint: '数列求和', analysis: '等差等比公式', questionType: '计算题', similarity: 0.85 },
+    { id: 'c', examPoint: '导数与不等式', analysis: '构造函数法', questionType: '证明题', similarity: 0.80 },
   ];
 
   it('boosts exact subject match and sorts by score', () => {
-    const ranked = rerank(candidates, '\u5bfc\u6570');
+    const ranked = rerank(candidates, '导数');
     expect(ranked[0]!.id).toBe('a'); // 0.82 + 0.05 = 0.87 > 0.85
     expect(ranked[1]!.id).toBe('c'); // 0.80 + 0.05 = 0.85
     expect(ranked[2]!.id).toBe('b'); // 0.85 (no boost)
   });
 
   it('returns top3 unchanged when all match', () => {
-    const ranked = rerank(candidates, '\u6570\u5b66');
-    // None contains '\u6570\u5b66' explicitly, so no boost
+    const ranked = rerank(candidates, '数学');
+    // None contains '数学' explicitly, so no boost
     expect(ranked[0]!.id).toBe('b'); // 0.85
   });
 });

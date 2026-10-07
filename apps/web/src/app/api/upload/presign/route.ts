@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   const rl = await checkAIRateLimit(user.id);
   if (!rl.allowed) {
-    return NextResponse.json({ error: '\u8bf7\u6c42\u8fc7\u4e8e\u9891\u7e41' }, { status: 429 });
+    return NextResponse.json({ error: '请求过于频繁' }, { status: 429 });
   }
 
   let body: unknown;
@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     const presigned = await createPresignedUploadUrl(user.id, key, contentType);
     return NextResponse.json(presigned);
   } catch (err) {
-    return NextResponse.json({ error: `\u9884\u7b7e\u540d\u5931\u8d25\uff1a${String(err)}` }, { status: 500 });
+    console.error('[api/upload/presign]', err);
+    return NextResponse.json({ error: '预签名失败，请稍后再试' }, { status: 500 });
   }
 }

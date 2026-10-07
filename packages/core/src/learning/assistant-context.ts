@@ -18,12 +18,12 @@ function formatPlanSummary(planData: unknown, title: string, description: string
   const tasks = plan?.tasks ?? [];
   const taskLines = tasks
     .slice(0, 5)
-    .map((t) => `${t.title}(${t.subject}, ${t.estimatedMinutes}\u5206\u949f)`)
-    .join('\u3001');
-  const parts = [`\u5f53\u524d\u8ba1\u5212\uff1a${title}`];
+    .map((t) => `${t.title}(${t.subject}, ${t.estimatedMinutes}分钟)`)
+    .join('、');
+  const parts = [`当前计划：${title}`];
   if (description) parts.push(description);
-  if (taskLines) parts.push(`\u4efb\u52a1\uff1a${taskLines}`);
-  return parts.join('\u3002');
+  if (taskLines) parts.push(`任务：${taskLines}`);
+  return parts.join('。');
 }
 
 /**
@@ -64,12 +64,12 @@ export async function getAssistantContext(userId: string): Promise<AssistantCont
   const sections: string[] = [];
 
   if (learnerText) {
-    sections.push(`\u3010\u5b66\u751f\u753b\u50cf\u3011${learnerText}`);
+    sections.push(`【学生画像】${learnerText}`);
   }
 
   if (planRes.data) {
     sections.push(
-      `\u3010\u5b66\u4e60\u8ba1\u5212\u3011${formatPlanSummary(
+      `【学习计划】${formatPlanSummary(
         planRes.data.plan_data,
         planRes.data.title,
         planRes.data.description,
@@ -87,25 +87,25 @@ export async function getAssistantContext(userId: string): Promise<AssistantCont
       .eq('mastered', false);
 
     const previews = wrongRows
-      .map((row) => {
+      .map((row: any) => {
         const q = row.questions as { subject?: string; content?: string } | { subject?: string; content?: string }[] | null;
         const question = Array.isArray(q) ? q[0] : q;
         const subject = question?.subject ?? '';
         const content = truncate(question?.content ?? '', 40);
         return `${subject}:${content}`;
       })
-      .join('\u3001');
+      .join('、');
     sections.push(
-      `\u3010\u9519\u9898\u590d\u4e60\u3011\u5f85\u590d\u4e60 ${count ?? wrongRows.length} \u9898\u3002\u6700\u8fd1\uff1a${previews}`,
+      `【错题复习】待复习 ${count ?? wrongRows.length} 题。最近：${previews}`,
     );
   }
 
   const practices = practiceRes.data ?? [];
   if (practices.length > 0) {
-    const correct = practices.filter((p) => p.is_correct).length;
+    const correct = practices.filter((p: any) => p.is_correct).length;
     const rate = Math.round((correct / practices.length) * 100);
     sections.push(
-      `\u3010\u8fd1\u671f\u7ec3\u4e60\u3011\u8fd17\u5929\u5171 ${practices.length} \u6b21\uff0c\u6b63\u786e\u7387 ${rate}%`,
+      `【近期练习】近7天共 ${practices.length} 次，正确率 ${rate}%`,
     );
   }
 

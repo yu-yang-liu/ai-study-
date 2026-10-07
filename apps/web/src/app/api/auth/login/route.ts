@@ -1,4 +1,4 @@
-import { createServerSupabaseClient, AUTH_RATE_LIMIT, checkRateLimit, bootstrapUserRecords } from '@ai-study/core';
+import { createServerAuthClient, AUTH_RATE_LIMIT, checkRateLimit, peekRateLimit, clearRateLimit, bootstrapUserRecords } from '@ai-study/core';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -8,7 +8,7 @@ const loginSchema = z.object({
 });
 
 function getClientIp(request: Request): string {
-  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  return request.headers.get('x-forwarded-for')?.split(',').pop()?.trim() ?? 'unknown';
 }
 
 export async function POST(request: Request) {
@@ -32,14 +32,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = await createServerSupabaseClient();
-  const { email, password } = parsed.data;
+  const email = parsed.data.email.trim().toLowerCase();
+  const password = parsed.data.password;
+  const failKey = `auth:login:fail:${email}`;
+  if (peekRateLimit(failKey) >= 10) {
+    return NextResponse.json(
+      { error: '登录失败次数过多，请稍后再试' },
+      { status: 429, headers: { 'Retry-After': String(15 * 60) } },
+    );
+  }
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const authClient = await createServerAuthClient();
+
+  const { data, error } = await authClient.auth.signInWithPassword({ email, password });
 
   if (error) {
+    await checkRateLimit(failKey, 10, 15 * 60_000);
     return NextResponse.json({ error: error.message }, { status: 401 });
   }
+
+  clearRateLimit(failKey);
 
   if (data.user?.id && data.user.email) {
     try {

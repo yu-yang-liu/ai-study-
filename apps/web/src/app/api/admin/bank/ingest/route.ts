@@ -23,7 +23,7 @@ const entrySchema = z.object({
 });
 
 const bodySchema = z.object({
-  entries: z.array(entrySchema).optional(),
+  entries: z.array(entrySchema).max(500).optional(),
   useDemo: z.boolean().optional(),
 });
 

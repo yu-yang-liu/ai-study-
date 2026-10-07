@@ -31,8 +31,6 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1086.0",
     "@aws-sdk/s3-request-presigner": "^3.1086.0",
-    "@supabase/ssr": "^0.12.0",
-    "@supabase/supabase-js": "^2.108.2",
     "drizzle-orm": "^0.45.2",
     "next": "^15.5.19",
     "pg": "^8.22.0",

@@ -46,10 +46,11 @@ export type { SupabaseClient } from './db';
 
 // auth
 export {
-  createServerSupabaseClient,
+  createServerAuthClient,
   getAuthUser,
   requireAuth,
   resolveUserFromAccessToken,
+  refreshLocalSession,
   isAdmin,
   requireAdmin,
   createClientFromToken,
@@ -292,6 +293,8 @@ export { safeFetch, assertUserOwnsFile, sha256Hash } from './security';
 // rate limit
 export {
   checkRateLimit,
+  peekRateLimit,
+  clearRateLimit,
   rateLimitByKey,
   checkAIRateLimit,
   AUTH_RATE_LIMIT,

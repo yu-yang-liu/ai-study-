@@ -49,17 +49,11 @@ export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): P
   // Allow the configured S3 endpoint and optional public CDN base
   const s3Endpoint = process.env.S3_ENDPOINT;
   if (s3Endpoint && host === parseHost(s3Endpoint)) {
-    return fetch(input, init);
+    return fetch(input, { ...init, redirect: 'manual' });
   }
   const s3Public = process.env.S3_PUBLIC_BASE_URL;
   if (s3Public && host === parseHost(s3Public)) {
-    return fetch(input, init);
-  }
-
-  // Allow Supabase host
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (supabaseUrl && host === parseHost(supabaseUrl)) {
-    return fetch(input, init);
+    return fetch(input, { ...init, redirect: 'manual' });
   }
 
   const allowedHosts = buildAllowedHosts();
@@ -67,7 +61,7 @@ export async function safeFetch(input: RequestInfo | URL, init?: RequestInit): P
     throw new Error(`SSRF blocked: ${host} is not in the allowed hosts list. Use ALLOWED_HOSTS_EXTRA env var to extend.`);
   }
 
-  return fetch(input, init);
+  return fetch(input, { ...init, redirect: 'manual' });
 }
 
 export function assertUserOwnsFile(userId: string, s3Key: string): void {

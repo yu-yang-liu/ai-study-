@@ -3,8 +3,8 @@ import { chatAgentOutput, chatAgentToolName } from '../structured/schemas';
 
 describe('chatAgentOutput schema', () => {
   it('accepts direct reply without tool', () => {
-    const parsed = chatAgentOutput.parse({ reply: '\u4f60\u597d\uff0c\u6211\u6765\u5e2e\u4f60\u3002' });
-    expect(parsed.reply).toBe('\u4f60\u597d\uff0c\u6211\u6765\u5e2e\u4f60\u3002');
+    const parsed = chatAgentOutput.parse({ reply: '你好，我来帮你。' });
+    expect(parsed.reply).toBe('你好，我来帮你。');
     expect(parsed.tool).toBeUndefined();
   });
 
@@ -12,11 +12,11 @@ describe('chatAgentOutput schema', () => {
     const parsed = chatAgentOutput.parse({
       tool: {
         name: 'generate_plan',
-        args: { focus: '\u5bfc\u6570' },
+        args: { focus: '导数' },
       },
     });
     expect(parsed.tool?.name).toBe('generate_plan');
-    expect(parsed.tool?.args.focus).toBe('\u5bfc\u6570');
+    expect(parsed.tool?.args.focus).toBe('导数');
   });
 
   it('rejects unknown tool names', () => {

@@ -16,7 +16,7 @@ export async function middleware(req: NextRequest) {
     return;
   }
 
-  // requireAuth 成功返回 { user, response }（response 带 x-user-id 头），
+  // requireAuth 成功返回 { user, response }，
   // 失败返回 NextResponse（API 401 / 页面重定向 /login）。无 throw 控制流。
   const result = await requireAuth(req);
   if (result instanceof NextResponse) return result;

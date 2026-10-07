@@ -1,16 +1,13 @@
-// Sliding-window rate limiter with Redis + in-memory fallback.
+// Sliding-window rate limiter — single-instance, in-memory implementation.
 //
-// Production: set REDIS_URL to use Redis (multi-instance safe).
-// Development / serverless: falls back to in-memory Map.
-//
-// Redis sliding window uses sorted sets with atomic Lua script.
+// 注意：计数保存在进程内 Map 中。多实例 / Serverless 部署下各实例互相独立，
+// 如需跨实例限流必须自行接入共享存储（Redis 等）。此前代码里的 ioredis 分支
+// 依赖未声明、require 必然失败并静默回退内存，属于从未生效的死代码，已移除。
 
 interface RateLimitEntry {
   timestamps: number[];
-}
-
-interface RateLimitBackend {
-  check(key: string, maxRequests: number, windowMs: number): Promise<RateLimitResult>;
+  // check() 记录命中时保存的窗口长度，供 peekRateLimit 按“当前窗口”过滤。
+  windowMs?: number;
 }
 
 export interface RateLimitResult {
@@ -19,131 +16,52 @@ export interface RateLimitResult {
   retryAfterMs?: number;
 }
 
-// ── In-memory backend (fallback) ──
+// 防止限流键无限累积导致内存缓慢增长：超过上限时按插入序淘汰最旧的键。
+const MAX_ENTRIES = 5_000;
 
 const memoryStore = new Map<string, RateLimitEntry>();
 
-const memoryBackend: RateLimitBackend = {
-  async check(key: string, maxRequests: number, windowMs: number) {
-    const now = Date.now();
-    const cutoff = now - windowMs;
+function evictOldestIfNeeded(): void {
+  while (memoryStore.size > MAX_ENTRIES) {
+    const oldestKey = memoryStore.keys().next().value;
+    if (oldestKey === undefined) break;
+    memoryStore.delete(oldestKey);
+  }
+}
 
-    let entry = memoryStore.get(key);
-    if (!entry) {
-      entry = { timestamps: [] };
-      memoryStore.set(key, entry);
-    }
+async function check(
+  key: string,
+  maxRequests: number,
+  windowMs: number,
+): Promise<RateLimitResult> {
+  const now = Date.now();
+  const cutoff = now - windowMs;
 
-    entry.timestamps = entry.timestamps.filter((t) => t > cutoff);
+  let entry = memoryStore.get(key);
+  if (!entry) {
+    entry = { timestamps: [], windowMs };
+    memoryStore.set(key, entry);
+    evictOldestIfNeeded();
+  } else {
+    entry.windowMs = windowMs;
+  }
 
-    if (entry.timestamps.length >= maxRequests) {
-      const oldest = entry.timestamps[0]!;
-      return {
-        allowed: false,
-        remaining: 0,
-        retryAfterMs: oldest + windowMs - now,
-      };
-    }
+  entry.timestamps = entry.timestamps.filter((t) => t > cutoff);
 
-    entry.timestamps.push(now);
+  if (entry.timestamps.length >= maxRequests) {
+    const oldest = entry.timestamps[0]!;
     return {
-      allowed: true,
-      remaining: maxRequests - entry.timestamps.length,
+      allowed: false,
+      remaining: 0,
+      retryAfterMs: oldest + windowMs - now,
     };
-  },
-};
-
-// ── Redis backend (production, optional) ──
-
-interface RedisLike {
-  eval(script: string, numKeys: number, ...args: Array<string | number>): Promise<unknown>;
-  quit(): Promise<void>;
-}
-
-const REDIS_URL = process.env.REDIS_URL;
-
-let redisClient: RedisLike | null = null;
-let redisInitAttempted = false;
-
-async function tryConnectRedis(): Promise<RedisLike | null> {
-  if (!REDIS_URL) return null;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { Redis } = require('ioredis') as { Redis: new (url: string, opts?: Record<string, unknown>) => RedisLike };
-    return new Redis(REDIS_URL, {
-      lazyConnect: true,
-      maxRetriesPerRequest: 1,
-      retryStrategy: () => null,
-    });
-  } catch {
-    return null;
-  }
-}
-
-// Lua script: atomic sliding window via sorted set
-const SLIDING_WINDOW_LUA = `
-local key = KEYS[1]
-local now = tonumber(ARGV[1])
-local window = tonumber(ARGV[2])
-local maxRequests = tonumber(ARGV[3])
-
-redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
-
-local count = redis.call('ZCARD', key)
-if count >= maxRequests then
-  local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
-  local retryAfter = 0
-  if oldest[2] then
-    retryAfter = tonumber(oldest[2]) + window - now
-  end
-  return {0, 0, retryAfter}
-end
-
-redis.call('ZADD', key, now, now .. '-' .. math.random())
-redis.call('EXPIRE', key, math.ceil(window / 1000) + 1)
-return {1, maxRequests - count - 1, 0}
-`;
-
-const redisBackend: RateLimitBackend = {
-  async check(key, maxRequests, windowMs) {
-    if (!redisClient) {
-      return memoryBackend.check(key, maxRequests, windowMs);
-    }
-    try {
-      const now = Date.now();
-      const rawResult = await redisClient.eval(
-        SLIDING_WINDOW_LUA,
-        1,
-        key,
-        now.toString(),
-        windowMs.toString(),
-        maxRequests.toString(),
-      );
-
-      const result = rawResult as number[];
-      const allowed = Number(result[0]) === 1;
-      const remaining = typeof result[1] === 'number' ? Number(result[1]) : 0;
-      const retryAfterMs = typeof result[2] === 'number' && result[2] > 0 ? result[2] : undefined;
-
-      return { allowed, remaining, retryAfterMs };
-    } catch {
-      return memoryBackend.check(key, maxRequests, windowMs);
-    }
-  },
-};
-
-async function getBackend(): Promise<RateLimitBackend> {
-  if (redisClient) return redisBackend;
-
-  if (!redisInitAttempted) {
-    redisInitAttempted = true;
-    redisClient = await tryConnectRedis();
-    if (redisClient) {
-      console.log('[rate-limit] Using Redis backend');
-    }
   }
 
-  return redisClient ? redisBackend : memoryBackend;
+  entry.timestamps.push(now);
+  return {
+    allowed: true,
+    remaining: maxRequests - entry.timestamps.length,
+  };
 }
 
 // ── Public API ──
@@ -153,8 +71,22 @@ export async function checkRateLimit(
   maxRequests: number,
   windowMs = 60_000,
 ): Promise<RateLimitResult> {
-  const backend = await getBackend();
-  return backend.check(key, maxRequests, windowMs);
+  return check(key, maxRequests, windowMs);
+}
+
+/** 返回 key 在当前窗口内的命中计数；只读，不记录新命中。 */
+export function peekRateLimit(key: string): number {
+  const entry = memoryStore.get(key);
+  if (!entry) return 0;
+  const windowMs = entry.windowMs;
+  if (!windowMs) return entry.timestamps.length;
+  const cutoff = Date.now() - windowMs;
+  return entry.timestamps.filter((t) => t > cutoff).length;
+}
+
+/** 删除 key 的限流计数（例如登录成功后清空失败计数）。 */
+export function clearRateLimit(key: string): void {
+  memoryStore.delete(key);
 }
 
 export function rateLimitByKey(

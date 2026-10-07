@@ -15,9 +15,9 @@ type Message = {
 };
 
 const QUICK_CHIPS = [
-  '\u5e2e\u6211\u5236\u5b9a\u4eca\u65e5\u5b66\u4e60\u8ba1\u5212',
-  '\u6211\u7684\u8584\u5f31\u70b9\u5728\u54ea\u91cc',
-  '\u6211\u6709\u54ea\u4e9b\u5f85\u590d\u4e60\u9519\u9898',
+  '帮我制定今日学习计划',
+  '我的薄弱点在哪里',
+  '我有哪些待复习错题',
 ];
 
 function ActionCard({ action }: { action: ChatAction }) {
@@ -26,10 +26,10 @@ function ActionCard({ action }: { action: ChatAction }) {
     const tasks = (action.payload.tasks as Array<{ title: string; subject: string; estimatedMinutes: number }>) ?? [];
     return (
       <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm">
-        <p className="font-medium text-emerald-900">{'\u5b66\u4e60\u8ba1\u5212\uff1a'}{title}</p>
+        <p className="font-medium text-emerald-900">{'学习计划：'}{title}</p>
         <ul className="mt-2 list-inside list-disc text-emerald-800">
           {tasks.slice(0, 5).map((t, i) => (
-            <li key={i}>{t.title} ({t.subject}, {t.estimatedMinutes}{'\u5206\u949f'})</li>
+            <li key={i}>{t.title} ({t.subject}, {t.estimatedMinutes}{'分钟'})</li>
           ))}
         </ul>
       </div>
@@ -42,7 +42,7 @@ function ActionCard({ action }: { action: ChatAction }) {
     const summary = String(action.payload.summary ?? '');
     return (
       <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
-        <p className="font-medium text-blue-900">{'\u6279\u6539\u7ed3\u679c\uff1a'}{score}/{maxScore}</p>
+        <p className="font-medium text-blue-900">{'批改结果：'}{score}/{maxScore}</p>
         <p className="mt-1 text-blue-800">{summary}</p>
       </div>
     );
@@ -52,7 +52,7 @@ function ActionCard({ action }: { action: ChatAction }) {
     const analysis = String(action.payload.analysis ?? '');
     return (
       <div className="mt-2 rounded-lg border border-violet-200 bg-violet-50 p-3 text-sm">
-        <p className="font-medium text-violet-900">{'\u9898\u76ee\u5206\u6790'}</p>
+        <p className="font-medium text-violet-900">{'题目分析'}</p>
         <p className="mt-1 text-violet-800">{analysis.slice(0, 200)}{analysis.length > 200 ? '...' : ''}</p>
       </div>
     );
@@ -63,7 +63,7 @@ function ActionCard({ action }: { action: ChatAction }) {
     const items = (action.payload.items as Array<{ subject: string; preview: string }>) ?? [];
     return (
       <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
-        <p className="font-medium text-amber-900">{'\u9519\u9898\u6458\u8981\uff1a\u5171 '}{total}{'\u9898'}</p>
+        <p className="font-medium text-amber-900">{'错题摘要：共 '}{total}{'题'}</p>
         <ul className="mt-2 list-inside list-disc text-amber-800">
           {items.map((item, i) => (
             <li key={i}>[{item.subject}] {item.preview}</li>
@@ -77,7 +77,7 @@ function ActionCard({ action }: { action: ChatAction }) {
 }
 
 export default function ChatPage() {
-  const [subject, setSubject] = useState('\u6570\u5b66');
+  const [subject, setSubject] = useState('数学');
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -151,7 +151,7 @@ export default function ChatPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        const errMsg = typeof data.error === 'string' ? data.error : '\u8bf7\u6c42\u5931\u8d25';
+        const errMsg = typeof data.error === 'string' ? data.error : '请求失败';
         setMessages((prev) => [...prev, { role: 'ai', content: errMsg }]);
         return;
       }
@@ -160,31 +160,31 @@ export default function ChatPage() {
         ...prev,
         {
           role: 'ai',
-          content: data.reply ?? '\u0041\u0049 \u65e0\u54cd\u5e94',
+          content: data.reply ?? 'AI 无响应',
           action: data.action,
         },
       ]);
     } catch {
-      setMessages((prev) => [...prev, { role: 'ai', content: '\u7f51\u7edc\u9519\u8bef\uff0c\u8bf7\u91cd\u8bd5' }]);
+      setMessages((prev) => [...prev, { role: 'ai', content: '网络错误，请重试' }]);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <LayoutShell title={'\u0041\u0049\u9ad8\u4e2d'}>
-      <PageTitle title={'AI \u5b66\u4e60\u52a9\u624b'} />
+    <LayoutShell title={'AI高中'}>
+      <PageTitle title={'AI 学习助手'} />
       <Card className="flex flex-col" style={{ height: 'calc(100vh - 200px)', minHeight: 400 }}>
         <div className="mb-4">
           <SubjectPicker value={subject} onChange={setSubject} />
         </div>
         <div className="flex-1 overflow-y-auto">
           {historyLoading && (
-            <p className="mt-8 text-center text-xs text-slate-400">{'\u52a0\u8f7d\u5386\u53f2\u5bf9\u8bdd...'}</p>
+            <p className="mt-8 text-center text-xs text-slate-400">{'加载历史对话...'}</p>
           )}
           {!historyLoading && messages.length === 0 && (
             <div className="mt-12 text-center">
-              <p className="text-slate-400">{'\u9009\u62e9\u5b66\u79d1\uff0c\u5f00\u59cb\u4e0e AI \u5b66\u4e60\u52a9\u624b\u5bf9\u8bdd'}</p>
+              <p className="text-slate-400">{'选择学科，开始与 AI 学习助手对话'}</p>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {QUICK_CHIPS.map((chip) => (
                   <button
@@ -206,7 +206,7 @@ export default function ChatPage() {
               {m.action && m.role === 'ai' && <ActionCard action={m.action} />}
             </div>
           ))}
-          {loading && <p className="text-center text-xs text-slate-400">{'AI \u601d\u8003\u4e2d...'}</p>}
+          {loading && <p className="text-center text-xs text-slate-400">{'AI 思考中...'}</p>}
           <div ref={endRef} />
         </div>
         <div className="mt-4 flex gap-2">
@@ -214,12 +214,12 @@ export default function ChatPage() {
             value={input}
             onChange={(e) => setInput((e.target as HTMLInputElement).value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }}
-            placeholder={'\u8f93\u5165\u95ee\u9898\uff0c\u6309 Enter \u53d1\u9001...'}
+            placeholder={'输入问题，按 Enter 发送...'}
             disabled={loading}
             className="flex-1 rounded-lg border border-neutral-200 px-3 py-2.5 text-sm placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none"
           />
           <Button onClick={() => void send()} loading={loading} disabled={!input.trim()}>
-            {'\u53d1\u9001'}
+            {'发送'}
           </Button>
         </div>
       </Card>

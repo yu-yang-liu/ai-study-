@@ -49,7 +49,7 @@ public struct LogoutResponse: Codable, Sendable {
 
 // MARK: - Token Refresh
 
-/// POST /api/auth/refresh 请求体（Supabase refresh token）
+/// POST /api/auth/refresh 请求体（本地 SQLite refresh token）
 public struct RefreshRequest: Codable, Sendable {
     public let refreshToken: String
 

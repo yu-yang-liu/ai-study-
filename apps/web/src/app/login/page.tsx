@@ -44,7 +44,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-white px-4">
       <Card className="w-full max-w-md">
         <h1 className="mb-6 text-center text-2xl font-bold text-neutral-900">
-          {mode === 'login' ? '\u767b\u5f55' : '\u6ce8\u518c'}
+          {mode === 'login' ? '登录' : '注册'}
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input

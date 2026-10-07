@@ -122,7 +122,7 @@ export function SuccessBanner({ message }: { message: string }) {
 export function SubjectPicker({
   value,
   onChange,
-  label = '\u5b66\u79d1',
+  label = '学科',
 }: {
   value: string;
   onChange: (v: string) => void;

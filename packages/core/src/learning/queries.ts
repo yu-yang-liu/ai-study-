@@ -104,10 +104,10 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
     { count: number; correct: number; scoreSum: number; scoreCount: number }
   > = {};
   const abilityTrend = (events ?? [])
-    .filter((event) => event.ability_assessment && typeof event.ability_assessment === 'object')
+    .filter((event: any) => event.ability_assessment && typeof event.ability_assessment === 'object')
     .slice(0, 14)
     .reverse()
-    .map((event) => ({
+    .map((event: any) => ({
       date: new Date(event.created_at).toISOString().slice(0, 10),
       abilities: Object.fromEntries(
         Object.entries(event.ability_assessment as Record<string, unknown>).map(([key, value]) => [
@@ -175,7 +175,7 @@ export async function fetchStats(userId: string): Promise<StatsResponse> {
     subjectBreakdown: breakdown,
     recentActivity,
     trend,
-    mastery: (masteryRows ?? []).map((row) => ({
+    mastery: (masteryRows ?? []).map((row: any) => ({
       knowledgePoint: row.knowledge_point,
       subject: row.subject,
       level: Number(row.level) || 0,

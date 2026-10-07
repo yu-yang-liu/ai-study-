@@ -97,8 +97,8 @@ export async function seedAppContent(adminEmail: string): Promise<void> {
             phase: APP_PHASE,
             subject,
             content_type: ct,
-            title: `\u9ad8\u4e2d${subject} ${ct}`,
-            data: { placeholder: true, description: `\u5360\u4f4d ${subject} ${ct}` },
+            title: `高中${subject} ${ct}`,
+            data: { placeholder: true, description: `占位 ${subject} ${ct}` },
           },
           { onConflict: 'phase, subject, content_type' },
         );

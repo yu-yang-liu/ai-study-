@@ -54,7 +54,7 @@ function rerank(
 
 /**
  * Retrieves relevant references from the question bank via vector search.
- * Returns exam_points and analysis summaries only �?never raw question content.
+ * Returns exam_points and analysis summaries only — never raw question content.
  * Uses service_role client (RLS bypass) to call match_questions RPC.
  */
 export async function retrieveReferences(opts: RetrieveOptions): Promise<RAGReference[]> {

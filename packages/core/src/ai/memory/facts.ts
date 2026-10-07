@@ -50,7 +50,7 @@ export async function loadUserFacts(userId: string): Promise<StoredFact[]> {
     return [];
   }
 
-  return (data ?? []).map((row) => ({
+  return (data ?? []).map((row: any) => ({
     id: row.id as string,
     key: row.key as string,
     value: row.value as string,

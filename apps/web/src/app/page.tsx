@@ -5,13 +5,13 @@ import { Card, LayoutShell, Spinner } from '@ai-study/core/ui';
 import Link from 'next/link';
 
 const FEATURES = [
-  { title: 'AI \u5b66\u4e60\u52a9\u624b', desc: '\u61c2\u4f60\u7684\u5b66\u60c5\uff0c\u53ef\u5236\u5b9a\u8ba1\u5212\u3001\u67e5\u9519\u9898\u3001\u6279\u6539\u4f5c\u4e1a', href: '/chat', color: 'border-l-emerald-600' },
-  { title: '\u62cd\u7167\u4e0a\u4f20', desc: '\u4e0a\u4f20\u9898\u76ee\u56fe\u7247\uff0cAI \u8bc6\u522b\u5e76\u5206\u6790', href: '/upload', color: 'border-l-slate-900' },
-  { title: '\u8bd5\u9898\u5206\u6790', desc: '\u8f93\u5165\u9898\u76ee\u6587\u672c\uff0cAI \u5224\u65ad\u5b66\u79d1\u3001\u77e5\u8bc6\u70b9\u3001\u96be\u5ea6\u5e76\u7ed9\u51fa\u89e3\u6790', href: '/analyze', color: 'border-l-slate-900' },
-  { title: '\u667a\u80fd\u6279\u6539', desc: '\u4e0a\u4f20\u89e3\u9898\u8fc7\u7a0b\uff0cAI \u6309\u6b65\u9aa4\u6279\u6539\u5e76\u7ed9\u51fa\u9488\u5bf9\u6027\u53cd\u9988', href: '/grade', color: 'border-l-slate-900' },
-  { title: '\u5b66\u4e60\u8ba1\u5212', desc: '\u57fa\u4e8e\u5b66\u60c5\u5206\u6790\u751f\u6210\u4e2a\u6027\u5316\u5907\u8003\u8ba1\u5212', href: '/plan', color: 'border-l-slate-900' },
-  { title: '\u9519\u9898\u590d\u4e60', desc: '\u667a\u80fd\u590d\u4e60\u9519\u9898\uff0c\u57fa\u4e8e\u9057\u5fd8\u66f2\u7ebf\u5b89\u6392\u6700\u4f73\u590d\u4e60\u65f6\u673a', href: '/wrong-questions', color: 'border-l-slate-900' },
-  { title: '\u5b66\u4e60\u7edf\u8ba1', desc: '\u67e5\u770b\u5b66\u4e60\u65f6\u957f\u3001\u638c\u63e1\u5ea6\u53d8\u5316\u3001\u79d1\u76ee\u5206\u5e03', href: '/stats', color: 'border-l-slate-900' },
+  { title: 'AI 学习助手', desc: '懂你的学情，可制定计划、查错题、批改作业', href: '/chat', color: 'border-l-emerald-600' },
+  { title: '拍照上传', desc: '上传题目图片，AI 识别并分析', href: '/upload', color: 'border-l-slate-900' },
+  { title: '试题分析', desc: '输入题目文本，AI 判断学科、知识点、难度并给出解析', href: '/analyze', color: 'border-l-slate-900' },
+  { title: '智能批改', desc: '上传解题过程，AI 按步骤批改并给出针对性反馈', href: '/grade', color: 'border-l-slate-900' },
+  { title: '学习计划', desc: '基于学情分析生成个性化备考计划', href: '/plan', color: 'border-l-slate-900' },
+  { title: '错题复习', desc: '智能复习错题，基于遗忘曲线安排最佳复习时机', href: '/wrong-questions', color: 'border-l-slate-900' },
+  { title: '学习统计', desc: '查看学习时长、掌握度变化、科目分布', href: '/stats', color: 'border-l-slate-900' },
 ];
 
 export default function DashboardPage() {
@@ -27,8 +27,8 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <LayoutShell title="AI\u9ad8\u4e2d">
-      <PageTitle title="AI\u9ad8\u4e2d\u5b66\u4e60\u7cfb\u7edf" subtitle="AI\u9a71\u52a8\u7684\u4e2a\u6027\u5316\u5907\u8003\u52a9\u624b" />
+    <LayoutShell title="AI高中">
+      <PageTitle title="AI高中学习系统" subtitle="AI驱动的个性化备考助手" />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((f) => (
           <Link key={f.href} href={f.href} className="no-underline">
@@ -43,9 +43,9 @@ export default function DashboardPage() {
       {stats && !loading && (
         <Card className="mt-6 text-center">
           <p className="text-sm text-neutral-500">
-            {'\u9898\u5e93\u5df2\u6536\u5f55 '}
+            {'题库已收录 '}
             <strong className="text-slate-900">{stats.questions}</strong>
-            {' \u9053\u771f\u9898'}
+            {' 道真题'}
           </p>
         </Card>
       )}

@@ -33,9 +33,9 @@ describe('composePrompt', () => {
 
     expect(result).toContain('高考');
     expect(result).toContain('判断所属学科');
-    expect(result).toContain('\u8003\u70b9\uff1a\u5bfc\u6570\u5e94\u7528');
-    expect(result).toContain('\u8bc4\u5206\u8981\u70b9\uff1a\u6c42\u5bfc\u540e\u627e\u9a7b\u70b9');
-    expect(result).toContain('\u5b66\u751f\u5b66\u60c5\uff1a\u8be5\u751f\u5bfc\u6570\u7ae0\u8282\u638c\u63e1\u8f83\u5f31');
+    expect(result).toContain('考点：导数应用');
+    expect(result).toContain('评分要点：求导后找驻点');
+    expect(result).toContain('学生学情：该生导数章节掌握较弱');
     expect(result).toContain('f(x)=x^2');
   });
 

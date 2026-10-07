@@ -9,14 +9,14 @@ interface NavProps {
 }
 
 const DEFAULT_ITEMS = [
-  { href: '/', label: '\u9996\u9875' },
-  { href: '/analyze', label: '\u8bd5\u9898\u5206\u6790' },
-  { href: '/upload', label: '\u62cd\u7167\u4e0a\u4f20' },
-  { href: '/grade', label: '\u667a\u80fd\u6279\u6539' },
-  { href: '/chat', label: 'AI \u5b66\u4e60\u52a9\u624b' },
-  { href: '/plan', label: '\u5b66\u4e60\u8ba1\u5212' },
-  { href: '/wrong-questions', label: '\u9519\u9898\u590d\u4e60' },
-  { href: '/stats', label: '\u5b66\u4e60\u7edf\u8ba1' },
+  { href: '/', label: '首页' },
+  { href: '/analyze', label: '试题分析' },
+  { href: '/upload', label: '拍照上传' },
+  { href: '/grade', label: '智能批改' },
+  { href: '/chat', label: 'AI 学习助手' },
+  { href: '/plan', label: '学习计划' },
+  { href: '/wrong-questions', label: '错题复习' },
+  { href: '/stats', label: '学习统计' },
 ];
 
 export function Nav({ title, navItems = DEFAULT_ITEMS }: NavProps) {
@@ -49,7 +49,7 @@ export function Nav({ title, navItems = DEFAULT_ITEMS }: NavProps) {
         onClick={logout}
         className="cursor-pointer rounded-md border border-neutral-700 bg-transparent px-4 py-1.5 text-xs text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
       >
-        {'\u9000\u51fa'}
+        {'退出'}
       </button>
     </nav>
   );

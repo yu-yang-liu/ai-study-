@@ -46,7 +46,7 @@ export default function AnalyzePage() {
             placeholder="请粘贴题目文字内容（至少10字）..."
           />
           <Button type="submit" loading={loading} disabled={content.length < 10}>
-            开始分�?
+            开始分析
           </Button>
         </Card>
       </form>

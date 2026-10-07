@@ -56,7 +56,8 @@ export async function GET(request: Request) {
     const conversations = await listConversations(user.id, undefined, 20);
     return NextResponse.json({ conversations });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error('[api/chat/history]', err);
+    return NextResponse.json({ error: '服务器内部错误，请稍后再试' }, { status: 500 });
   }
 }
 
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
     );
     return NextResponse.json({ conversationId });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error('[api/chat/history]', err);
+    return NextResponse.json({ error: '服务器内部错误，请稍后再试' }, { status: 500 });
   }
 }

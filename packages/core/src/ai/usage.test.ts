@@ -36,7 +36,7 @@ describe('calcCost', () => {
     expect(calcCost('unknown-model', 1000, 1000)).toBe(0);
   });
 
-  it('deepseek: 1M tokens �?$3', () => {
+  it('deepseek: 1M tokens ≈ $3', () => {
     const cost = calcCost('deepseek-chat', 1_000_000, 1_000_000);
     expect(cost).toBeCloseTo(3, 0);
   });

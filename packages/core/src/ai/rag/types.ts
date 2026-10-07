@@ -1,4 +1,4 @@
-/** RAG retrieval result � only exam_points and scoring criteria, never raw question text. */
+/** RAG retrieval result — only exam_points and scoring criteria, never raw question text. */
 import type { AppPhase } from '../../constants';
 
 export interface RAGReference {

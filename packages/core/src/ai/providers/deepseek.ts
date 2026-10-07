@@ -3,7 +3,7 @@ import type { AIProvider, Capability, ChatRequest, TokenUsage } from '../gateway
 
 const DEEPSEEK_BASE = 'https://api.deepseek.com';
 
-/** 模型选择策略：根�?capability 自动路由到合适的模型 */
+/** 模型选择策略：根据 capability 自动路由到合适的模型 */
 export type DeepSeekModel = 'deepseek-v4-flash' | 'deepseek-v4-pro';
 
 function getApiKey(): string {

@@ -6,6 +6,17 @@ import { recordApiUsage } from './usage';
 // In-memory cache: key = SHA-256 of image URL ? OCR text
 const cache = new Map<string, string>();
 
+// 防止缓存无限增长：超过上限时按插入序淘汰最旧的键（同 rate-limit.ts 的淘汰写法）。
+const MAX_CACHE_ENTRIES = 500;
+
+function evictOldestIfNeeded(): void {
+  while (cache.size > MAX_CACHE_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey === undefined) break;
+    cache.delete(oldestKey);
+  }
+}
+
 const DASHSCOPE_BASE = 'https://dashscope.aliyuncs.com';
 
 function getVisionApiKey(): string {
@@ -57,6 +68,7 @@ export async function runOCR(
   const output: OCRResult = { text: json.choices[0]?.message?.content ?? '' };
 
   cache.set(cacheKey, JSON.stringify(output));
+  evictOldestIfNeeded();
 
   if (opts?.userId && json.usage) {
     recordApiUsage({

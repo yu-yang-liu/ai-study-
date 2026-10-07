@@ -118,7 +118,7 @@ async function loadUnsummarizedOlderMessages(
 
   return (data ?? [])
     .reverse()
-    .map((row) => ({
+    .map((row: any) => ({
       id: row.id as string,
       role: row.role as 'user' | 'assistant',
       content: row.content as string,

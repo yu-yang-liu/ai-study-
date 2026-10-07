@@ -15,7 +15,8 @@ export async function GET() {
     const questions = await fetchWrongQuestionList(user.id);
     return NextResponse.json({ questions });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error('[api/wrong-questions]', err);
+    return NextResponse.json({ error: '服务器内部错误，请稍后再试' }, { status: 500 });
   }
 }
 
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
     if (err instanceof FetchNotFoundErr) {
       return NextResponse.json({ error: err.message }, { status: 404 });
     }
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error('[api/wrong-questions]', err);
+    return NextResponse.json({ error: '服务器内部错误，请稍后再试' }, { status: 500 });
   }
 }

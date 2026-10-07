@@ -1,9 +1,9 @@
-import { createServerSupabaseClient } from '@ai-study/core';
+import { createServerAuthClient } from '@ai-study/core';
 import { NextResponse } from 'next/server';
 
 export async function POST() {
-  const supabase = await createServerSupabaseClient();
-  const { error } = await supabase.auth.signOut();
+  const authClient = await createServerAuthClient();
+  const { error } = await authClient.auth.signOut();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

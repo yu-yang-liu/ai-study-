@@ -10,6 +10,7 @@ export async function GET() {
     const stats = await fetchStats(user.id);
     return NextResponse.json(stats);
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error('[api/stats]', err);
+    return NextResponse.json({ error: '服务器内部错误，请稍后再试' }, { status: 500 });
   }
 }

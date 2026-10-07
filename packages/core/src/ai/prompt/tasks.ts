@@ -46,7 +46,7 @@ const TASK_INSTRUCTIONS: Record<TaskName, string> = {
   plan: `请根据学生的掌握情况，制定个性化学习计划：
 1. 明确计划标题和描述
 2. 列出具体任务，每项包含学科、知识点、预估时间、优先级、原因`,
-  chat: `\u8bf7\u4ee5\u5b66\u79d1\u6559\u5e08\u7684\u8eab\u4efd\u56de\u7b54\u5b66\u751f\u95ee\u9898\u3002`,
+  chat: `请以学科教师的身份回答学生问题。`,
   chatAgent: CHAT_AGENT_TASK_INSTRUCTION,
   geometry: GEOMETRY_SYSTEM_PROMPT,
   chart: CHART_SYSTEM_PROMPT,
