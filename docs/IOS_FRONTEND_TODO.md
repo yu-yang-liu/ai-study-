@@ -208,7 +208,7 @@
 
 ## P1 Implementation Status (2026-08-11)
 
-Validation（2026-08-14 复验）: Core/Web `ts-check` passed; Core Vitest passed with `183 passed / 15 skipped`（15 个 LLM eval 无 key 自动跳过，待 Mac 真跑）; visual-ast passed with 32 Node tests; `git diff --check` passed. macOS Xcode, device, staging API, and migration verification remain external checks.
+Validation（2026-10-07 复验）: Core/Web `ts-check` passed; Core Vitest passed with `197 passed / 15 skipped`（15 个 LLM eval 无 key 自动跳过，待 Mac 真跑）; visual-ast passed with 32 Node tests; `git diff --check` passed. macOS Xcode, device, and staging API verification remain external checks（后端已切换本地 SQLite，无数据库迁移步骤）.
 
 Completed in code:
 
@@ -224,7 +224,7 @@ Still pending external validation or dedicated tests:
 
 - macOS Xcode build and simulator/device verification.
 - UI tests.
-- Staging smoke tests and database migration verification.
+- Staging smoke tests against a deployed backend.
 
 ## P2：后续增强
 
@@ -270,12 +270,12 @@ Still pending external validation or dedicated tests:
 - 阶段 1（数据安全与用户隔离）：代码、作用域重置和多用户隔离测试已补齐，待 macOS Xcode 执行验证
 - 阶段 2（API 环境配置）：Debug / Staging / Release 配置和 fail-closed 校验已补齐，真实 staging / production 部署地址仍需注入
 - 阶段 3（签名、归档与 TestFlight）：ExportOptions 模板、Xcode 签名变量、unsigned Release archive CI、构建配置校验和归档元数据校验已补齐；正式签名与 TestFlight 仍待 Apple Team、证书和真实部署地址
-- 阶段 4（真题演练）：题库筛选、单选/多选/主观题答题、结果、错题入口、失败重试、请求幂等、练习记录和学习事件代码已补齐，待执行 `0004` / `0005` 数据库迁移、staging API 和 iOS/macOS CI 验证
+- 阶段 4（真题演练）：题库筛选、单选/多选/主观题答题、结果、错题入口、失败重试、请求幂等、练习记录和学习事件代码已补齐，待 staging API 和 iOS/macOS CI 验证（本地 SQLite 自动建表，无需迁移）
 - P1 图片链路：Upload 与 Chat 已接入统一压缩、尺寸校验和失败重试，待 macOS iOS 编译验证
 - P1 Chat 追问：图片分析结果可带上下文继续进入 Chat，待 macOS iOS 编译和 API 冒烟验证
 - P1 Chat 结果卡片：已支持查看完整详情、带上下文再次练习和手动加入错题
-- P1 图片 Chat 历史：服务端保存富消息元数据，iOS 在线恢复图片和分析卡片，同步失败可重试；待执行 `0007` 迁移与 iOS/API 验证
-- 当前工作区验证：`@ai-study/core` / `@ai-study/web` TypeScript 通过；Core Vitest 183 passed、15 skipped（15 个 LLM eval 无 key 自动跳过，待 Mac 真跑）；visual-ast Node 测试 32 passed；visual-ast TypeScript 通过；`git diff --check` 通过
+- P1 图片 Chat 历史：服务端保存富消息元数据，iOS 在线恢复图片和分析卡片，同步失败可重试；待 iOS/API 验证
+- 当前工作区验证：`@ai-study/core` / `@ai-study/web` TypeScript 通过；Core Vitest 197 passed、15 skipped（15 个 LLM eval 无 key 自动跳过，待 Mac 真跑）；visual-ast Node 测试 32 passed；visual-ast TypeScript 通过；`git diff --check` 通过
 - P0：8 / 12
 - P1：25 / 26（仅完整 UI 测试仍待补）
 - P2：9 / 10（仅 V3 学习智能长期项未启动）

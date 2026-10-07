@@ -171,30 +171,25 @@ cd apps/web && pnpm exec tsc --noEmit
 
 ## 4. 外部依赖
 
+> **本地模式（2026-08 起）**：数据库为本地 SQLite，不需要 Supabase / PostgreSQL / pgvector，详见 [LOCAL_STORAGE.md](./LOCAL_STORAGE.md)。
+
 ### 4.1 必须（核心功能）
 
-| 服务 | 用途 | 环境变量 |
+| 依赖 | 用途 | 环境变量 |
 |------|------|----------|
-| [Supabase](https://supabase.com) | 登录、PostgreSQL、RLS | `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY` |
 | DeepSeek API | 分析/批改/计划/对话/Agent | `DEEPSEEK_API_KEY` |
-| Node 22 + pnpm 9 | 本地/构建 | — |
+| Node 24+ + pnpm 9 | 本地/构建（`node:sqlite` 要求 Node 24 或更高） | — |
 | 部署主机（上线） | 跑 Next.js | `NEXT_PUBLIC_APP_URL` |
 
-数据库初始化（一次性）：在 Supabase SQL Editor 依次执行  
-`packages/core/src/db/migrations/0000_initial.sql`（需 **pgvector** 扩展）、  
-`0001_conversation_summaries.sql`（M2 摘要表）、  
-`0002_user_memory_facts.sql`（M3/M5 跨会话事实表）、  
-`0003_user_memories.sql`（M4/M6 用户经历向量表 + `match_user_memories` RPC）、
-`0004_question_bank_year.sql`（真题演练年份筛选）、
-`0005_practice_request_id.sql`（真题练习请求幂等）、
-`0006_agent_memory_hardening.sql`（摘要消息游标、phase 隔离与事实向量排除）。
+数据库：本地 SQLite（`packages/core/src/db/sqlite.ts`，基于 Node 内置 `node:sqlite`），`SQLITE_PATH` 指定库文件（默认 `data/ai-study.sqlite`），首次启动自动建库建表，无需执行任何 migration。账号、题库、错题、学习记录、对话全部写入本地；`packages/core/src/db/migrations/0000–0011` 仅作历史参考（见 [LOCAL_STORAGE.md](./LOCAL_STORAGE.md)）。
 
 ### 4.2 强烈建议
 
 | 服务 | 用途 | 环境变量 |
 |------|------|----------|
-| 阿里云 DashScope | RAG embedding、视觉/OCR | `DASHSCOPE_API_KEY`、`DASHSCOPE_VISION_API_KEY` |
-| PostgreSQL 直连 | Drizzle 迁移/排查 | `DATABASE_URL` |
+| 阿里云 DashScope | 题库 RAG embedding、拍照 OCR 分析 | `DASHSCOPE_API_KEY`、`DASHSCOPE_VISION_API_KEY` |
+
+未配置 DashScope 时：题库向量以 JSON 文本存储、语义 RAG 返回空（题库浏览与练习不受影响）；`/upload` 拍照分析（`analyzeImg`）不可用。本地模式不使用 PostgreSQL / `DATABASE_URL`（Drizzle 迁移已停用）。
 
 ### 4.3 按功能可选
 
@@ -208,16 +203,16 @@ cd apps/web && pnpm exec tsc --noEmit
 ### 4.4 功能 → API 对照
 
 ```
-登录/注册/刷新       →  Supabase Auth
+登录/注册/刷新       →  本地 SQLite 会话（scrypt 哈希；Web 用 httpOnly Cookie，iOS/Android 用 access/refresh token）
 文本分析             →  DeepSeek（executeAnalyze）
-智能批改             →  DeepSeek + DashScope Embedding（RAG）
+智能批改             →  DeepSeek（DashScope RAG embedding 可选，未配置时降级为无参考）
 AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
   ├ 制定计划         →  executePlan
   ├ 分析题目         →  executeAnalyze
   ├ 批改作答         →  executeGrade
   └ 查错题摘要       →  fetchWrongQuestionSummary（纯 DB）
 学习计划             →  DeepSeek（executePlan）
-错题/统计/落库       →  Supabase DB（需 SERVICE_ROLE_KEY）
+错题/统计/落库       →  本地 SQLite（getLocalDatabase，无需云凭据）
 图片上传             →  S3 presign + PUT
 拍照分析             →  DashScope Vision（analyzeImg）
 对话历史             →  GET /api/chat/history
@@ -227,7 +222,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 
 - macOS + Xcode 16 + xcodegen
 - Apple Developer 账号（TestFlight/上架）
-- 已部署 Web 的 HTTPS 地址（`project.yml` 中 `API_BASE_URL`）
+- 已部署 Web 的 HTTPS 地址（经 `AISTUDY_API_BASE_URL_STAGING/PRODUCTION` 构建设置注入，见 [packages/ios/README.md](../packages/ios/README.md)）
 - iOS **不需要**单独配 AI Key，全部走 Web API
 
 ### 4.6 Android 额外需要
@@ -342,7 +337,7 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 
 | # | 问题 | 影响 |
 |---|------|------|
-| 1 | **题库/RAG 内容偏薄** | 批改/analyze 的 RAG 参考常为空；需 seed + embedding |
+| 1 | **题库/RAG 内容偏薄（第一批已落地）** | 2026-10：`scripts/seed-bank` 管线已入库 **272 题**（2025 高考 9 科 + 2026 语文/数学/化学，含答案/解析/考点/难度，客观题答案经源答案键 113 信号交叉校验 0 分歧）；RAG 向量待配 `DASHSCOPE_API_KEY` 后跑 `backfill-embedding`，见 [LOCAL_STORAGE.md](./LOCAL_STORAGE.md) |
 | 2 | **部署/运维文档缺失** | 新环境上手成本高 |
 
 ### P1 — 体验与深度
@@ -439,6 +434,8 @@ AI 学习助手          →  DeepSeek（runChatAgent，含二次合成）
 | **会话读写** | `packages/core/src/learning/conversation.ts`、`learning/persist.ts` |
 | AI/学习路由 | `apps/web/src/app/api/{analyze,grade,chat,chat/history,plan,upload,wrong-questions,stats,bank,bank/practice}/route.ts` |
 | Chat UI | `apps/web/src/app/chat/page.tsx` |
+| **题库 seed 管线** | `scripts/seed-bank/`（extract-pdf / parse-exam / import-bank / backfill-embedding / smoke-rag / check-answers，用法见 [LOCAL_STORAGE.md](./LOCAL_STORAGE.md)） |
+| **题库原料** | `试卷/`（git 忽略：2024–2026 高考/合格考 PDF 与文字版） |
 | 导航 | `packages/core/src/ui/shell.tsx` |
 | iOS API | `packages/ios/CoreKit/Sources/CoreKit/APIClient/` |
 | iOS Chat | `packages/ios/ios-gaokao/Sources/App/Views/ChatView.swift` |
@@ -519,7 +516,7 @@ POST /api/chat
 
 - [ ] DB `phase_type` 去掉 `middle`（需迁移）
 - [ ] 部署指南 / 运维文档
-- [ ] 题库/RAG 大规模 seed 与真实年份/选项数据补齐
+- [ ] 题库/RAG 后续批次 seed（数学/物理专题 PDF 约 3000+ 题；管线已就绪：`scripts/seed-bank/`）＋ 配 `DASHSCOPE_API_KEY` 跑 `backfill-embedding.mts` 激活语义 RAG
 - [ ] Chat 内图片 OCR（v2）
 - [ ] **V3 学习智能**：Knowledge Graph Agent + 学习状态模型 + 个性化推荐 + 智能规划（长期积累型，未启动，见 [SCIENCE_AST_IOS_ROADMAP.md](./SCIENCE_AST_IOS_ROADMAP.md) §5）
 - [x] **公式渲染 M1**：后端 `Block[]` schema + 前端 `FormulaView`(iosMath) + `MarkdownRenderer(blocks:)`（见 [RENDER_AST.md](./RENDER_AST.md)）
@@ -537,4 +534,4 @@ POST /api/chat
 
 ---
 
-*文档版本：2026-08-14 · 对应当前工作区代码状态（M1–M6 全部已落地；代码卫生整改：Redis 幽灵依赖死代码移除、全库乱码清扫与 `\uXXXX` 转义还原、`.gitattributes` 换行符规范化；tsc 双包通过、core vitest 183 passed / 15 skipped——15 个 LLM eval 无 key 跳过待 Mac 真跑、visual-ast 32 passed）*
+*文档版本：2026-10-07 · 对应当前工作区代码状态（M1–M6 已落地；题库 seed 第一批完成：272 题北京高考真题入库，管线 `scripts/seed-bank/`，RAG embedding 待 DASHSCOPE_API_KEY；core tsc 通过、vitest 198 passed / 15 skipped；本地 SQLite 运行模式，详见 [LOCAL_STORAGE.md](./LOCAL_STORAGE.md)）*

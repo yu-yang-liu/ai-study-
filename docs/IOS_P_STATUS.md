@@ -1,6 +1,6 @@
 # iOS P Status
 
-Updated: 2026-08-11
+Updated: 2026-10-07
 
 This file separates implementation status from checks that require macOS, Apple credentials, a deployed API, or a real device.
 
@@ -40,8 +40,8 @@ Implementation count: P0 8/12, P1 25/26, P2 9/10. The remaining P0/P1 items requ
 
 - Core TypeScript check: passed.
 - Web TypeScript check: passed.
-- Core Vitest: passed, 183 tests passed and 15 skipped; external-key evals are skipped when no key is configured（真跑待 Mac 环境）.
+- Core Vitest: passed, 197 tests passed and 15 skipped; external-key evals are skipped when no key is configured（真跑待 Mac 环境）.
 - visual-ast Node tests: passed, 32 tests passed.
 - visual-ast TypeScript check: passed.
 - `git diff --check`: passed after the latest documentation changes.
-- Native iOS build, simulator/UI execution, staging API, migrations, signing, and TestFlight: require macOS/Apple environment.
+- Native iOS build, simulator/UI execution, staging API, signing, and TestFlight: require macOS/Apple environment. Backend storage is local SQLite with automatic schema creation; no migration step.
