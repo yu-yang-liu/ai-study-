@@ -17,6 +17,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // compose-markdown is published on JitPack under com.github.jeziellago.
+        maven(url = "https://jitpack.io")
     }
 }
 
