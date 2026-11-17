@@ -114,6 +114,12 @@ targets:
       - path: Tests
     dependencies:
       - target: ios-gaokao
+    settings:
+      base:
+        # XcodeGen derives the default host from the target name (`ios-gaokao`),
+        # but the app's PRODUCT_NAME is the Chinese display name.
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/AI高中助手.app/AI高中助手"
+        BUNDLE_LOADER: "$(TEST_HOST)"
 
   ios-gaokaoUITests:
     type: bundle.ui-testing
