@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,6 +32,7 @@ import com.aistudy.corekit.ui.LoadingState
 import com.aistudy.corekit.ui.brandPrimary
 
 /** 学习统计屏（镜像 iOS `StatsView`）：总题数/错数/准确率/均分 + 学科分布 + 近期活动。 */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
     container: AppContainer,

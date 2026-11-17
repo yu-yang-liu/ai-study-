@@ -90,6 +90,7 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
 
     // Image loading & markdown
     implementation(libs.coil.compose)

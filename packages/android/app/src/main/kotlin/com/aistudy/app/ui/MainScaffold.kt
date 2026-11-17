@@ -41,6 +41,7 @@ import com.aistudy.corekit.config.FeatureFlags
  * [NavHost] 承载 9 个目的地，按 [NavDestination] 路由切换。
  * AppBar 右侧头像入口以 ModalBottomSheet 打开 [ProfileScreen]（对齐 iOS sidebar 底部用户区 sheet）。
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScaffold(container: AppContainer) {
     val navController = rememberNavController()
