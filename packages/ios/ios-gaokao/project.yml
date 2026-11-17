@@ -15,6 +15,11 @@ options:
     xcassets: folder
   createIntermediateGroups: true
 
+configs:
+  Debug: debug
+  Staging: release
+  Release: release
+
 settings:
   base:
     PRODUCT_BUNDLE_IDENTIFIER: com.aistudy.app

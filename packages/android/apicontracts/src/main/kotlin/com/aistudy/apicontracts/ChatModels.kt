@@ -1,6 +1,7 @@
 package com.aistudy.apicontracts
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 // MARK: - Chat
 // POST /api/chat — { subject, message(1-2000), conversationId? } → { reply, conversationId?, action? }
