@@ -73,7 +73,6 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
-    implementation(libs.material3.adaptive)
     implementation(libs.material3.adaptive.nav.suite)
     debugImplementation(libs.compose.ui.tooling)
 
