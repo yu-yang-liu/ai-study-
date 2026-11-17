@@ -7,6 +7,7 @@ pluginManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
+        // KSP publishes its plugin marker to Maven Central, not Google Maven.
         mavenCentral()
         gradlePluginPortal()
     }
