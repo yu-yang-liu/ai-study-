@@ -18,7 +18,9 @@ case "$environment" in
 esac
 
 if [[ -z "$url" ]]; then
-  echo "Missing API URL for ${environment}: set AISTUDY_API_BASE_URL_${environment^^}" >&2
+  # macOS ships bash 3.2, which lacks ${var^^}; use tr for portability.
+  env_upper="$(printf '%s' "$environment" | tr '[:lower:]' '[:upper:]')"
+  echo "Missing API URL for ${environment}: set AISTUDY_API_BASE_URL_${env_upper}" >&2
   exit 1
 fi
 
