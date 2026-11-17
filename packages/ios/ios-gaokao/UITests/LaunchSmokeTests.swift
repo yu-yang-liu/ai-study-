@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class LaunchSmokeTests: XCTestCase {
     func testApplicationReachesForeground() {
         let app = XCUIApplication()
