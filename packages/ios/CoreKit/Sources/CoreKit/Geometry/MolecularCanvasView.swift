@@ -35,7 +35,7 @@ public struct MolecularCanvasView: View {
                 }
             }
             .frame(minHeight: 180)
-            .background(Color(.systemGray6))
+            .background(Color.gray.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }

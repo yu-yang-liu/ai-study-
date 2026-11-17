@@ -7,7 +7,7 @@ final class WrongQuestionsViewModel: ObservableObject {
     @Published var questions: LoadingState<[WrongQuestionItem]> = .idle
     @Published var actionError: String?
     @Published var searchText = ""
-    @Published var subjectFilter = "鍏ㄩ儴"
+    @Published var subjectFilter = "全部"
     @Published private(set) var updatingFavoriteIDs: Set<String> = []
 
     private let apiClient: APIClient
@@ -26,13 +26,13 @@ final class WrongQuestionsViewModel: ObservableObject {
 
     var subjectOptions: [String] {
         let values = Set((questions.value ?? []).map(\.subject)).sorted()
-        return ["鍏ㄩ儴"] + values
+        return ["全部"] + values
     }
 
     private var filteredItems: [WrongQuestionItem] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return (questions.value ?? []).filter { item in
-            let matchesSubject = subjectFilter == "鍏ㄩ儴" || item.subject == subjectFilter
+            let matchesSubject = subjectFilter == "全部" || item.subject == subjectFilter
             guard !query.isEmpty else { return matchesSubject }
             let haystack = [
                 item.questionContent,

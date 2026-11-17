@@ -135,12 +135,12 @@ struct PlanTaskCard: View {
                 if isUpdating {
                     ProgressView()
                 } else {
-                    Button(task.status == "completed" ? "鏀规垚寰呭畬鎴?" : "瀹屾垚") {
+                    Button(task.status == "completed" ? "改成待完成" : "完成") {
                         onStatusChange(task.status == "completed" ? "pending" : "completed")
                     }
                     .buttonStyle(.borderedProminent)
 
-                    Button(task.status == "skipped" ? "鎭㈠" : "璺宠繃") {
+                    Button(task.status == "skipped" ? "恢复" : "跳过") {
                         onStatusChange(task.status == "skipped" ? "pending" : "skipped")
                     }
                     .buttonStyle(.bordered)
