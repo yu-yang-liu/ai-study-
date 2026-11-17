@@ -93,7 +93,7 @@ class AuthManager(
         }
         val userId = tokenStorage.userId()
         val userEmail = tokenStorage.userEmail()
-        if (userId == null) {
+        if (userId == null || userEmail == null) {
             _state.value = AuthState.Unauthenticated
             return
         }

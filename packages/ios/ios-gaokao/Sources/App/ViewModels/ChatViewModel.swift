@@ -190,8 +190,8 @@ final class ChatViewModel: ObservableObject {
                     ChatMessage(
                         role: msg.role == "user" ? .user : .assistant,
                         content: msg.content,
-                        imageURL: msg.imageUrl,
                         action: msg.action,
+                        imageURL: msg.imageUrl,
                         analyzeResult: msg.analyzeResult,
                         replyBlocks: msg.replyBlocks
                     )
@@ -207,8 +207,8 @@ final class ChatViewModel: ObservableObject {
                     ChatMessage(
                         role: msg.role == "user" ? .user : .assistant,
                         content: msg.content,
-                        imageURL: msg.imageUrl,
                         action: msg.action,
+                        imageURL: msg.imageUrl,
                         analyzeResult: msg.analyzeResult,
                         replyBlocks: msg.replyBlocks
                     )
