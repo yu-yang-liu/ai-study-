@@ -99,9 +99,9 @@ private fun AnalyzeResultCard(response: com.aistudy.apicontracts.AnalyzeResponse
             if (response.examPoints.isNotEmpty()) {
                 Text("考点：${response.examPoints.joinToString("、")}", style = MaterialTheme.typography.bodySmall)
             }
-            if (response.answer != null) {
+            response.answer?.let { answer ->
                 Text("参考答案", style = MaterialTheme.typography.titleSmall)
-                Text(response.answer, style = MaterialTheme.typography.bodyMedium)
+                Text(answer, style = MaterialTheme.typography.bodyMedium)
             }
             Text("解析", style = MaterialTheme.typography.titleSmall)
             Text(response.analysis, style = MaterialTheme.typography.bodyMedium)

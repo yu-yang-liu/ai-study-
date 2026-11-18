@@ -19,7 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Sparkles
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -109,7 +109,7 @@ private fun AssistantCta(onClick: () -> Unit) {
             .padding(18.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Filled.Sparkles, contentDescription = null, tint = Color.White)
+            Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Color.White)
             Text("AI 学习助手", color = Color.White, style = MaterialTheme.typography.titleMedium)
         }
         Spacer(Modifier.height(4.dp))
@@ -138,7 +138,7 @@ private fun AiPlanCard(onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Filled.Sparkles, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                 Text("AI 定制提分计划", style = MaterialTheme.typography.titleMedium)
             }
             Spacer(Modifier.height(4.dp))
@@ -205,7 +205,7 @@ private fun ToolCard(title: String, subtitle: String, onClick: () -> Unit) {
                     .background(Color.Black.copy(alpha = 0.04f), RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Filled.Sparkles, contentDescription = null, tint = brandAccent)
+                Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = brandAccent)
             }
             Spacer(Modifier.height(8.dp))
             Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)

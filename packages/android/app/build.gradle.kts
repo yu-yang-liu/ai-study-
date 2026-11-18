@@ -23,8 +23,8 @@ android {
 
     buildTypes {
         debug {
-            // Mirror iOS project.yml Debug API_BASE_URL.
-            buildConfigField("String", "API_BASE_URL", "\"https://api-dev.example.com\"")
+            // Temporary friend-test backend (sslip.io points at the Aliyun host).
+            buildConfigField("String", "API_BASE_URL", "\"https://123-57-158-178.sslip.io\"")
             buildConfigField("String", "APP_PHASE", "\"high\"")
             buildConfigField("String", "APP_NAME", "\"AI高中助手\"")
             isMinifyEnabled = false
@@ -73,7 +73,6 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
-    implementation(libs.material3.adaptive)
     implementation(libs.material3.adaptive.nav.suite)
     debugImplementation(libs.compose.ui.tooling)
 
@@ -91,6 +90,7 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
 
     // Image loading & markdown
     implementation(libs.coil.compose)

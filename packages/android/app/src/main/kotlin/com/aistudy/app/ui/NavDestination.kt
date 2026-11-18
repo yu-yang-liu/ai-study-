@@ -9,7 +9,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Sparkles
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.outlined.Assignment
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CameraAlt
@@ -18,7 +18,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Sparkles
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -37,7 +37,7 @@ enum class NavDestination(
     GRADE("grade", "作业批改", Icons.Filled.CheckCircle, Icons.Outlined.CheckCircle),
     WRONG_QUESTIONS("wrong-questions", "错题复习", Icons.Filled.Assignment, Icons.Outlined.Assignment),
     STATS("stats", "学习统计", Icons.Filled.BarChart, Icons.Outlined.BarChart),
-    PLAN("plan", "学习计划", Icons.Filled.Sparkles, Icons.Outlined.Sparkles),
+    PLAN("plan", "学习计划", Icons.Filled.AutoAwesome, Icons.Outlined.AutoAwesome),
     REAL_EXAM("real-exam", "真题演练", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
     ;
 

@@ -90,7 +90,6 @@ class TokenAuthenticatorTest {
             .protocol(Protocol.HTTP_1_1)
             .code(401)
             .message("Unauthorized")
-            .body("".toResponseBody(null))
             .build()
         val retriedResponse = Response.Builder()
             .request(request)

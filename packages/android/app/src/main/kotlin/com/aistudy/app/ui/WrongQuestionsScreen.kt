@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -32,6 +34,7 @@ import com.aistudy.corekit.ui.LoadingState
 import com.aistudy.corekit.ui.brandPrimary
 
 /** 错题复习屏（镜像 iOS `WrongQuestionsView`）：待复习 / 计划中 + SM-2 自评。 */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WrongQuestionsScreen(
     container: AppContainer,
@@ -134,7 +137,7 @@ private fun SubjectPill(subject: String) {
 }
 
 @Composable
-private fun AnswerBox(title: String, text: String, background: Color, foreground: Color) {
+private fun RowScope.AnswerBox(title: String, text: String, background: Color, foreground: Color) {
     Surface(color = background, shape = RoundedCornerShape(8.dp), modifier = Modifier.weight(1f)) {
         Column(modifier = Modifier.padding(8.dp)) {
             Text(title, style = MaterialTheme.typography.labelSmall, color = foreground.copy(alpha = 0.7f))
@@ -144,7 +147,7 @@ private fun AnswerBox(title: String, text: String, background: Color, foreground
 }
 
 @Composable
-private fun ReviewButton(label: String, quality: Int, prominent: Boolean, onClick: () -> Unit) {
+private fun RowScope.ReviewButton(label: String, quality: Int, prominent: Boolean, onClick: () -> Unit) {
     if (prominent) {
         Button(onClick = onClick, modifier = Modifier.weight(1f)) { Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
     } else {

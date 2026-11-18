@@ -7,6 +7,7 @@ pluginManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
+        // KSP publishes its plugin marker to Maven Central, not Google Maven.
         mavenCentral()
         gradlePluginPortal()
     }
@@ -17,6 +18,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // compose-markdown is published on JitPack under com.github.jeziellago.
+        maven(url = "https://jitpack.io")
     }
 }
 
