@@ -56,19 +56,23 @@ class ApiClient(
 
         /**
          * 装配 [ApiClient]：OkHttp + Retrofit + 鉴权拦截器。
+         *
          * @param tokenStorage 令牌存储
-         * @param authManager 鉴权管理器（提供 currentAccessToken / refreshAfterUnauthorized）
+         * @param authManagerProvider 鉴权管理器的延迟提供者：拦截器只在真正发请求时调用，
+         *   因此这里不能直接接收 [AuthManager] 实例 —— `AuthManager` 的构造依赖本客户端的
+         *   `api`，直接传实例会让 `AppContainer` 的两个 `lazy` 在冷启动时互相求值，
+         *   抛 `StackOverflowError`（`AuthManager` ↔ `ApiClient` 构造期循环）。
          * @param debug 是否打印网络日志
          */
         fun create(
             tokenStorage: TokenStorage,
-            authManager: AuthManager,
+            authManagerProvider: () -> AuthManager,
             debug: Boolean,
         ): ApiClient {
             val authenticator = TokenAuthenticator {
-                kotlinx.coroutines.runBlocking { authManager.refreshAfterUnauthorized() }
+                kotlinx.coroutines.runBlocking { authManagerProvider().refreshAfterUnauthorized() }
             }
-            val authInterceptor = AuthInterceptor { authManager.currentAccessToken() }
+            val authInterceptor = AuthInterceptor { authManagerProvider().currentAccessToken() }
             val rateLimitInterceptor = RateLimitInterceptor()
 
             val builder = OkHttpClient.Builder()

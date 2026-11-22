@@ -48,7 +48,9 @@ class AppContainer(private val context: android.content.Context) {
     val apiClient: ApiClient by lazy {
         ApiClient.create(
             tokenStorage = tokenStorage,
-            authManager = authManager,
+            // 必须传 lambda：构造 ApiClient 时不能触发 authManager 的 lazy 求值，
+            // 否则 authManager → apiClient.api → authManager 无限递归，冷启动即 StackOverflowError。
+            authManagerProvider = { authManager },
             debug = BuildConfig.DEBUG,
         )
     }
