@@ -19,11 +19,7 @@ Android 原生客户端，Kotlin + Jetpack Compose。镜像 iOS 三层架构（`
 - Gradle 8.9（自带 wrapper）
 - **不需要**单独配置 AI Key，全部走 Web API
 
-> **首次准备 wrapper**：仓库提交了 `gradlew`/`gradlew.bat` 与 `gradle-wrapper.properties`，但 `gradle-wrapper.jar` 为二进制不入库。若本地无该 jar，在 `packages/android` 下执行：
-> ```bash
-> gradle wrapper --gradle-version 8.9 --distribution-type bin
-> ```
-> （需系统已装 Gradle；CI 通过 `gradle/actions/setup-gradle` 自动处理。）
+> **wrapper 已入库**：`gradlew`/`gradlew.bat`、`gradle-wrapper.jar` 与 `gradle-wrapper.properties` 都随仓库提交，`gradlew` 带可执行位；clone 后直接 `./gradlew` 即可，不需要系统预装 Gradle。
 
 ## 构建
 
